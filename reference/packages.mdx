@@ -1,0 +1,105 @@
+---
+title: "Package and API index"
+description: "FireWeave package names, versions, publish state, env vars, OpenFeature pins, and runtime compatibility. Links out to per-SDK pages."
+---
+
+Developer index. Full call surfaces live on the [SDK pages](/sdks/node). Do not treat registry install commands as working unless the publish row says so.
+
+<Warning>
+  Pre-release. License MIT; do not redistribute packages built from the SDK repository until the license is ratified and publication is authorized.
+</Warning>
+
+## Packages
+
+| Surface | Package | Version in tree | Published? | Runtime (manifests + CI) |
+| --- | --- | --- | --- | --- |
+| [Node / Bun / Deno](/sdks/node) | `@fireweaveai/sdk` | `2.1.0` | **Published.** npm **2.1.0**; dist-tag **latest = 2.1.0** (as of 2026-08-17). CHANGELOG/docs previously described 2.1.0 as unpublished and `latest` as 2.0.0. | Node `>=20.20`; CI Node 20 + 24, Bun 1.2.0 + latest, Deno `v2.x` + canary |
+| [Python](/sdks/python) | `fireweave` | `0.1.0` | **Published.** PyPI **0.1.0** — `pip install 'fireweave[openfeature]'` is valid | Python `>=3.10`; CI 3.10 + 3.14 |
+| [Go](/sdks/go) | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go` | `0.1.0` (matrix); `go.mod` is `go 1.25.12` | **Unpublished** as a tagged module | Go 1.25; CI `1.25.x` + `stable` |
+| [Java](/sdks/java) | `ai.fireweave:fireweave-{sdk,openfeature,adapter-posthog,testing}` | `0.1.0-SNAPSHOT` | **Unpublished.** Parent POM: “DO NOT PUBLISH.” `groupId ai.fireweave` is a working assumption | Java 11+; CI JDK 11 + 25 |
+| [Browser](/sdks/web) | `@fireweaveai/web-sdk` | `2.1.0` | **Published.** npm **2.1.0** (as of 2026-08-17) | Browser. CI: Bun + happy-dom. **Not** a Node/Deno target |
+
+Zero runtime dependencies on Node, Python core, and Web. OpenFeature is a **peer** (Node/Web) or an **extra** (Python). Go requires the OpenFeature and PostHog modules listed on the Go page.
+
+See [Compatibility](/sdks/compatibility) for the adapter and type matrix.
+
+## OpenFeature pins
+
+| Binding | Provider | Pin | Notes |
+| --- | --- | --- | --- |
+| Node | `FireweaveProvider` | `@openfeature/server-sdk` `^1.22.0` | `lazyReady` default **true**. Deno OF provider import is Node/Bun-gated in CI |
+| Python | `fireweave.openfeature.FireweaveProvider` | `openfeature-sdk>=0.10.0,<0.11` | Extra `fireweave[openfeature]`; pre-1.0 |
+| Go | `openfeature.NewProvider` | `go-sdk` `v1.17.2` | Wraps `*fireweave.Client` |
+| Java | `ai.fireweave.openfeature.FireweaveProvider` | `dev.openfeature:sdk` **1.15.1** | Not 1.21.0 |
+| Web | `FireweaveWebProvider` | `@openfeature/web-sdk` `^1.9.0` | **Sync** resolvers; `runsOn = 'client'`; name `fireweave-web` |
+
+Tracking (spec §6): **not implemented**. Details: [OpenFeature](/openfeature).
+
+## Env vars and config
+
+| Name | Who reads it |
+| --- | --- |
+| `FW_API_URL` | Node, Python, Go **remote** adapters |
+| `FW_PROJECT_API_KEY` | Node, Python, Go **remote** adapters |
+| `FW_DEPRECATION_WARNINGS` | Node, Python (`=1` → one `client.flags` notice) |
+
+Java: constructor / `FireweaveConfig` only. Web: constructor only.
+
+Timeouts: request **3000 ms**, shutdown **10000 ms**. Host allowlists and https rules: [Configuration](/production/configuration).
+
+Example-only (not SDK core): `FIREWEAVE_POSTHOG_KEY`, `FIREWEAVE_POSTHOG_HOST`, `FW_POSTHOG_HOST`, `FW_SECRET_KEY`.
+
+## Adapters (quick map)
+
+| Adapter | Node 2.1 | Python | Go | Java | Web |
+| --- | --- | --- | --- | --- | --- |
+| `FireweaveRemoteAdapter` | yes | yes | yes | yes | `FireweaveRemoteWebAdapter` |
+| `InMemoryAdapter` | yes | yes | yes | `fireweave-testing` | `InMemoryWebAdapter` |
+| Local / dev | `FireweaveLocalAdapter` | `FireweaveLocalAdapter` | **absent** | **absent** | `FireweaveLocalWebAdapter` |
+| PostHog | **removed** | `fireweave[posthog]` | `adapters/posthog` | seam only (`create(config)` → `UnsupportedCapability`) | **none** |
+
+## Errors
+
+15 kinds, evaluation never throws. Full table: [Errors](/production/errors).
+
+Node/Web: `FireweaveError`. Python: per-kind classes + `ErrorKind`. Go: `fireweave.Error`. Java: `ErrorKind` + `FireweaveException`.
+
+## Language gates (do not paper over)
+
+| API | Node | Python | Go | Java | Web |
+| --- | --- | --- | --- | --- | --- |
+| Product namespace | `controlPoints` (`flags` alias) | `control_points` (`flags` alias) | `Flags()` only | no facade | `controlPoints` (sync) |
+| Register target | `runtime.registerTarget` | `runtime.register_target` | **absent** | **absent** | `client.identify` |
+| Native typed getters | boolean / string / number / object | boolean / string / int / float / object | `Evaluate` only | boolean + string; others via `evaluate` or OF | boolean / string / number / object (sync) |
+| Shutdown flushes client exposures | yes | yes | **no** — `Exposures().Flush` first | **no** — `exposures().flush()` first | yes (+ unload) |
+| Env config | yes | yes | remote adapter | **no** | **no** |
+
+## Wire paths
+
+| Method | Path | Who implements the client |
+| --- | --- | --- |
+| `POST` | `/v1/flags/evaluate` | All five remote adapters |
+| `POST` | `/v1/capture` | All five remote adapters |
+| `POST` | `/v1/targets/register` | Node, Python, Web only |
+
+Auth: `Authorization: Bearer <key>`.
+
+The [test server](/testing) implements evaluate, capture, and `/health` — **not** `/v1/targets/register`.
+
+## Runtime compatibility notes
+
+- **Node 2.1** is ESM, portable across Node / Bun / Deno (`readEnv`, no `Buffer` / bare `process.env` in `src/`). OpenFeature provider smoke on Deno is **not** asserted by CI.
+- **Web** targets browsers only. Suite runs on Bun + happy-dom. No server entry point.
+- CI “latest” / “stable” / “canary” cells **float**. Document minimums from manifests, not floating CI cells as support guarantees.
+- No mobile, iOS, Android, Rust, .NET, PHP, or Ruby packages under `sdks/`.
+
+## Next
+
+<Columns cols={3}>
+  <Card title="Node" href="/sdks/node" icon="js" />
+  <Card title="Python" href="/sdks/python" icon="python" />
+  <Card title="Go" href="/sdks/go" icon="golang" />
+  <Card title="Java" href="/sdks/java" icon="java" />
+  <Card title="Web" href="/sdks/web" icon="window" />
+  <Card title="Compatibility" href="/sdks/compatibility" icon="table" />
+</Columns>

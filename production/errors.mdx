@@ -1,0 +1,98 @@
+---
+title: "Errors"
+description: "FireWeave’s 15-kind error taxonomy, OpenFeature errorCode map, and how to read a default-valued decision."
+---
+
+The client evaluation API **never throws**. Abnormal execution returns the caller-supplied **default** with `reason: ERROR` and an `errorCode` (OpenFeature spec §1.4.10). If a typed getter raised, that is a bug.
+
+First diagnostic step: read **details**, not just the value.
+
+```ts
+const d = await client.getBooleanDetails('new-checkout', false, ctx);
+// d.reason, d.errorCode, d.errorMessage, d.flagMetadata['fireweave.errorKind']
+```
+
+`flagMetadata["fireweave.errorKind"]` is the FireWeave kind. Use it to tell `NotReady` from `AlreadyClosed` — both map to OpenFeature `PROVIDER_NOT_READY`.
+
+## 15 kinds
+
+Canonical kinds from `contracts/errors.md`. Messages are secret-redacted (no API keys, bearer tokens, or `FW_PROJECT_API_KEY` values).
+
+| Kind | OpenFeature `errorCode` | Retryable | When |
+| --- | --- | --- | --- |
+| `NotReady` | `PROVIDER_NOT_READY` | yes | Evaluation before successful init |
+| `FlagNotFound` | `FLAG_NOT_FOUND` | no | Key absent (includes quota-empty snapshots → default + `fireweave.quotaLimited: true`) |
+| `TypeMismatch` | `TYPE_MISMATCH` | no | Stored type ≠ requested getter |
+| `InvalidContext` | `INVALID_CONTEXT` or `TARGETING_KEY_MISSING` | no | Bad/oversized context; missing targeting key when required |
+| `Authentication` | `GENERAL` | no | HTTP 401 / invalid key |
+| `Authorization` | `GENERAL` | no | HTTP 403 / key lacks permission |
+| `RateLimited` | `GENERAL` | yes | HTTP 429 (still serve defaults) |
+| `Timeout` | `GENERAL` | yes | Request or init deadline exceeded |
+| `Network` | `GENERAL` | yes | DNS / connect / reset / TLS |
+| `BackendUnavailable` | `GENERAL` | yes | 5xx / upstream unavailable |
+| `MalformedResponse` | `PARSE_ERROR` | no | Non-JSON or schema-invalid body |
+| `UnsupportedCapability` | `GENERAL` | no | Extension not in this build (guardrails stub; Java `PostHogAdapter.create(config)`) |
+| `Configuration` | `PROVIDER_FATAL` (init) / `GENERAL` (runtime) | no | Invalid host, missing required key, bad options |
+| `AlreadyClosed` | `PROVIDER_NOT_READY` | no | Call after shutdown |
+| `Internal` | `GENERAL` | no | Unexpected invariant |
+
+\* `MalformedResponse` is permanent for a given response; a later request may succeed. Adapters must not invent flag values.
+
+`InvalidContext` subtype: missing required `targetingKey` → `TARGETING_KEY_MISSING`. All other context violations (type, reserved keys, size/depth/count bounds) → `INVALID_CONTEXT`.
+
+## OpenFeature codes
+
+All eight OpenFeature codes are reachable:
+
+| OF `errorCode` | FireWeave kind(s) |
+| --- | --- |
+| `PROVIDER_NOT_READY` | `NotReady`, `AlreadyClosed` |
+| `PROVIDER_FATAL` | `Configuration` (init-fatal) |
+| `FLAG_NOT_FOUND` | `FlagNotFound` |
+| `PARSE_ERROR` | `MalformedResponse` |
+| `TYPE_MISMATCH` | `TypeMismatch` |
+| `TARGETING_KEY_MISSING` | `InvalidContext` (missing targeting key) |
+| `INVALID_CONTEXT` | `InvalidContext` |
+| `GENERAL` | `Authentication`, `Authorization`, `RateLimited`, `Timeout`, `Network`, `BackendUnavailable`, `UnsupportedCapability`, `Internal`, non-fatal `Configuration` |
+
+## Language surfaces
+
+| Language | Type |
+| --- | --- |
+| Node / Web | Single class `FireweaveError` with `kind`, `openFeatureErrorCode`, `retryable` |
+| Python | `ErrorKind` plus subclasses (`NotReadyError`, `FlagNotFoundError`, `TimeoutError_`, `TargetingKeyMissingError`, …) |
+| Go | `fireweave.Error` with `ErrorKind` constants; implements `error` |
+| Java | `ErrorKind` enum + `FireweaveException` / `FireweaveError` value type. Evaluation returns defaults; extensions return `ExtensionResult` |
+
+Go **extension** APIs (`Releases().Start`, and so on) return `error`. Evaluation still does not throw through OpenFeature.
+
+## Reasons that are not errors
+
+| `reason` | Meaning |
+| --- | --- |
+| `TARGETING_MATCH` | Conditions matched |
+| `SPLIT` | Backend reported percentage-rollout bucketing |
+| `DISABLED` | Control point exists and is off — you get the off/default value |
+| `STALE` | Last-good or timed-out prefetch (web boot ceiling). Check `fireweave.fromCache` when present |
+| `ERROR` | Inspect `errorCode` and `fireweave.errorKind` |
+| `DEFAULT` | Local/dev adapter: unknown key rewritten from `FLAG_NOT_FOUND` |
+
+## `UnsupportedCapability`
+
+Expected in phase one for:
+
+1. **Guardrails** in every language (`guardrails: false`).
+2. **Java** `PostHogAdapter.create(config)` until a Java server SDK exists.
+
+Anywhere else, compare the name to `capabilities.get()`.
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Troubleshooting" href="/troubleshooting" icon="wrench">
+    Default values, auth, missing exposures
+  </Card>
+  <Card title="OpenFeature" href="/openfeature" icon="flag">
+    How kinds appear on ResolutionDetails
+  </Card>
+</Columns>

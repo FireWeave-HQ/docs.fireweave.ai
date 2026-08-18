@@ -1,0 +1,128 @@
+---
+title: "Initialize, ready, shutdown"
+description: "FireWeave runtime states, readiness, flush-on-shutdown, and the Java close() exception."
+---
+
+One state machine in every language:
+
+```text
+UNINITIALIZED ── init() ──► INITIALIZING ──► READY ◄──recovery──► STALE / ERROR
+                                 │                     │
+                          fatal config/auth        shutdown()
+                                 ▼                     ▼
+                               FATAL ─────────────► SHUTDOWN   (idempotent, terminal)
+```
+
+| State | Meaning |
+| --- | --- |
+| `UNINITIALIZED` | Constructed, not started |
+| `INITIALIZING` | Config validated, adapter starting |
+| `READY` | Remote: client constructed successfully. Evaluations are live |
+| `STALE` | Last-good / timed-out path. Web: prefetch lost a 5 s ceiling — reads are defaults with reason `STALE`. Do not collapse this into `READY` |
+| `ERROR` | Transient failure; evaluations degrade to defaults until recovery |
+| `FATAL` | Config or auth failure. Not retried |
+| `SHUTDOWN` | Terminal for that instance. Construct a new runtime |
+
+OpenFeature mapping is on the [OpenFeature](/openfeature) page.
+
+Recommended pattern: **one runtime per process per backend project**, created at boot, shared, shut down once on exit.
+
+## Initialize
+
+Init order: **validate config → construct adapter → adapter init → READY**. Configuration and auth failures are `FATAL`. Transient failures land in `ERROR`. Init is **idempotent** — registering an OpenFeature provider and constructing a `FireweaveClient` against the same runtime initializes once.
+
+<Tabs>
+  <Tab title="Node">
+    ```ts
+    await client.initialize();
+    // or: await runtime.initialize();
+    // or OpenFeature — wait for READY:
+    await OpenFeature.setProviderAndWait(
+      new FireweaveProvider(runtime, { lazyReady: false }),
+    );
+    ```
+
+    Default `lazyReady: true`: `initialize()` returns immediately, init continues in the background, and evaluations return defaults with `PROVIDER_NOT_READY` / `fireweave.errorKind: NotReady` until `READY`.
+
+    Observe: `runtime.getState()`, `runtime.onStateChange(listener)`.
+  </Tab>
+  <Tab title="Python">
+    ```python
+    runtime.initialize()                          # backend_required=False
+    runtime.initialize(backend_required=True)     # missing config → FATAL
+    # OpenFeature: api.set_provider(FireweaveProvider(runtime))
+    ```
+
+    After a recorded `FATAL`, evaluations still return default-valued decisions with the precise error kind (they do not raise).
+  </Tab>
+  <Tab title="Go">
+    ```go
+    if err := runtime.Initialize(ctx); err != nil { /* ... */ }
+    err := openfeature.SetProviderAndWait(fwprovider.NewProvider(client))
+    ```
+
+    Concurrent `Initialize` callers observe a single adapter initialization. Every blocking call takes `context.Context`.
+  </Tab>
+  <Tab title="Java">
+    ```java
+    runtime.initialize();
+    api.setProviderAndWait("domain", new FireweaveProvider(runtime));
+    // Observe: runtime.state()
+    ```
+  </Tab>
+  <Tab title="Web">
+    ```ts
+    await client.initialize();
+    // or OpenFeature.setProviderAndWait(new FireweaveWebProvider(runtime))
+    ```
+
+    `initialize()` and `setContext()` prefetch a decision cache asynchronously (one evaluate batch per context). `evaluateSync` / OpenFeature resolvers are **pure reads** of that cache.
+
+    If the prefetch loses the 5 s ceiling, state is **`STALE`**, not `READY`. The provider emits `Stale`. Values are defaults with reason `STALE` — fail-open, not fail-silent.
+  </Tab>
+</Tabs>
+
+Wait for `READY` before treating values as live. On Node, that means `lazyReady: false` or waiting for the READY event.
+
+## Shutdown and flush
+
+Shutdown belongs to the **runtime**. It is **idempotent**. Default deadline: **10 s**. Shutdown on Node/Python does not throw; flush failures are swallowed (telemetry loss is acceptable, evaluation correctness is not).
+
+| Language | Standard path | Native path | Client exposure queue |
+| --- | --- | --- | --- |
+| Node | `await OpenFeature.close()` | `await client.shutdown()` | **Flushed first**, then runtime shutdown |
+| Python | `api.shutdown()` | `client.shutdown()` (also context manager) | **Flushed first** |
+| Go | `of.Shutdown()` / `ShutdownWithContext(ctx)` | `runtime.Shutdown(ctx)` | **Not** drained — call `Exposures().Flush(ctx)` first |
+| Java | `api.shutdown()` | `client.close()` (`AutoCloseable`) / `runtime.shutdown()` | **Not** drained — call `exposures().flush()` first |
+| Web | `await OpenFeature.close()` | `await client.shutdown()` | **Flushed**, then shutdown. Also `visibilitychange → hidden` and `pagehide` via `keepalive` / `sendBeacon` (`autoFlushOnUnload` defaults on; pass `{ autoFlushOnUnload: false }` in tests) |
+
+<Warning>
+  **Java `close()` flushes nothing implicitly** (client Javadoc). Always `exposures().flush()` then `close()`. Go’s `runtime.Shutdown` closes the adapter (the remote adapter’s `Close` posts adapter-pending capture events) but does **not** drain `client.Exposures()`.
+</Warning>
+
+<Note>
+  Web unload prefers `keepalive` fetch so it can send `Authorization: Bearer`. `sendBeacon` cannot set that header and is a fallback. Whether fw-server accepts an unauthenticated beacon is **unverified** — do not rely on it.
+</Note>
+
+Injected vendor clients (PostHog extras on Python/Go) are **your** responsibility to close. FireWeave will not shut them down.
+
+## After shutdown
+
+- OpenFeature evaluations return defaults with `PROVIDER_NOT_READY` and `flagMetadata["fireweave.errorKind"] = "AlreadyClosed"`.
+- Extension calls fail fast with `AlreadyClosed`.
+- A shut-down runtime is **terminal**. `initialize()` after shutdown fails with `AlreadyClosed`. Construct a new runtime.
+
+## Concurrency
+
+Runtimes and clients are safe for concurrent evaluation on one instance (Go: race-tested; Java: volatile-state reads; Python: thread-safe sync core, `fireweave.aio` for asyncio; Node: single-threaded async). Evaluations racing shutdown either complete or observe `AlreadyClosed` — never a crash.
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Configuration and auth" href="/production/configuration" icon="key">
+    Timeouts and credentials
+  </Card>
+  <Card title="Troubleshooting shutdown" href="/troubleshooting" icon="wrench">
+    Hangs, missing exposures, AlreadyClosed
+  </Card>
+</Columns>

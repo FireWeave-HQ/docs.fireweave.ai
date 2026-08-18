@@ -1,0 +1,123 @@
+---
+title: "Migrate Node 2.0 to 2.1"
+description: "Breaking changes from the FireWeave Node CHANGELOG: PostHog adapter removal and what is not breaking. npm latest is 2.1.0 as of 2026-08-17."
+---
+
+This page documents **`@fireweaveai/sdk` 2.0.0 → tree 2.1.0** only. Every breakage below is quoted from the SDK `CHANGELOG.md` or the Node section of `docs/migration.md`. Nothing else is inferred.
+
+<Warning>
+  CHANGELOG/docs previously described 2.1.0 as unpublished and `latest` as 2.0.0. As of 2026-08-17, npm **latest is 2.1.0**. An unpinned `npm install @fireweaveai/sdk` now resolves to **2.1.0** — the API that **removed** the direct PostHog adapter and the `./posthog` subpath. Stay pinned at `2.0.0` only if you still need that adapter; otherwise apply the breakages below.
+</Warning>
+
+## Version note (from CHANGELOG)
+
+The 2.1.0 work was drafted as `3.0.0` and `3.1.0` and is released as a single **2.1.0**. Neither 3.x version reached a registry.
+
+Those changes ship in a **minor**. A consumer pinned `^2.0.0` now picks **2.1.0** up automatically and, if they import `@fireweaveai/sdk/posthog`, will fail to build. CHANGELOG: this is a deliberate choice made while 2.0.0 has no known consumers.
+
+## Required — exactly three breakages
+
+CHANGELOG: “Exactly three things break.”
+
+### 1. `@fireweaveai/sdk/posthog` no longer resolves
+
+Replace `PostHogAdapter` with `FireweaveRemoteAdapter`. Env vars `POSTHOG_HOST` / `POSTHOG_API_KEY` become `FW_API_URL` / `FW_PROJECT_API_KEY`.
+
+```ts
+// 2.0.0
+import { PostHogAdapter } from '@fireweaveai/sdk/posthog';
+const adapter = new PostHogAdapter({
+  projectApiKey: process.env.POSTHOG_API_KEY,
+  host: process.env.POSTHOG_HOST,
+  featureFlagsRequestTimeoutMs: 3000,
+});
+
+// 2.1.0
+import { FireweaveRemoteAdapter } from '@fireweaveai/sdk';
+const adapter = new FireweaveRemoteAdapter({
+  apiUrl: process.env.FW_API_URL,
+  apiKey: process.env.FW_PROJECT_API_KEY,
+  requestTimeoutMs: 3000,
+});
+```
+
+From `docs/migration.md`:
+
+| Before | After |
+| --- | --- |
+| `POSTHOG_HOST` | `FW_API_URL` — fw-server base URL |
+| `POSTHOG_API_KEY` (`phc_…`) | `FW_PROJECT_API_KEY` (`project-api-key_…`) |
+| `featureFlagsRequestTimeoutMs` | `requestTimeoutMs` |
+| `secretApiKey` / `onlyEvaluateLocally` / `featureFlagsPollingInterval` | **no equivalent** |
+| `posthog-node` in your `package.json` | remove it, unless you use it for your own analytics |
+
+**The new key is a FireWeave project key, not a re-labelled vendor key.**
+
+Drop `projectApiKey` / `host` from `FireweaveRuntimeConfig` if you set them only to satisfy the old adapter. Keep `host` if you relied on the runtime-level allowlist check. The remote adapter takes its own options.
+
+### 2. `posthog-node` is no longer a peer dependency
+
+If you use it for analytics, depend on it directly.
+
+### 3. Type-level: `'posthog'` removed from adapter unions
+
+`'posthog'` is no longer a member of `BackendAdapter['name']` or `Capabilities['runtime']['backend']`. Affects custom adapters declaring `name: 'posthog'` (use `'other'`) and exhaustive `switch`es on `backend`.
+
+CHANGELOG also records `features.posthogAdapter` → `features.remoteAdapter`.
+
+## Removed capability — in-process local evaluation
+
+CHANGELOG:
+
+> The vendor adapter's secret-key mode (background definition polling, `onlyEvaluateLocally`, staleness detection, `waitForLocalDefinitions`) has no replacement; caching is fw-server's concern and both shipped adapters report `localEvaluation: false`.
+
+If in-process evaluation is load-bearing, CHANGELOG says stay on v2 and tell FireWeave. The interface seam (`localEvaluation` / `fromCache` / `STALE`) is preserved for a future cache.
+
+## Not breaking (deliberately)
+
+CHANGELOG:
+
+- `client.flags` still exists and **is** `client.controlPoints` — same object, not a copy. Marked `@deprecated` in JSDoc only; **not scheduled for removal in 2.x**.
+- `capabilities.get().static.features.flags` is still `true` (`controlPoints: true` added beside it).
+- `InMemoryAdapterOptions.flags`, `FlagValueType`, `InMemoryFlagDefinition`, `ExpectedFlagType`, `Decision.flagKey`, `Exposure.flagKey`, `flagMetadata` — unchanged.
+- All 22 v2 value exports and ~40 type exports survive (pinned by `v2-surface.compat.test.ts`).
+
+Renaming `client.flags` → `client.controlPoints` is cosmetic. Set `FW_DEPRECATION_WARNINGS=1` for one notice per process; the SDK is silent otherwise.
+
+## Changed — `DEFAULT_ALLOWED_HOSTS` contents
+
+The **export name stayed**. Contents now list FireWeave hosts (`app-server.fireweave.ai`, `staging-app-server.fireweave.ai`, loopback), not vendor hosts.
+
+Code doing `allowedHosts: [...DEFAULT_ALLOWED_HOSTS, 'mine.example']` keeps compiling and **no longer permits** the old endpoints. Intended; verify against your deployment.
+
+`capabilities.get().static.sdkVersion` now reports the real package version (v2 always returned `0.1.0`).
+
+## Added in 2.1 (not a migration requirement)
+
+These ship in **2.1.0** (npm latest as of 2026-08-17). They are not on **2.0.0**:
+
+- `client.controlPoints` (and `FireweaveLocalAdapter` / `makeFireweaveLocalProvider()`, `getFwLocalCaptures`, `resetFwLocalCaptures`)
+- Bun ≥ 1.2 and Deno ≥ 2.0 support
+- `FW_DEPRECATION_WARNINGS=1`
+
+## What this page does not document
+
+These appear in SDK `docs/migration.md` but are **not** Node 2.0→2.1 CHANGELOG breakages, so they are omitted here:
+
+- Migrating from direct PostHog SDK calls
+- Migrating from another OpenFeature provider
+- Migrating from `@fireweaveai/deploy-sdk`
+- Advice to move person properties onto `registerTarget` (optimization, not a listed breakage)
+
+Python, Go, Java, and Web have **no** equivalent 2.x breaking migration in CHANGELOG.
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Node SDK" href="/sdks/node" icon="js">
+    2.1 surface after you leave 2.0.0
+  </Card>
+  <Card title="Configuration" href="/production/configuration" icon="key">
+    `FW_API_URL` and `FW_PROJECT_API_KEY`
+  </Card>
+</Columns>
