@@ -1,0 +1,156 @@
+---
+title: "Exposures"
+description: "An exposure is proof a target saw a control-point value. Emission is opt-in — sendExposure defaults to false in every language."
+---
+
+An **exposure** records that a [target](/concepts/targeting) saw a [control-point](/concepts/control-points) value. Records queue in-process, deduplicate, and drain on `flush`.
+
+OpenFeature and the wire still say `flagKey`. The capture body uses `type: "exposure"`. fw-server may map that to a vendor `$feature_flag_called` — SDKs never emit that name on the public FireWeave wire.
+
+This is **not** OpenFeature Tracking (spec §6). `provider.track` is not implemented.
+
+## Why it exists
+
+Evaluation is side-effect-free by default so a read does not imply “we showed this variant.” You opt in when you need assignment proof — analytics, holdouts, or correlating a Decision to a [release](/concepts/releases).
+
+## When to use it
+
+- Pass `sendExposure: true` (or language equivalent) on evaluate when this call **is** the serve
+- Call `exposures.record` when you evaluated once and served many users, or you need extra correlation (`rolloutId`)
+- Always `flush` before you care that the queue left the process — especially on Java
+
+Do not assume evaluate emits an exposure. The default is **false** in all five packages.
+
+## How it relates
+
+| Concept | Relation |
+|---------|----------|
+| [Control points](/concepts/control-points) | `flagKey` + value + optional variant |
+| [Targeting](/concepts/targeting) | `targetingKey` is required to record; empty key is dropped on the evaluate path |
+| [Releases](/concepts/releases) | Optional `rolloutId` / change / stamp on a manual record |
+| [Adapters](/concepts/adapters) | Remote batches to `POST /v1/capture`. InMemory keeps records for test asserts |
+
+## When an exposure happens
+
+| Path | Default | What happens |
+|------|---------|----------------|
+| OpenFeature / native evaluate | **No emission** | Phase-one evaluate is side-effect-free |
+| Evaluate with `sendExposure` / `send_exposure` / `SendExposure: true` | Opt-in | SDK queues a FireWeave-owned exposure after a successful resolve (Node also dedups this path) |
+| Web runtime `sendExposure: true` | Opt-in, **config-level** (not per `evaluateSync` call) | Records against the prefetched Decision |
+| `exposures.record` | Explicit | Queues one record |
+| Go `EvaluateOptions.SendExposure` | `nil` → adapter default, which is **false** | Pointer so you can force on or off per call |
+
+<Warning>
+  Do not document emit-on-evaluate as the default. Ruling 20: `sendExposure` defaults **false** everywhere.
+</Warning>
+
+## Dedup, batching, flush
+
+Dedup key (Node, Python, Go, and the extensions contract): **`(targetingKey, flagKey, variant, value)`**.
+
+- Duplicates return `ok` with `deduped: true` and are **not** re-queued.
+- The seen-set **clears on flush** so it cannot grow for the process lifetime. The same tuple can queue again after a flush.
+
+`flush` drains the queue to the adapter sink (`POST /v1/capture` on the remote adapter). Return shape is typically `{ ok, flushed, queued }` (Go returns a count + `error`).
+
+Web also flushes on `visibilitychange` → hidden and `pagehide`, using `keepalive` fetch and `sendBeacon` as a fallback. `sendBeacon` cannot set `Authorization`; keepalive fetch is preferred.
+
+## Shutdown
+
+| Language | Shutdown vs flush |
+|----------|-------------------|
+| Node | `client.shutdown()` **flushes first** |
+| Python | `client.shutdown()` **flushes first** (never raises; idempotent) |
+| Web | `client.shutdown()` **flushes first**, plus unload listeners |
+| Go | Explicit `Exposures().Flush(ctx)` before `Shutdown` if you need delivery |
+| Java | `close()` / `runtime.shutdown()` **does not implicit-flush**. Call `exposures().flush()` first |
+
+Default shutdown timeout is **10_000 ms** where the runtime exposes one.
+
+## Failure behavior
+
+- Evaluate still **never throws** if exposure emission fails. A failed sink does not change the Decision.
+- `record` / `flush` degrade with result objects (Go: `error`) — `NotReady` / `UnsupportedCapability` before READY, `AlreadyClosed` after shutdown.
+- Node `flush` maps adapter flush exceptions to a `Network` (or existing `FireweaveError`) result.
+- Python flush swallows sink exceptions so telemetry loss cannot break callers.
+- Empty `targetingKey` or `flagKey` on Node `record` → `InvalidContext`.
+- Evaluate-path emission with an empty `targetingKey` is skipped (Node).
+
+Delivery to fw-server after flush is **NEEDS VERIFICATION** per adapter (same skew as [releases](/concepts/releases)).
+
+## API
+
+<Tabs>
+  <Tab title="Node">
+    ```ts
+    client.exposures.record({
+      targetingKey: 'user_42',
+      flagKey: 'new-checkout',
+      value: true,
+      variant: 'on',
+    });
+    await client.exposures.flush(); // { ok, flushed, queued }
+
+    await client.controlPoints.evaluate(
+      'new-checkout',
+      'boolean',
+      false,
+      { targetingKey: 'user_42' },
+      { sendExposure: true },
+    );
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    client.exposures.record("user_42", "new-checkout", "on", True)
+    client.exposures.flush()  # FlushResult(ok, flushed, queued)
+
+    client.control_points.evaluate(
+        "new-checkout",
+        FlagType.BOOLEAN,
+        False,
+        EvaluationContext("user_42"),
+        send_exposure=True,
+    )
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```go
+    res, err := client.Exposures().Record(ctx, fireweave.Exposure{
+        TargetingKey: "user_42",
+        FlagKey:      "new-checkout",
+        Variant:      "on",
+        Value:        true,
+    })
+    flushed, err := client.Exposures().Flush(ctx)
+    _ = res
+    _ = flushed
+    ```
+  </Tab>
+  <Tab title="Java">
+    ```java
+    client.exposures().record(exposure);  // ExtensionResult<RecordOutcome>
+    client.exposures().flush();           // required — close() does not flush
+    client.close();
+    ```
+  </Tab>
+  <Tab title="Web">
+    ```ts
+    client.exposures.record({
+      targetingKey: 'user_42',
+      flagKey: 'new-checkout',
+      value: true,
+      variant: 'on',
+    });
+    await client.exposures.flush();
+    await client.shutdown(); // flushes again, then shuts down
+    ```
+  </Tab>
+</Tabs>
+
+## Related
+
+- [Control points](/concepts/control-points) — evaluate options
+- [Targeting](/concepts/targeting) — `targetingKey` join
+- [Signals](/concepts/signals) — different envelope (`type: "signal"`)
+- [Lifecycle](/production/lifecycle) — flush-on-shutdown exceptions

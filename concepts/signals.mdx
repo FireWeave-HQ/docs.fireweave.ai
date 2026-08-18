@@ -1,0 +1,221 @@
+---
+title: "Signals and outcomes"
+description: "Signals are release-safety telemetry: health, error, metric, and outcome. Outcome is a signal kind — not a standalone product object."
+---
+
+A **signal** is a telemetry envelope your app sends so FireWeave can see how a release is going. The spec defines **four kinds only**: `health`, `error`, `metric`, and `outcome`.
+
+OpenFeature and the wire still say `flagKey` when a signal names a control point. Capture uses `type: "signal"`. These are **not** the in-app Log / Alert / Block severities.
+
+## Why it exists
+
+Evaluation says what value was chosen. Signals say what happened next — a component is degraded, an error you already classified, a numeric observation, or a user-visible result. Messages are secret-redacted. Attributes pass an [allowlist](#attribute-allowlist) so arbitrary PII does not go on the wire.
+
+## When to use it
+
+| Kind | Use when |
+|------|----------|
+| **health** | A component’s status (`ok`, `degraded`, …) |
+| **error** | A failure you already classified (`errorKind` + redacted `message`) |
+| **metric** | A named observation (`value` + optional `unit`) |
+| **outcome** | A user-visible or release-level result (checkout completed, release completed) |
+
+Do not invent extra kinds. Do not map console **Block** onto `recordError`.
+
+## How it relates
+
+| Concept | Relation |
+|---------|----------|
+| [Releases](/concepts/releases) | Node `releases.complete` / `fail` also record an outcome signal. That is not a substitute for `recordOutcome` in other languages |
+| [Exposures](/concepts/exposures) | Different capture type. Exposures prove assignment; signals report aftermath |
+| [Capabilities](/concepts/capabilities) | `signals.recordHealth` / `recordError` / `recordMetric` / `recordOutcome` |
+| [Adapters](/concepts/adapters) | Remote may batch to `POST /v1/capture`. Some paths stay in-process |
+
+<Note>
+  Whether signals always reach fw-server is **NEEDS VERIFICATION** (compatibility known gap: Go/Java sink vs Node/Python in-process record). Check `capabilities.get().runtime.features` and do not claim universal delivery.
+</Note>
+
+## Shared envelope
+
+Required by `spec/signal.schema.json`: `kind` + `name` (1–256 chars). Optional correlation: `targetingKey`, `rolloutId`, `changeId`, `stampId`, `flagKey`, `variant`. Optional `status`, `errorKind`, `message`, `value`, `unit` (language-specific), `attributes`.
+
+- Calls are opt-in per invocation — nothing is emitted until you call a `record*` method.
+- Empty `name` is rejected (`InvalidContext` on Node).
+- Extension lifecycle gate: degrade before READY / after shutdown; **never throw** (Go returns `error`).
+- Node/Python keep an in-process list (`getRecorded()` / `signals.recorded`) useful for tests.
+
+## Health
+
+**Purpose:** “Is this component ok?”
+
+**Typical fields:** `name`, `status` (spec examples: `ok`, `degraded`).
+
+<Tabs>
+  <Tab title="Node">
+    ```ts
+    client.signals.recordHealth({ name: 'checkout-api', status: 'healthy' });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    client.signals.record_health(
+        "checkout-api",
+        "healthy",
+        rollout_id="rollout_01HZXEXAMPLE000000000001",
+    )
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```go
+    err := client.Signals().RecordHealth(ctx, fireweave.HealthSignal{
+        Name: "checkout-api", Status: "ok",
+    })
+    ```
+  </Tab>
+  <Tab title="Java">
+    ```java
+    client.signals().recordHealth("checkout-api", "ok");
+    ```
+  </Tab>
+</Tabs>
+
+## Error
+
+**Purpose:** A classified failure. `errorKind` uses the SDK’s 15-kind taxonomy (for example `Timeout`). `message` is redacted.
+
+<Tabs>
+  <Tab title="Node">
+    ```ts
+    client.signals.recordError({
+      name: 'checkout-api',
+      errorKind: 'Timeout',
+      message: 'upstream deadline exceeded',
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    client.signals.record_error(
+        "checkout-api",
+        error_kind="Timeout",
+        message="upstream deadline exceeded",
+    )
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```go
+    err := client.Signals().RecordError(ctx, fireweave.ErrorSignal{
+        Name: "checkout-api", ErrorKind: fireweave.KindTimeout, Message: "...",
+    })
+    ```
+  </Tab>
+  <Tab title="Java">
+    ```java
+    client.signals().recordError("checkout-api", ErrorKind.Timeout, "...");
+    ```
+  </Tab>
+</Tabs>
+
+## Metric
+
+**Purpose:** A named observation. Spec `value` is number, boolean, or string. Python’s helper types `value` as `float`. Optional `unit`.
+
+<Tabs>
+  <Tab title="Node">
+    ```ts
+    client.signals.recordMetric({ name: 'p99_latency_ms', value: 187, unit: 'ms' });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    client.signals.record_metric("p99_latency_ms", 187.0, unit="ms")
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```go
+    err := client.Signals().RecordMetric(ctx, fireweave.MetricSignal{
+        Name: "p99_latency_ms", Value: 187,
+    })
+    ```
+  </Tab>
+  <Tab title="Java">
+    ```java
+    client.signals().recordMetric("p99_latency_ms", JsonValue.of(187));
+    ```
+  </Tab>
+</Tabs>
+
+There is no SDK type named “adoption signal.” Use `recordMetric` or `recordOutcome`.
+
+## Outcome
+
+**Purpose:** Record that a result happened. This is a **signal kind**, not its own product object and not a separate docs page.
+
+`signals.recordOutcome` / `record_outcome` / `RecordOutcome` takes a `name` + `status` and optional rollout correlation (`rolloutId`, `changeId` on Python).
+
+Node `releases.complete()` / `fail()` also records `{ kind: 'outcome', name: 'release', status: 'completed' | 'failed' }`. Completing a release is still a **different call** from recording an application outcome (for example checkout completed).
+
+<Tabs>
+  <Tab title="Node">
+    ```ts
+    client.signals.recordOutcome({
+      name: 'checkout',
+      status: 'completed',
+      rolloutId: 'rollout_01HZXEXAMPLE000000000001',
+    });
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    client.signals.record_outcome(
+        "checkout",
+        "completed",
+        rollout_id="rollout_01HZXEXAMPLE000000000001",
+    )
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```go
+    err := client.Signals().RecordOutcome(ctx, fireweave.OutcomeSignal{
+        Name: "checkout", Status: "completed",
+    })
+    ```
+  </Tab>
+  <Tab title="Java">
+    ```java
+    client.signals().recordOutcome("checkout", "completed");
+    ```
+  </Tab>
+</Tabs>
+
+Whether console **Completed / Rolled back** consume these signals is **NEEDS VERIFICATION**.
+
+Node also exposes generic `signals.record({ kind, name, ... })`. Java has `signals().record(Signal)`.
+
+## Attribute allowlist
+
+Unknown attribute keys are **dropped**, not rejected. String values are secret-redacted.
+
+Node default (`DEFAULT_SIGNAL_ATTRIBUTE_ALLOWLIST`, on unless you override `telemetry.attributeAllowlist`) and Python `_SIGNAL_ATTRIBUTE_ALLOWLIST`:
+
+`name`, `kind`, `status`, `value`, `unit`, `rolloutId`, `changeId`, `stampId`, `errorKind`, `message`, `flagKey`, `variant`, `environment`, `service`
+
+Go’s emission allowlist is slightly different: `flagKey`, `variant`, `value`, `rolloutId`, `changeId`, `stampId`, `stampIds`, `status`, `name`, `kind`, `errorKind`, `message`, `metricValue`.
+
+Java signals use a fixed canonical field set; `FireweaveConfig.telemetryAttributeAllowlist` can filter further.
+
+Do not send arbitrary PII as signal attributes and expect it to survive.
+
+## Batching and failure
+
+- Signals are recorded when you call `record*`. Remote adapters capture via `POST /v1/capture` when a sink is attached.
+- Node calls `adapter.recordSignal` when present. Python calls `deliver_signal` and swallows sink exceptions.
+- Telemetry loss must not break evaluate or login paths.
+- After shutdown, calls degrade with `AlreadyClosed`.
+
+## Related
+
+- [Releases](/concepts/releases) — lifecycle vs `recordOutcome`
+- [Exposures](/concepts/exposures) — assignment proof
+- [Errors](/production/errors) — the 15 `errorKind` values
+- [Quickstart](/quickstart) — record an outcome in the first-hour path
