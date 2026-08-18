@@ -5,3 +5,10 @@
 # Draft content
 drafts/
 *.draft.mdx
+
+# Internal planning (not published on the docs site)
+TASKS.md
+DOCUMENTATION_GAPS.md
+audits/
+scripts/
+.github/

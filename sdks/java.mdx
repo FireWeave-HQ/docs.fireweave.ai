@@ -1,0 +1,284 @@
+---
+title: "Java"
+description: "Install and use the FireWeave Java SDK. No controlPoints namespace, no registerTarget, no environment auto-read, and close() does not flush exposures."
+---
+
+The Java SDK is `ai.fireweave:fireweave-{sdk,openfeature,adapter-posthog,testing}` at `0.1.0-SNAPSHOT`. It evaluates flags, drives a **release** lifecycle, and records **exposures** and **signals**. OpenFeature and the wire protocol use `flagKey`.
+
+<Warning>
+  **Not on Maven Central.** The parent POM says “DO NOT PUBLISH.” `groupId ai.fireweave` is a working assumption pending namespace verification. Install from a checkout with `mvn install`.
+</Warning>
+
+<Warning>
+  **`registerTarget` is not in this SDK** on `master`. There is no `controlPoints` / `flags` facade. Native helpers are **boolean and string only**. `close()` **does not** flush exposures.
+</Warning>
+
+## Supported versions
+
+From the parent POM:
+
+| | Value |
+| --- | --- |
+| Artifacts | `fireweave-sdk` (zero runtime deps), `fireweave-openfeature`, `fireweave-adapter-posthog`, `fireweave-testing` |
+| Version | `0.1.0-SNAPSHOT` |
+| Java | **11+** (`maven.compiler.release`) |
+| OpenFeature | `dev.openfeature:sdk` **1.15.1** (actual pin; not 1.21.0) |
+| Jackson (testing/examples) | `2.18.9` |
+
+CI runs JDK 11 and 25. Document 11+ from the POM; do not treat CI “latest” as a support guarantee.
+
+## Install
+
+```bash
+git clone https://github.com/FireWeave-HQ/fireweave-sdk && cd fireweave-sdk/sdks/java
+mvn install
+```
+
+```xml
+<dependency>
+  <groupId>ai.fireweave</groupId>
+  <artifactId>fireweave-sdk</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+</dependency>
+<dependency>
+  <groupId>ai.fireweave</groupId>
+  <artifactId>fireweave-openfeature</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+</dependency>
+<dependency>
+  <groupId>ai.fireweave</groupId>
+  <artifactId>fireweave-testing</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <scope>test</scope>
+</dependency>
+```
+
+Do not add a Maven Central coordinate as if the artifacts are published.
+
+## Initialize
+
+Plain constructors. No DI framework. `FireweaveClient` implements `AutoCloseable`.
+
+```java
+import ai.fireweave.openfeature.FireweaveProvider;
+import ai.fireweave.sdk.FireweaveConfig;
+import ai.fireweave.sdk.FireweaveRuntime;
+import ai.fireweave.testing.FlagDefinition;
+import ai.fireweave.testing.InMemoryAdapter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.openfeature.sdk.MutableContext;
+import dev.openfeature.sdk.OpenFeatureAPI;
+
+import java.util.Map;
+
+public class Quickstart {
+    public static void main(String[] args) throws Exception {
+        ObjectMapper m = new ObjectMapper();
+        Map<String, FlagDefinition> flags = Map.of("new-checkout",
+            FlagDefinition.fromJson(m.readTree(
+                "{\"type\":\"boolean\",\"enabled\":true,\"variant\":\"on\",\"value\":true}")));
+        FireweaveRuntime runtime = new FireweaveRuntime(
+            FireweaveConfig.builder().build(), new InMemoryAdapter(flags));
+
+        OpenFeatureAPI api = OpenFeatureAPI.getInstance();
+        api.setProviderAndWait("app", new FireweaveProvider(runtime));
+
+        boolean enabled = api.getClient("app")
+            .getBooleanValue("new-checkout", false, new MutableContext("user_42"));
+        System.out.println("new-checkout: " + enabled);
+
+        api.shutdown();
+    }
+}
+```
+
+`FireweaveRuntime.initialize()` / `shutdown()` / `close()`. Shutdown waits at most `shutdownTimeoutMs` (default 10_000) on a daemon thread.
+
+## Configuration and authentication
+
+<Warning>
+  Java does **not** call `System.getenv`. There is no auto-read of `FW_API_URL` or `FW_PROJECT_API_KEY`. Javadoc on `FireweaveRemoteAdapter` *maps* `host()` / `projectApiKey()` to those names for documentation only. Pass them on `FireweaveConfig`.
+</Warning>
+
+`FireweaveConfig` fields: `projectApiKey`, `personalApiKey`, `host`, `allowedHosts`, `requireTargetingKey`, `limits`, `reservedAttributeKeys`, `globalContext`, `localEvaluation`, `onlyEvaluateLocally`, `requestTimeoutMs` (3000), `shutdownTimeoutMs` (10000), `defaultEvaluationOptions`, `telemetryAttributeAllowlist`, `releasesEnabled`, `exposuresEnabled`, `signalsEnabled`.
+
+```java
+FireweaveConfig config = FireweaveConfig.builder()
+    .host("http://127.0.0.1:3901")
+    .projectApiKey("project-api-key_dev")
+    .build();
+FireweaveRuntime runtime = new FireweaveRuntime(config, new FireweaveRemoteAdapter());
+```
+
+Auth: `Authorization: Bearer <key>` from `FireweaveConfig.projectApiKey()`. Paths: `/v1/flags/evaluate`, `/v1/capture` only.
+
+`DEFAULT_ALLOWED_HOSTS`: five PostHog hosts + loopback. Opt-out: `ALLOW_ANY_HOST = "*"`. `https` off-loopback; `http` on loopback only.
+
+See [Configuration and auth](/production/configuration).
+
+## Targets
+
+**Not in this SDK** on `master`. The remote adapter has no `/v1/targets/register` path. A local feature branch with Java parity is **not** source of truth. Pass `targetingKey` and attributes on each evaluate / OpenFeature call.
+
+See [Targeting and targets](/concepts/targeting).
+
+## Evaluate (no `controlPoints` namespace)
+
+There is **no** `controlPoints` or `flags` facade. Use `FireweaveClient.evaluate` or the two typed helpers.
+
+`FlagType`: `BOOLEAN`, `STRING`, `INTEGER`, `FLOAT`, `OBJECT`.
+
+Native helpers: **`getBooleanValue` and `getStringValue` only**. Integer, float, and object go through `evaluate(...)` or OpenFeature.
+
+```java
+import ai.fireweave.sdk.EvaluationContext;
+import ai.fireweave.sdk.EvaluationOptions;
+import ai.fireweave.sdk.FireweaveClient;
+import ai.fireweave.sdk.FlagType;
+import ai.fireweave.sdk.JsonValue;
+
+FireweaveClient client = new FireweaveClient(runtime);
+EvaluationContext ctx = EvaluationContext.builder().targetingKey("user_42").build();
+
+boolean on = client.getBooleanValue("new-checkout", false, ctx);
+String theme = client.getStringValue("checkout-theme", "classic", ctx);
+
+var decision = client.evaluate(
+    "max-items",
+    FlagType.INTEGER,
+    JsonValue.of(0),
+    ctx,
+    EvaluationOptions.builder().sendExposure(false).build());
+```
+
+`EvaluationOptions`: `sendExposure()` (default **false**), `includePayloadMetadata()`. Evaluation **never throws** — failures are `reason=ERROR` with the default.
+
+See [Control points](/concepts/control-points).
+
+## Releases
+
+```java
+import ai.fireweave.sdk.ReleaseContext;
+
+var bound = client.releases().setContext(ReleaseContext.builder()
+    .stampId("stmp_01HZXEXAMP0E00000000000001")
+    .rolloutId("rollout_example_1")
+    .changeId("chg_01HZXEXAMP0E00000000000001")
+    .build());
+if (!bound.isOk()) {
+    throw new IllegalStateException("release context rejected: " + bound.error().message());
+}
+client.releases().start("rollout_example_1");
+client.releases().complete("rollout_example_1");
+```
+
+Returns `ExtensionResult`, not thrown errors. `rolloutId` + `stampIds` required (`stmp_` + 26 Crockford characters).
+
+See [Releases](/concepts/releases).
+
+## Exposures
+
+```java
+import ai.fireweave.sdk.Exposure;
+import ai.fireweave.sdk.JsonValue;
+
+client.exposures().record(new Exposure("user_42", "new-checkout", "on", JsonValue.of(true), null));
+client.exposures().flush();
+```
+
+`sendExposure` defaults to **false**. Dedup is on `(targetingKey, flagKey, variant, value)`.
+
+<Warning>
+  `client.close()` / `runtime.shutdown()` **flushes nothing implicitly**. Call `exposures().flush()` yourself before close.
+</Warning>
+
+See [Exposures](/concepts/exposures).
+
+## Signals
+
+```java
+client.signals().recordHealth("provider", "ok");
+client.signals().recordError("checkout", ErrorKind.Timeout, "upstream");
+client.signals().recordMetric("latency_ms", JsonValue.of(42));
+client.signals().recordOutcome("checkout", "completed");
+```
+
+See [Signals and outcomes](/concepts/signals).
+
+## Capabilities
+
+```java
+client.capabilities().get();
+client.invokeCapability("capabilities.get", Map.of());
+```
+
+`guardrails().check` is a stub (`UnsupportedCapability`).
+
+See [Capabilities](/concepts/capabilities).
+
+## Adapters
+
+| Adapter | Module | Use |
+| --- | --- | --- |
+| `FireweaveRemoteAdapter` | `fireweave-sdk` | Production fw-server |
+| `InMemoryAdapter` | `fireweave-testing` | Tests / offline |
+| `PostHogAdapter` | `fireweave-adapter-posthog` | **Seam only** |
+
+`PostHogAdapter.create(config)` returns `UnsupportedCapability` until a Java PostHog server SDK exists. Production PostHog use requires an injected `PostHogClientApi`. There is **no** local/dev adapter on Java `master`.
+
+See [Adapters](/concepts/adapters).
+
+## OpenFeature
+
+`ai.fireweave.openfeature.FireweaveProvider` on `dev.openfeature:sdk` **1.15.1**. Synchronous — no `CompletionStage`.
+
+Five resolvers: boolean, string, **integer (`Integer`, 32-bit)**, double, object (`Value`). Values outside `Integer` range → `TYPE_MISMATCH` + default (never silent truncation).
+
+`InitMode.AUTOMATIC` | `MANUAL`. Tracking is **not implemented**.
+
+See [OpenFeature](/openfeature).
+
+## Errors
+
+`ErrorKind` enum (15 kinds) + `FireweaveException` + `FireweaveError` value type. Evaluation returns defaults; extensions return `ExtensionResult`.
+
+See [Errors](/production/errors).
+
+## Testing
+
+`ai.fireweave.testing.InMemoryAdapter` with `FlagDefinition`. The test-server stub does **not** implement `/v1/targets/register`.
+
+See [Testing](/testing).
+
+## Shutdown
+
+```java
+client.exposures().flush();
+client.close();        // runtime.shutdown(); does NOT flush
+// or: api.shutdown();
+```
+
+Javadoc on `close()`: “flushes nothing implicitly.”
+
+See [Initialize, ready, shutdown](/production/lifecycle).
+
+## Not in this SDK
+
+- `registerTarget`
+- `controlPoints` / `flags` namespace
+- Native `getIntegerValue` / `getFloatValue` / `getObjectValue`
+- `System.getenv` for `FW_*`
+- Local/dev adapter
+- Live PostHog from API keys alone
+- Implicit flush on `close`
+- Working guardrails
+- OpenFeature Tracking
+
+## Next
+
+<Card title="Quickstart" href="/quickstart">
+  Offline evaluate in every language.
+</Card>
+<Card title="Compatibility" href="/sdks/compatibility">
+  Type split, adapters, and conformance.
+</Card>

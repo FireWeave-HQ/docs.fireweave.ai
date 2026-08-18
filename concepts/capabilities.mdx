@@ -1,0 +1,135 @@
+---
+title: "Capabilities"
+description: "capabilities.get reports what this SDK build and adapter can do. Guardrails are a typed stub — always false."
+---
+
+A **capability** is a discoverable fact about this package build and the attached [adapter](/concepts/adapters). `capabilities.get()` returns a structured matrix (`static` ∪ `runtime`), not a flat list of strings.
+
+OpenFeature and the wire still say `flagKey`. The matrix still pins `static.features.flags: true` even though the product noun is [control point](/concepts/control-points).
+
+## Why it exists
+
+Language surfaces diverge (registration, typed getters, local adapters). Harnesses and defensive app code should ask the client what it can do instead of sniffing versions or copying another language’s namespace.
+
+## When to use it
+
+- Gate optional paths (`localEvaluation`, `exposureEmission`, `remoteEvaluation`)
+- Confirm `guardrails` is false before you assume ramp control exists in-process
+- Invoke a named operation dynamically and accept `UnsupportedCapability`
+
+You do not need this for a normal evaluate + record-outcome path.
+
+## How it relates
+
+| Concept | Relation |
+|---------|----------|
+| [Adapters](/concepts/adapters) | `runtime.backend` and `runtime.features` come from the adapter |
+| [Control points](/concepts/control-points) | Node reports `controlPoints: true` beside retained `flags: true` |
+| [Releases](/concepts/releases) / [Exposures](/concepts/exposures) / [Signals](/concepts/signals) | Named operations in the canonical list |
+| Guardrails | **Non-feature.** Typed stub; every call degrades |
+
+<Warning>
+  In-app “bind capabilities per environment” is undefined in recovered console copy and **NEEDS VERIFICATION**. It is not this SDK API.
+</Warning>
+
+## What `get()` returns
+
+Shape: `spec/capabilities.schema.json`.
+
+### `static` (compile-time)
+
+| Field | Meaning |
+|-------|---------|
+| `language` | `node` \| `web` \| `python` \| `go` \| `java` |
+| `sdkVersion` / `specVersion` | Build + spec `0.1.0` |
+| `openFeature.specFloor` | `0.8.0` |
+| `openFeature.providerName` | `fireweave` (Web provider metadata name is `fireweave-web`) |
+| `features.flags` | Always `true` (conformance pin) |
+| `features.controlPoints` | Present where the namespace exists (Node reports `true`) |
+| `features.releases` / `exposures` / `signals` | This build includes those extensions |
+| `features.guardrails` | **Always `false`** in phase one |
+| `features.inMemoryAdapter` | Always `true` |
+| `features.remoteAdapter` / `posthogAdapter` | Language-dependent. Node 2.1 does not report `posthogAdapter`. Java reports `posthogAdapter: false` until an upstream artifact exists |
+
+### `runtime` (adapter + config)
+
+| Field | Meaning |
+|-------|---------|
+| `backend` | `fireweave` \| `posthog` \| `inmemory` \| `none` \| `other` (`other` is what Node’s local/dev adapter reports) |
+| `lifecycle` | `UNINITIALIZED` \| `INITIALIZING` \| `READY` \| `STALE` \| `ERROR` \| `FATAL` \| `SHUTDOWN` |
+| `features.remoteEvaluation` | Remote adapter can call `/v1/flags/evaluate` |
+| `features.localEvaluation` | Adapter resolves in-process (InMemory and Local report true; Node remote reports **false** — secret-key poll was removed in 2.1) |
+| `features.localOnly` | Dev/fixture adapters that never call a network |
+| `features.exposureEmission` | Adapter has an exposure sink (InMemory true; Local false — no sink) |
+| `features.sideEffectFreeReads` | Reads do not imply vendor emission |
+| `features.groupAnalytics` | Adapter accepts group context |
+| `limits.intSafeMaxAbs` | `9007199254740991` (2^53−1) |
+| `limits.shutdownTimeoutMsDefault` | `10000` |
+
+## Canonical operations
+
+Identical names across languages:
+
+```
+releases.setContext  releases.start  releases.complete  releases.fail
+exposures.record     exposures.flush
+signals.recordHealth signals.recordError signals.recordMetric signals.recordOutcome
+capabilities.get
+```
+
+## API
+
+<Tabs>
+  <Tab title="Node">
+    ```ts
+    const caps = client.capabilities.get();
+    // caps.static.features.guardrails === false
+    // caps.runtime.backend === 'fireweave' | 'inmemory' | 'other' | …
+    client.capabilities.list(); // operation-name list
+    client.invokeCapability('releases.start'); // unknown names degrade
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    client.capabilities.get()
+    client.capabilities.names()
+    client.capabilities.invoke("releases.start")
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```go
+    caps := client.Capabilities().Get()
+    ops := client.Capabilities().Operations()
+    err := client.Capabilities().Invoke(ctx, "releases.start", nil)
+    _ = caps
+    _ = ops
+    _ = err
+    ```
+  </Tab>
+  <Tab title="Java">
+    ```java
+    Capabilities caps = client.capabilities().get();
+    caps.names();
+    client.invokeCapability("releases.start", null); // unknown → UnsupportedCapability
+    ```
+  </Tab>
+</Tabs>
+
+Unknown names on `invokeCapability` / `invoke` / `Invoke` degrade with `UnsupportedCapability`. They never throw.
+
+## Guardrails are a stub
+
+Every language ships types so the name is stable, and every call returns `UnsupportedCapability` (often with `degraded: true`). The static matrix reports `guardrails: false`.
+
+```ts
+client.guardrails.evaluate('ramp-gate');
+// { ok: false, degraded: true, errorKind: 'UnsupportedCapability' }
+```
+
+Do not write a how-to for client-side auto-rollback. Console Block / rollback copy is not this API.
+
+## Related
+
+- [Adapters](/concepts/adapters) — what `runtime.backend` means
+- [Compatibility](/sdks/compatibility) — language matrix
+- [Core concepts](/concepts) — collisions including guardrails vs console

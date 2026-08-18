@@ -1,0 +1,185 @@
+---
+title: "Configuration and auth"
+description: "Connect a FireWeave SDK to fw-server: FW_API_URL, FW_PROJECT_API_KEY, Bearer auth, host allowlists, and timeouts."
+---
+
+Production evaluation uses `FireweaveRemoteAdapter` (web: `FireweaveRemoteWebAdapter`). It speaks `POST /v1/flags/evaluate` and `POST /v1/capture`. Node, Python, and Web also call `POST /v1/targets/register`.
+
+Auth on the wire is `Authorization: Bearer <FireWeave project key>`. Current key prefix in the spec: `project-api-key_…`. Never send PostHog `phc_` / `phs_` / `phx_` keys on this path.
+
+<Warning>
+  **Java** does not read `FW_*` from the environment — pass `FireweaveConfig`. **Web** reads **no** environment — `apiUrl` and `apiKey` are required constructor fields.
+</Warning>
+
+## Environment variables
+
+Exact names from the remote adapters:
+
+| Variable | Read by | Maps to |
+| --- | --- | --- |
+| `FW_API_URL` | Node, Python, Go remote adapters | fw-server base URL |
+| `FW_PROJECT_API_KEY` | Node, Python, Go remote adapters | Bearer token |
+| `FW_DEPRECATION_WARNINGS` | Node and Python | Set to `1` for one process-wide notice when `client.flags` is used. Silent otherwise. |
+
+<Note>
+  Deno: `readEnv()` treats a denied `--allow-env` as absence, not a throw. Pass `apiUrl` / `apiKey` explicitly and you do not need `--allow-env`. You still need `--allow-net` to reach fw-server.
+</Note>
+
+Do **not** document `FIREWEAVE_POSTHOG_KEY`, `FIREWEAVE_POSTHOG_HOST`, `FW_POSTHOG_HOST`, or `FW_SECRET_KEY` as SDK configuration. Those appear in **examples only**.
+
+## Per-language setup
+
+<Tabs>
+  <Tab title="Node">
+    ```ts
+    import { FireweaveRemoteAdapter, FireweaveRuntime, FireweaveClient } from '@fireweaveai/sdk';
+
+    const adapter = new FireweaveRemoteAdapter({
+      // or omit and read FW_API_URL / FW_PROJECT_API_KEY
+      apiUrl: process.env.FW_API_URL,
+      apiKey: process.env.FW_PROJECT_API_KEY,
+      requestTimeoutMs: 3000,
+      shutdownTimeoutMs: 10000,
+    });
+    const runtime = new FireweaveRuntime(adapter);
+    const client = new FireweaveClient(runtime);
+    await client.initialize();
+    ```
+
+    `FireweaveRemoteAdapterOptions`: `apiUrl`, `apiKey`, `allowedHosts`, `requestTimeoutMs` (default **3000**), `shutdownTimeoutMs` (default **10000**), optional injected `fetch`.
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from fireweave import FireweaveClient, FireweaveRuntime
+    from fireweave.adapters import FireweaveRemoteAdapter
+
+    adapter = FireweaveRemoteAdapter()  # reads FW_API_URL / FW_PROJECT_API_KEY when omitted
+    runtime = FireweaveRuntime(adapter)
+    runtime.initialize()
+    with FireweaveClient(runtime) as client:
+        ...
+    ```
+
+    `FireweaveConfig` also has `feature_flags_request_timeout_ms` (default 3000) and `shutdown_timeout_ms` (default 10000).
+  </Tab>
+  <Tab title="Go">
+    Runtime `fireweave.Config` has **no** API URL or key. Those live on the remote adapter:
+
+    ```go
+    adapter, err := remote.New(remote.Config{
+        APIURL:         os.Getenv("FW_API_URL"),
+        APIKey:         os.Getenv("FW_PROJECT_API_KEY"),
+        RequestTimeout: 3 * time.Second,
+        CloseTimeout:   10 * time.Second,
+    })
+    runtime := fireweave.NewRuntime(adapter, fireweave.Config{})
+    ```
+  </Tab>
+  <Tab title="Java">
+    **No `System.getenv`.** Javadoc *equates* `host()` / `projectApiKey()` to `FW_API_URL` / `FW_PROJECT_API_KEY` for documentation only.
+
+    ```java
+    FireweaveConfig config = FireweaveConfig.builder()
+        .host("https://your-fw-server.example")
+        .projectApiKey(projectApiKey) // pass from your secrets manager
+        .requestTimeoutMs(3000)
+        .shutdownTimeoutMs(10000)
+        .build();
+    FireweaveRemoteAdapter adapter = new FireweaveRemoteAdapter();
+    FireweaveRuntime runtime = new FireweaveRuntime(config, adapter);
+    runtime.initialize();
+    ```
+  </Tab>
+  <Tab title="Web">
+    Constructor fields are **required**. The package never reads `process`, `Deno`, or `import.meta.env`.
+
+    ```ts
+    import {
+      FireweaveRemoteWebAdapter,
+      FireweaveWebRuntime,
+      FireweaveWebClient,
+    } from '@fireweaveai/web-sdk';
+
+    const adapter = new FireweaveRemoteWebAdapter({
+      apiUrl: apiUrl,
+      apiKey: apiKey,
+    });
+    const runtime = new FireweaveWebRuntime(adapter);
+    const client = new FireweaveWebClient(runtime);
+    ```
+
+    Vendor key shapes `phc_` / `phs_` / `phx_` are rejected at construction (`FireweaveError('Configuration')`).
+  </Tab>
+</Tabs>
+
+## HTTPS and host allowlists
+
+`https` is required off-loopback. Plain `http` is allowed on loopback only (`localhost`, `127.0.0.1`, `::1`) for the test stub.
+
+Default allowlists **differ by language**:
+
+| Surface | `DEFAULT_ALLOWED_HOSTS` |
+| --- | --- |
+| Node 2.1 and Web | `app-server.fireweave.ai`, `staging-app-server.fireweave.ai`, plus loopback |
+| Python, Go (PostHog adapter), Java | five PostHog hosts plus loopback |
+| Go remote adapter | hostname of the configured `APIURL` plus loopback |
+
+Self-hosted or custom hosts need an explicit `allowedHosts` / `allowed_hosts` entry. A literal `*` (Java: `ALLOW_ANY_HOST`) opts out of host pinning; **https is still required off-loopback**.
+
+A host that fails the allowlist or scheme check is `Configuration` (`PROVIDER_FATAL` on init). Error messages do **not** echo the host or the key.
+
+<Warning>
+  `app-server.fireweave.ai` and `staging-app-server.fireweave.ai` appear in the Node/Web allowlist. Whether those hostnames are live, what TLS they require, and whether they are the customer-facing URLs is **not verified** from the SDK repo. Do not treat them as confirmed production endpoints until platform docs say so. Set `FW_API_URL` to the base URL you were given.
+</Warning>
+
+## Credentials
+
+- Store `FW_PROJECT_API_KEY` in your secret manager or environment. Do not commit it.
+- Error messages and logs redact keys, bearer tokens, and `FW_PROJECT_API_KEY` values.
+- Do not put an `attest:write` project key in a browser bundle.
+
+<Warning>
+  Browser evaluation makes the key the entire authorization boundary. The spec calls for a scoped `fw_public_…` family (`flags:evaluate` + `events:write`) plus per-key rate limiting **before production browser use**. Whether fw-server already issues `fw_public_…` keys is **platform work, not SDK-proven**. Do not invent an issuance flow.
+</Warning>
+
+The remote protocol spec also accepts `x-api-key`. Shipped adapters document and send **Bearer**. Do not assume every language sends `x-api-key` as well.
+
+## Timeouts
+
+Verified defaults in the remote adapters and runtime config:
+
+| Setting | Default |
+| --- | --- |
+| Evaluate / capture request timeout | **3000 ms** (`requestTimeoutMs` / `RequestTimeout` / `feature_flags_request_timeout_ms`) |
+| Shutdown / close deadline | **10000 ms** (`shutdownTimeoutMs` / `CloseTimeout` / `shutdown_timeout_ms`) |
+| Web prefetch ceiling (STALE) | **5000 ms** (`DEFAULT_FLAGS_READY_TIMEOUT_MS`) |
+
+## Reliability (verified only)
+
+- **Batching:** exposures and signals queue in-process and POST to `/v1/capture` as `{ events: [...] }` on `flush`. Web evaluation prefetches **one batch** `/v1/flags/evaluate` per context. Node 2.1 remote evaluation is a **per-call** fw-server round trip (no in-process definition cache).
+- **Retries:** `registerTarget` / `register_target` / Web `identify` **retry once** when the error taxonomy marks the failure retryable (network / timeout / backend). Auth and invalid-payload failures are not retried. **Evaluate and capture are not retried** by `FireweaveRemoteAdapter` in Node, Python, Go, or Java.
+- **Flush on failure:** Node and Python remote flush catch transport errors, re-queue the batch, and do not throw.
+- **`sendExposure` default:** **false** in every language. See [Exposures](/concepts/exposures).
+
+<Note>
+  Signal and release **delivery** to fw-server vs in-process record is a known compatibility skew (Go / Java adapter sink vs some Node/Python paths). Do not claim “signals always reach the server.” Check `capabilities.get().runtime.features` for the attached adapter.
+</Note>
+
+## What this page does not claim
+
+- Container or serverless runtimes as a supported class (not evidenced in the SDK).
+- Automatic retries on evaluate or capture.
+- Java reading `FW_API_URL` / `FW_PROJECT_API_KEY` from the environment.
+- Web environment-variable configuration.
+- Issued `fw_public_…` keys or a live customer host URL.
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Initialize, ready, shutdown" href="/production/lifecycle" icon="power-off">
+    Lifecycle states and Java close vs flush
+  </Card>
+  <Card title="Errors" href="/production/errors" icon="triangle-exclamation">
+    What a default-valued decision means
+  </Card>
+</Columns>

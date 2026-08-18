@@ -1,55 +1,49 @@
-# Mintlify Starter Kit
+# FireWeave docs
 
-Use the starter kit to get your docs deployed and ready to customize.
+Source repository for FireWeave SDK documentation. Pages are MDX. Site config is `docs.json`. Mintlify builds and hosts the site.
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+The intended public hostname is `docs.fireweave.ai`. That hostname is **not** claimed live from this repo — custom domain setup is a Mintlify dashboard + DNS step. See `audits/mintlify-foundation-notes.md`.
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
+Do not invent product APIs here. Writer tasks, the sitemap, and validation checkpoints live in [`TASKS.md`](TASKS.md).
 
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
+This checkout started from the [Mintlify starter kit](https://github.com/mintlify/templates). The root `LICENSE` is MIT, copyright Mintlify 2026.
 
-## AI-assisted writing
+## Requirements
 
-Set up your AI coding tool to work with Mintlify:
+- Node.js **20.17+**
+- Mintlify CLI package **`mint`** (not the old `mintlify` package)
 
 ```bash
-npx skills add https://mintlify.com/docs
-```
-
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
-
-See the [AI tools guides](/ai-tools) for tool-specific setup.
-
-## Development
-
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
-
-```
 npm i -g mint
 ```
 
-Run the following command at the root of your documentation, where your `docs.json` is located:
+`npx mint` also works without a global install.
 
-```
+## Local preview
+
+From this directory (the folder that contains `docs.json`):
+
+```bash
 mint dev
 ```
 
-View your local preview at `http://localhost:3000`.
+Preview: [http://localhost:3000](http://localhost:3000).
 
-## Publishing changes
+Optional: `mint login` enables search and the assistant in local preview.
 
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
+## Validate
 
-## Need help?
+```bash
+mint validate
+mint broken-links --check-anchors --check-redirects
+```
 
-### Troubleshooting
+Keep the CLI current with `mint update`.
 
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
+## Publishing
 
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+Deploys are configured in the [Mintlify dashboard](https://app.mintlify.com) (Git Settings + GitHub App). Pushes to the connected default branch publish automatically after the app is installed. That connection is not represented as files in this repo.
+
+## What is not published
+
+`.mintignore` keeps internal files off the docs site, including `TASKS.md`, `audits/`, `DOCUMENTATION_GAPS.md`, `scripts/`, and `.github/`.
