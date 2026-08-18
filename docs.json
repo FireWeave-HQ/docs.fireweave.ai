@@ -1,53 +1,109 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "FireWeave",
+  "description": "FireWeave SDK documentation: evaluate control points, optionally register targets, drive a release lifecycle, and record exposures and signals. OpenFeature providers ship for Node.js, Python, Go, Java, and the browser.",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
     "dark": "#15803D"
   },
   "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "appearance": {
+    "default": "system"
+  },
   "navigation": {
-    "pages": [
+    "groups": [
       {
-        "group": "Getting Started",
+        "group": "Get Started",
         "pages": [
           "index",
+          "introduction/how-it-works",
+          "introduction/architecture",
           "quickstart"
+        ]
+      },
+      {
+        "group": "SDKs",
+        "pages": [
+          "sdks/node",
+          "sdks/python",
+          "sdks/go",
+          "sdks/java",
+          "sdks/web",
+          "sdks/compatibility"
+        ]
+      },
+      {
+        "group": "Concepts",
+        "pages": [
+          "concepts",
+          "concepts/control-points",
+          "concepts/targeting",
+          "concepts/releases",
+          "concepts/exposures",
+          "concepts/signals",
+          "concepts/capabilities",
+          "concepts/adapters"
+        ]
+      },
+      {
+        "group": "OpenFeature",
+        "pages": [
+          "openfeature"
+        ]
+      },
+      {
+        "group": "Production",
+        "pages": [
+          "production/configuration",
+          "production/lifecycle",
+          "production/errors"
+        ]
+      },
+      {
+        "group": "Testing",
+        "pages": [
+          "testing"
+        ]
+      },
+      {
+        "group": "Troubleshooting",
+        "pages": [
+          "troubleshooting"
+        ]
+      },
+      {
+        "group": "Migration",
+        "pages": [
+          "migration/node-2"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "reference/packages"
         ]
       }
     ],
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "SDK source",
+          "href": "https://github.com/FireWeave-HQ/fireweave-sdk",
+          "icon": "github"
         }
       ]
     }
   },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
     "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "type": "github",
+      "href": "https://github.com/FireWeave-HQ/fireweave-sdk"
     }
   },
   "contextual": {
@@ -64,9 +120,36 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/FireWeave-HQ/fireweave-sdk"
     }
+  },
+  "seo": {
+    "indexing": "navigable",
+    "metatags": {
+      "og:site_name": "FireWeave Docs",
+      "canonical": "https://docs.fireweave.ai"
+    },
+    "organization": {
+      "name": "FireWeave",
+      "url": "https://fireweave.ai",
+      "sameAs": [
+        "https://github.com/FireWeave-HQ"
+      ]
+    }
+  },
+  "search": {
+    "prompt": "Search FireWeave docs"
+  },
+  "metadata": {
+    "timestamp": true
+  },
+  "markdown": {
+    "instructions": [
+      "Official FireWeave SDK documentation.",
+      "Product noun is control point. OpenFeature and the wire protocol use flagKey — do not invent controlPointKey.",
+      "Do not invent APIs, packages, env vars, or endpoints. Guardrails are a typed stub (UnsupportedCapability). OpenFeature Tracking (spec section 6) is not implemented.",
+      "registerTarget and identify exist on Node, Python, and Web only. Go and Java have no target-registration API on master.",
+      "sendExposure defaults to false. Java close() does not flush exposures."
+    ]
   }
 }
