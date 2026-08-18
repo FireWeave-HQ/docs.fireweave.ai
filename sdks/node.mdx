@@ -1,0 +1,326 @@
+---
+title: "Node.js, Bun, and Deno"
+description: "Install and use @fireweaveai/sdk to evaluate control points, register targets, and report releases, exposures, and signals on Node, Bun, and Deno."
+---
+
+`@fireweaveai/sdk` is the FireWeave server SDK for JavaScript runtimes. It evaluates **control points**, optionally registers **targets**, drives a **release** lifecycle, and records **exposures** and **signals**. OpenFeature and the wire protocol still use the parameter name `flagKey`.
+
+<Warning>
+  This page documents the **2.1.0** API (`controlPoints`, `FireweaveRemoteAdapter`, no `./posthog` subpath). npm `latest` is **2.1.0** as of 2026-08-17. **2.0.0** is still on npm and is a different API: it still ships a direct PostHog adapter and `@fireweaveai/sdk/posthog`. Pin `2.1.0` if you do not want that surface. See [Migrate Node 2.0 to 2.1](/migration/node-2).
+</Warning>
+
+<Note>
+  FireWeave is pre-release. Package names and the MIT license await company ratification. Do not redistribute packages built from the SDK repository until publication is authorized.
+</Note>
+
+## Supported runtimes
+
+From `package.json#engines` and the SDK runtime docs:
+
+| Runtime | Minimum | Notes |
+| --- | --- | --- |
+| Node.js | `>=20.20` | Reference runtime |
+| Bun | `1.2` | Same package |
+| Deno | `2.0` | Import via `npm:@fireweaveai/sdk` |
+
+The package is ESM, has **zero runtime dependencies**, and a peer of `@openfeature/server-sdk` `^1.22.0` (needed only if you use the OpenFeature provider).
+
+<Note>
+  The native FireWeave surface (control points, targets, releases, exposures, signals, capabilities) is covered on Node, Bun, and Deno. The OpenFeature provider import is gated by Node/Bun CI. Deno's npm compatibility layer is used for `@openfeature/server-sdk` but is not asserted by this repo's smoke job.
+</Note>
+
+## Install
+
+<Tabs>
+  <Tab title="npm 2.1.0">
+    Published versions on npm: `0.1.0`, `2.0.0`, `2.1.0`. Dist-tag `latest` is **2.1.0** (verified 2026-08-17).
+
+    ```bash
+    npm install @fireweaveai/sdk@2.1.0 @openfeature/server-sdk
+    ```
+
+    Bun:
+
+    ```bash
+    bun add @fireweaveai/sdk@2.1.0 @openfeature/server-sdk
+    ```
+
+    An unpinned `npm install @fireweaveai/sdk` currently resolves to 2.1.0. Pin anyway so you do not silently land on 2.0.0 if tags move.
+
+    Deno needs no install step:
+
+    ```ts
+    import { FireweaveClient, FireweaveRemoteAdapter, FireweaveRuntime } from 'npm:@fireweaveai/sdk';
+    ```
+  </Tab>
+  <Tab title="From checkout">
+    Use a checkout when you want the tree at a specific commit:
+
+    ```bash
+    git clone https://github.com/FireWeave-HQ/fireweave-sdk && cd fireweave-sdk
+    (cd sdks/node && npm install && npm run build)
+    # in your app:
+    npm install ../fireweave-sdk/sdks/node/packages/sdk @openfeature/server-sdk
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  Do not install `@fireweaveai/sdk` unpinned and then assume you have 2.1 APIs if `latest` ever points at 2.0.0 again. Check `npm view @fireweaveai/sdk version` if in doubt.
+</Warning>
+
+## Initialize
+
+Build an adapter, a `FireweaveRuntime`, then a `FireweaveClient` and/or `FireweaveProvider`. There is no hidden global client.
+
+```js
+import { OpenFeature } from '@openfeature/server-sdk';
+import { FireweaveProvider, FireweaveRuntime, InMemoryAdapter } from '@fireweaveai/sdk';
+
+const runtime = new FireweaveRuntime(new InMemoryAdapter({
+  flags: {
+    'new-checkout': { type: 'boolean', enabled: true, value: true, variant: 'on' },
+  },
+}));
+
+await OpenFeature.setProviderAndWait(new FireweaveProvider(runtime, { lazyReady: false }));
+const client = OpenFeature.getClient();
+
+const enabled = await client.getBooleanValue('new-checkout', false, {
+  targetingKey: 'user_42',
+});
+console.log('new-checkout:', enabled);
+
+await OpenFeature.close();
+```
+
+`FireweaveProvider` defaults `lazyReady` to **true**: `initialize` returns immediately and evaluations surface `NotReady` until the runtime is `READY`. Pass `{ lazyReady: false }` (as above) to wait.
+
+Lifecycle states: `UNINITIALIZED` | `INITIALIZING` | `READY` | `STALE` | `ERROR` | `FATAL` | `SHUTDOWN`. Default shutdown timeout is `10000` ms.
+
+## Configuration and authentication
+
+`FireweaveRemoteAdapter` is the production adapter. It speaks `POST /v1/flags/evaluate` and `POST /v1/capture` (and `POST /v1/targets/register`). Auth on the wire is `Authorization: Bearer <key>`.
+
+| Option | Env | Default |
+| --- | --- | --- |
+| `apiUrl` | `FW_API_URL` | required (empty → configuration error on init) |
+| `apiKey` | `FW_PROJECT_API_KEY` | required |
+| `allowedHosts` | — | hostname of `apiUrl` + loopback |
+| `requestTimeoutMs` | — | `3000` |
+| `shutdownTimeoutMs` | — | `10000` |
+| `fetch` | — | injected (tests) |
+
+`FireweaveRuntimeConfig` also accepts `projectApiKey`, `host`, `allowedHosts`, `requireTargetingKey`, `limits`, `reservedAttributeKeys`, `shutdownTimeoutMs`.
+
+Other env:
+
+- `FW_DEPRECATION_WARNINGS=1` — one notice per process when you use the `client.flags` alias.
+- Deno: `readEnv()` treats a denied `--allow-env` as absence. Pass `apiUrl` and `apiKey` explicitly if you do not want `--allow-env`.
+
+```js
+import { FireweaveRemoteAdapter, FireweaveProvider, FireweaveRuntime } from '@fireweaveai/sdk';
+import { OpenFeature } from '@openfeature/server-sdk';
+
+const adapter = new FireweaveRemoteAdapter({
+  apiUrl: process.env.FW_API_URL,
+  apiKey: process.env.FW_PROJECT_API_KEY,
+});
+const runtime = new FireweaveRuntime(adapter);
+await OpenFeature.setProviderAndWait(new FireweaveProvider(runtime, { lazyReady: false }));
+```
+
+Default allowlist (`DEFAULT_ALLOWED_HOSTS`): `app-server.fireweave.ai`, `staging-app-server.fireweave.ai`, `localhost`, `127.0.0.1`, `::1`. `https` is required off-loopback; `http` is allowed on loopback only. Pass `allowedHosts: ['*']` to opt out of host pinning.
+
+<Note>
+  Whether `app-server.fireweave.ai` is the customer-facing production host is **NEEDS VERIFICATION** (named in the allowlist; not proven live from the SDK repo). Current key prefix in the spec is `project-api-key_…`. Never send PostHog `phc_` / `phs_` / `phx_` keys on this path.
+</Note>
+
+The spec also accepts `x-api-key`. This adapter documents Bearer. Whether it also sends `x-api-key` is **NEEDS VERIFICATION**.
+
+See [Configuration and auth](/production/configuration).
+
+## Targets
+
+```js
+const registered = await runtime.registerTarget('user_42', {
+  kind: 'user',
+  properties: { plan: 'pro', region: 'eu-west' },
+});
+console.log(registered.ok, registered.error?.kind);
+```
+
+`RegisterTargetOptions`: `kind?: 'user' | 'device'`, `properties?`, `environment?`, `signal?`. Returns `{ ok, error? }` and **never throws** (login-path contract). Wire: `POST /v1/targets/register`.
+
+`InMemoryAdapter` and `FireweaveLocalAdapter` do not implement registration — they report `UnsupportedCapability` so a harness does not look registered when it is not.
+
+See [Targeting and targets](/concepts/targeting).
+
+## Control points
+
+OpenFeature and the wire still say `flagKey`. The product name is **control point**. `client.controlPoints` is the native API. `client.flags` is the **same object** (deprecated JSDoc alias; not scheduled for removal in 2.x).
+
+Types (`ExpectedFlagType`): `'boolean'` | `'string'` | `'number'` | `'object'`. `'number'` is a single IEEE-754 double. Integers beyond ±(2^53−1) are not lossless.
+
+```js
+import { FireweaveClient } from '@fireweaveai/sdk';
+
+const fireweave = new FireweaveClient(runtime);
+
+const decision = await fireweave.controlPoints.evaluate('new-checkout', 'boolean', false, {
+  targetingKey: 'user_42',
+});
+console.log(decision.reason, decision.variant, decision.metadata);
+
+const on = await fireweave.controlPoints.getBooleanValue('new-checkout', false, {
+  targetingKey: 'user_42',
+});
+```
+
+Helpers: `getBooleanValue`, `getStringValue`, `getNumberValue`, `getObjectValue`. `evaluate` returns a `Decision` and **never throws** — failures are `reason: ERROR` with the caller default.
+
+`EvaluateOptions`: `includePayload?`, `sendExposure?` (default **false**), `signal?`.
+
+See [Control points](/concepts/control-points).
+
+## Releases
+
+`ReleaseContext` requires `rolloutId` (1–128 characters) and `stampIds` (`stmp_` + 26 Crockford characters, 1–64 unique). Optional `changeId` (`chg_` + 26).
+
+```js
+fireweave.releases.setContext({
+  rolloutId: 'rollout_01HZXEXAMPE000000000000001',
+  stampIds: ['stmp_01HZXEXAMPE000000000000001'],
+});
+fireweave.releases.start();
+fireweave.releases.complete();
+// or: fireweave.releases.fail()
+```
+
+<Note>
+  Whether release transitions always reach fw-server (versus in-process record) is **NEEDS VERIFICATION**. Compatibility notes a delivery skew across languages.
+</Note>
+
+See [Releases](/concepts/releases).
+
+## Exposures
+
+Evaluate-path emission is **opt-in**. `sendExposure` defaults to **false**. Record explicitly, then flush.
+
+```js
+fireweave.exposures.record({
+  targetingKey: 'user_42',
+  flagKey: 'new-checkout',
+  value: true,
+  variant: 'on',
+});
+await fireweave.exposures.flush();
+```
+
+Dedup is on `(targetingKey, flagKey, variant, value)`. `shutdown()` flushes exposures first.
+
+See [Exposures](/concepts/exposures).
+
+## Signals
+
+Kinds: `health` | `error` | `metric` | `outcome`.
+
+```js
+fireweave.signals.recordHealth({ name: 'checkout-api', status: 'healthy' });
+fireweave.signals.recordError({ name: 'checkout-api', errorKind: 'Timeout', message: 'upstream timed out' });
+fireweave.signals.recordMetric({ name: 'checkout.latency_ms', value: 42, unit: 'ms' });
+fireweave.signals.recordOutcome({ name: 'checkout', status: 'completed' });
+```
+
+Attribute allowlist is **on by default** (`DEFAULT_SIGNAL_ATTRIBUTE_ALLOWLIST`): `name`, `kind`, `status`, `value`, `unit`, `rolloutId`, `changeId`, `stampId`, `errorKind`, `message`, `flagKey`, `variant`, `environment`, `service`.
+
+See [Signals and outcomes](/concepts/signals).
+
+## Capabilities
+
+```js
+const caps = fireweave.capabilities.get();
+console.log(caps.runtime);
+fireweave.capabilities.list();
+fireweave.invokeCapability('capabilities.get');
+```
+
+`guardrails.evaluate` is a typed stub: every call degrades with `UnsupportedCapability`. Do not treat guardrails as a working feature.
+
+See [Capabilities](/concepts/capabilities).
+
+## Adapters
+
+| Adapter | Use |
+| --- | --- |
+| `FireweaveRemoteAdapter` | Production. Only network adapter in 2.1. |
+| `InMemoryAdapter` | Tests and offline quickstarts. `{ flags, fault?, initError?, initGate? }`. |
+| `FireweaveLocalAdapter` + `makeFireweaveLocalProvider()` | Dev boolean map. Keys in `devFlags` resolve `STATIC`; unknown keys become the caller default with reason `DEFAULT` (`FLAG_NOT_FOUND` rewritten on the local provider only). |
+
+```js
+import { makeFireweaveLocalProvider, getFwLocalCaptures, resetFwLocalCaptures } from '@fireweaveai/sdk';
+
+const provider = makeFireweaveLocalProvider({
+  devFlags: { 'new-checkout': true },
+});
+```
+
+There is **no** `./posthog` export and **no** in-process local evaluation (secret-key poll) on 2.1. Both shipped adapters report `localEvaluation: false`.
+
+See [Adapters](/concepts/adapters) and [Testing](/testing).
+
+## OpenFeature
+
+`FireweaveProvider` — `runsOn = 'server'`, metadata name `'fireweave'`.
+
+Resolvers: `resolveBooleanEvaluation`, `resolveStringEvaluation`, `resolveNumberEvaluation`, `resolveObjectEvaluation`.
+
+Options: `includePayload?`, `sendExposure?` (default false), `lazyReady?` (default **true**).
+
+Releases, exposures, signals, targets, and capabilities live on `FireweaveClient`, not on the OpenFeature client. OpenFeature Tracking (spec §6) is **not implemented**.
+
+See [OpenFeature](/openfeature).
+
+## Errors
+
+Single class `FireweaveError` with 15 kinds: `NotReady`, `FlagNotFound`, `TypeMismatch`, `InvalidContext`, `Authentication`, `Authorization`, `RateLimited`, `Timeout`, `Network`, `BackendUnavailable`, `MalformedResponse`, `UnsupportedCapability`, `Configuration`, `AlreadyClosed`, `Internal`.
+
+Evaluation **never throws**. Helpers: `isFireweaveError`, `ERROR_TAXONOMY`, `redactSecrets`.
+
+See [Errors](/production/errors).
+
+## Testing
+
+Use `InMemoryAdapter` so nothing needs a network. The repo test-server stub implements `POST /v1/flags/evaluate`, `POST /v1/capture`, and `GET /health`. It does **not** implement `POST /v1/targets/register`.
+
+See [Testing](/testing).
+
+## Shutdown
+
+```js
+await fireweave.shutdown(); // flushes exposures, then shuts down
+await OpenFeature.close();
+```
+
+Default timeout: 10 seconds. After shutdown, later evaluations degrade with `AlreadyClosed`.
+
+See [Initialize, ready, shutdown](/production/lifecycle).
+
+## Not in this SDK (2.1)
+
+- `@fireweaveai/sdk/posthog` / `PostHogAdapter` / `posthog-node` peer — removed. Stay on **2.0.0** only if you still need that path.
+- In-process local evaluation (`onlyEvaluateLocally`, secret-key definition poll).
+- Working guardrails.
+- OpenFeature Tracking.
+
+## Next
+
+<Card title="Quickstart" href="/quickstart">
+  Offline evaluate in every language.
+</Card>
+<Card title="Compatibility" href="/sdks/compatibility">
+  Type split, adapters, and conformance.
+</Card>
+<Card title="Migrate from 2.0.0" href="/migration/node-2">
+  The three 2.1 breaking changes, quoted from the CHANGELOG.
+</Card>

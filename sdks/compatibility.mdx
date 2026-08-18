@@ -1,0 +1,139 @@
+---
+title: "Compatibility"
+description: "Runtime floors, evaluation types, adapters, and conformance for the five FireWeave SDKs — from manifests and the SDK audit only."
+---
+
+Spec version **0.1.0**. OpenFeature specification floor **v0.8.0**. Source: SDK `master` `dfeb478` plus live registry checks on 2026-08-17.
+
+<Note>
+  Language surfaces are **not** identical. This page records the asymmetry. Do not assume a method exists in every SDK.
+</Note>
+
+## Packages and publish state
+
+| Surface | Package | Version in tree | Published? (verified 2026-08-17) |
+| --- | --- | --- | --- |
+| Node / Bun / Deno | `@fireweaveai/sdk` | `2.1.0` | **Yes.** npm `0.1.0`, `2.0.0`, `2.1.0`. Dist-tag `latest` = **2.1.0**. `2.0.0` is a different API (direct PostHog adapter). Pin `2.1.0`. |
+| Python | `fireweave` | `0.1.0` | **Yes on PyPI** (`fireweave==0.1.0`). `pip install 'fireweave[openfeature]'` is valid. Checkout remains an alternative for an unreleased tree. |
+| Go | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go` | `0.1.0` (matrix); `go.mod` is `go 1.25.12` | **No.** Go proxy 404. Checkout + `replace` only. |
+| Java | `ai.fireweave:fireweave-{sdk,openfeature,adapter-posthog,testing}` | `0.1.0-SNAPSHOT` | **No.** POM: “DO NOT PUBLISH.” Maven Central has no `ai.fireweave` artifacts. |
+| Browser | `@fireweaveai/web-sdk` | `2.1.0` | **Yes on npm** (`2.1.0`, `gitHead` = `dfeb478`). `npm install @fireweaveai/web-sdk@2.1.0` is valid. |
+
+<Note>
+  Registry tags can move. Re-check npm/PyPI before you ship install copy. As of 2026-08-17: Node `latest` = 2.1.0, Web 2.1.0, Python 0.1.0; Go and Java stay unpublished.
+</Note>
+
+License MIT; “do not redistribute packages built from this repository until the license is ratified and publication is authorized.”
+
+## Runtime floors (manifests)
+
+CI also runs extra cells (`latest` / `stable` / `canary`). Those float. **Support floors are the manifest numbers**, not the floating cells.
+
+| SDK | Manifest floor | Also exercised in CI (not a guarantee) |
+| --- | --- | --- |
+| Node | Node `>=20.20` (`engines`) | Node 20 + 24 |
+| Bun (same package) | Bun `1.2` (runtime docs) | Bun 1.2.0 + latest |
+| Deno (same package) | Deno `2.0` (runtime docs) | `v2.x` + canary |
+| Python | Python `>=3.10` (`requires-python`) | 3.10 + 3.14 |
+| Go | `go 1.25.12` (`go.mod`) | `1.25.x` + stable |
+| Java | Java **11+** (`maven.compiler.release`) | JDK 11 + 25 |
+| Web | Browser. No Node/Deno target. | Bun + happy-dom only |
+
+## Evaluation types
+
+OpenFeature and the wire use `flagKey`. Native product noun is **control point** where that namespace exists.
+
+| | Native evaluate | Boolean | String | Numeric | Object |
+| --- | --- | --- | --- | --- | --- |
+| Node 2.1 | `client.controlPoints.*` (`flags` alias) | `getBooleanValue` | `getStringValue` | **`number`** (IEEE-754 double) | `getObjectValue` |
+| Python | `client.control_points.*` (`flags` alias) | `get_boolean_value` | `get_string_value` | **`integer` + `float`** | `get_object_value` |
+| Go | `client.Flags().Evaluate` only | via `FlagTypeBoolean` | via `FlagTypeString` | **`integer` + `float`** | via `FlagTypeObject` |
+| Java | `evaluate` / `getBooleanValue` / `getStringValue` | helper | helper | **`INTEGER` / `FLOAT` via `evaluate` or OF** | via `evaluate` or OF |
+| Web | `client.controlPoints.*` (**sync**) | `getBooleanValue` | `getStringValue` | **`number`** | `getObjectValue` |
+
+### Numeric limitations (pre-declared)
+
+| Language | Limitation | Behavior |
+| --- | --- | --- |
+| Node / Web | Single `number` resolver; IEEE-754 double | Integers beyond ±(2^53−1) are not lossless. Node: 2 conformance skips. |
+| Java OpenFeature | Integer resolver is 32-bit `Integer` | Outside range → `TYPE_MISMATCH` + default (never silent truncation). 1 skip. |
+| All | Canonical JSON numbers | Cross-language integer reliability within ±(2^53−1). |
+
+Go OpenFeature integers are `int64`.
+
+## Feature matrix
+
+| Capability | Node 2.1 | Python | Go | Java | Web |
+| --- | --- | --- | --- | --- | --- |
+| Product namespace | `controlPoints` (`flags` alias) | `control_points` (`flags` alias) | `Flags()` only | **none** | `controlPoints` (sync) |
+| `registerTarget` / identify | `runtime.registerTarget` | `runtime.register_target` | **absent** | **absent** | `client.identify()` → `registerTarget` |
+| Remote adapter | `FireweaveRemoteAdapter` | `FireweaveRemoteAdapter` | `adapters/remote` | `FireweaveRemoteAdapter` | `FireweaveRemoteWebAdapter` |
+| In-memory | `InMemoryAdapter` | `InMemoryAdapter` | `adapters/inmemory` | `ai.fireweave.testing.InMemoryAdapter` | `InMemoryWebAdapter` |
+| Local / dev adapter | `FireweaveLocalAdapter` | `FireweaveLocalAdapter` | **absent** | **absent** | `FireweaveLocalWebAdapter` |
+| Direct PostHog adapter | **removed** | `fireweave[posthog]` | `adapters/posthog` | seam only (`create(config)` → `UnsupportedCapability`) | **none** |
+| In-process local eval | **none** | via PostHog extra | via PostHog adapter | blocked on unpublished `com.posthog:posthog-server` | never (`localEvaluation` structurally false) |
+| Env-var config | `FW_API_URL`, `FW_PROJECT_API_KEY`, `FW_DEPRECATION_WARNINGS` | same on remote adapter | `FW_API_URL`, `FW_PROJECT_API_KEY` on remote | **no `System.getenv`** | **reads no environment** |
+| Default host allowlist | Fireweave hosts + loopback | PostHog hosts + loopback | PostHog (PostHog adapter) / configured host + loopback (remote) | PostHog hosts + loopback | Fireweave hosts + loopback |
+| `sendExposure` default | **false** | **false** | **false** | **false** | **false** |
+| Shutdown flushes exposures | yes | yes | via `Flush` / provider shutdown | **`close()` does not** | yes (+ unload flush) |
+| Guardrails | stub | stub | stub | stub | stub |
+| OpenFeature Tracking (§6) | **not implemented** | **not implemented** | **not implemented** | **not implemented** | **not implemented** |
+
+## OpenFeature pins
+
+| Binding | Provider | OF SDK pin | Resolvers |
+| --- | --- | --- | --- |
+| Node | `FireweaveProvider` | `@openfeature/server-sdk` ^1.22.0 (peer) | boolean, string, **number**, object |
+| Python | `fireweave.openfeature.FireweaveProvider` | `openfeature-sdk` `>=0.10,<0.11` extra | boolean, string, **integer**, **float**, object |
+| Go | `openfeature.NewProvider` | `go-sdk` v1.17.2 | boolean, string, float, **int64**, object |
+| Java | `ai.fireweave.openfeature.FireweaveProvider` | `dev.openfeature:sdk` **1.15.1** | boolean, string, **32-bit Integer**, double, object |
+| Web | `FireweaveWebProvider` | `@openfeature/web-sdk` ^1.9.0 (peer) | boolean, string, **number**, object — **sync** |
+
+Verified: typed resolvers, detailed resolution, `flagMetadata`, provider initialize/shutdown, user-registered hooks. FireWeave ships **no** product hooks except Go’s reserved-key guard. Domains are domain-safe. Multi-provider: compatible where OpenFeature ships it (Node); **untested on Python**. Tracking: planned, not present.
+
+See [OpenFeature](/openfeature).
+
+## Conformance
+
+From `docs/compatibility.md` + `contracts/README.md`:
+
+| | Fixtures |
+| --- | --- |
+| Server contracts (65) | Python 65/65, Go 65/65, Java 64/65, Node 63/65 |
+| Web (`contracts/web/`) | 10/10 |
+
+All skips are pre-declared (`skipped-with-documented-limitation`). Node skips are the IEEE-754 integer fixtures. Java skip is the 32-bit integer range fixture.
+
+## Server vs web
+
+| | Server SDKs | Web |
+| --- | --- | --- |
+| `controlPoints.*` | Promise / blocking | **synchronous** |
+| Evaluation source | per-call (Node remote has no cache) | prefetched cache |
+| Extra lifecycle | — | **STALE** (5s prefetch ceiling) |
+| Telemetry flush | shutdown hook (except Java `close`) | `visibilitychange` / `pagehide`, `keepalive` / `sendBeacon` |
+| Config | env where implemented | constructor only |
+
+## Known gaps (do not paper over)
+
+1. **Java PostHog** — `PostHogAdapter.create(config)` → `UnsupportedCapability` until upstream publishes a Java server SDK.
+2. **Release/signal delivery skew** — Go (and Java via the adapter seam) deliver release transitions/signals to the backend telemetry sink; Node/Python may record some paths in-process only. **NEEDS VERIFICATION** per adapter before claiming “signals always reach fw-server.”
+3. **OpenFeature Tracking (§6)** — not implemented. Default evaluate remains side-effect-free (`sendExposure` false).
+
+## Language pages
+
+<Card title="Node.js, Bun, Deno" href="/sdks/node">
+  `@fireweaveai/sdk` 2.1.0 vs 2.0.0.
+</Card>
+<Card title="Python" href="/sdks/python">
+  `fireweave` extras and snake_case.
+</Card>
+<Card title="Go" href="/sdks/go">
+  `Flags()` only; no registerTarget.
+</Card>
+<Card title="Java" href="/sdks/java">
+  No env auto-read; close does not flush.
+</Card>
+<Card title="Browser" href="/sdks/web">
+  Sync reads, identify, STALE.
+</Card>
