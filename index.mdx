@@ -9,9 +9,14 @@ FireWeave SDKs evaluate **control points**, optionally register **targets**, dri
   The SDK is **pre-release**. As of 2026-08-17, npm `latest` for `@fireweaveai/sdk` is **2.1.0**, `@fireweaveai/web-sdk@2.1.0` is on npm, and PyPI has `fireweave` **0.1.0**. Pin Node `@2.1.0` — **2.0.0** is still on npm and still ships a direct PostHog adapter and `./posthog`. The Go module and Java `ai.fireweave:*` (`0.1.0-SNAPSHOT`) remain **unpublished** (checkout / `mvn install` only). See [Quickstart](/quickstart).
 </Warning>
 
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-  Install, initialize, evaluate a control point, record an outcome, and shut down — offline first, with real APIs.
-</Card>
+<Columns cols={2}>
+  <Card title="Onboarding" icon="list-check" href="/onboarding">
+    Account, CLI, coding-agent plugin, then ship your first change behind a flag.
+  </Card>
+  <Card title="SDK quickstart" icon="rocket" href="/quickstart">
+    Install, initialize, evaluate a control point, record an outcome, and shut down — offline first, with real APIs.
+  </Card>
+</Columns>
 
 ## SDKs
 
@@ -51,14 +56,14 @@ These capabilities are implemented in the five packages (language differences ar
 - **Capabilities** — `capabilities.get()` reports what this build and adapter can do. Guardrails are a typed stub (`guardrails: false`).
 
 <Note>
-  This site does not document wrap workflows, `fw.isOn`, working client-side guardrails, or OpenFeature Tracking (spec §6). Those are absent or unverified against the SDK.
+  The [onboarding guide](/onboarding) is the product path: plugin skills, `fw.flag`, and gradual rollouts. This SDK reference does not document `fw.isOn`, working client-side guardrails, or OpenFeature Tracking (spec §6) — those are absent or unverified against the SDK packages.
 </Note>
 
 ## Architecture and concepts
 
 <Columns cols={2}>
   <Card title="How it works" icon="diagram-project" href="/introduction/how-it-works">
-    Evaluate, register, capture — the runtime path without console ramp or wrap stories.
+    Evaluate, register, capture — the SDK runtime path. Product onboarding lives under [Onboarding](/onboarding).
   </Card>
   <Card title="Architecture" icon="sitemap" href="/introduction/architecture">
     Provider + Client → Runtime → Adapter, lifecycle states, and the three fw-server paths.
@@ -94,4 +99,4 @@ These capabilities are implemented in the five packages (language differences ar
   </Card>
 </Columns>
 
-Start with the [Quickstart](/quickstart) if you want a first evaluate in one sitting.
+Start with [Onboarding](/onboarding) to ship a first FireWeave rollout, or the [Quickstart](/quickstart) for a first evaluate in one sitting.
