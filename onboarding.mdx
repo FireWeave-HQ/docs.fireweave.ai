@@ -1,0 +1,28 @@
+---
+title: "Onboarding"
+description: "Set up FireWeave once per project, then ship your first change behind a flag with a gradual rollout and an audit trail."
+---
+
+This guide is divided into two parts. **Part 1** gets your account and environment ready. **Part 2** walks you through shipping your first change with FireWeave.
+
+<Columns cols={2}>
+  <Card title="Part 1 — Set up FireWeave" icon="screwdriver-wrench" href="/onboarding/setup">
+    Steps 1–4. Once per project: account, CLI, coding-agent plugin, and SDK initialise.
+  </Card>
+  <Card title="Part 2 — Ship your first change" icon="rocket" href="/onboarding/first-change">
+    Steps 5–8. Wrap a real change in a flag, register the rollout, watch the ramp, and retire dead flags.
+  </Card>
+</Columns>
+
+## What you will have when you finish
+
+- Everyone on the team can sign in at [app.fireweave.ai](https://app.fireweave.ai)
+- The `fw` CLI is installed and authenticated on your machine
+- `/fireweave:initialise`, `/fireweave:safe-rollout`, and `/fireweave:cleanup` are available in your coding agent
+- Your repo can report what it is running, and a first change can ship gradually instead of all at once
+
+<Tip>
+  Block about **45 minutes** for Part 2 and do the first rollout with us on a call. Pick something real but small.
+</Tip>
+
+The SDK-only path (evaluate a control point offline, no console or plugin) is the [Quickstart](/quickstart).

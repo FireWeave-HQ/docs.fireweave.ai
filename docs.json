@@ -22,6 +22,9 @@
         "group": "Get Started",
         "pages": [
           "index",
+          "onboarding",
+          "onboarding/setup",
+          "onboarding/first-change",
           "introduction/how-it-works",
           "introduction/architecture",
           "quickstart"
@@ -92,6 +95,11 @@
     ],
     "global": {
       "anchors": [
+        {
+          "anchor": "Console",
+          "href": "https://app.fireweave.ai",
+          "icon": "browser"
+        },
         {
           "anchor": "SDK source",
           "href": "https://github.com/FireWeave-HQ/fireweave-sdk",
