@@ -1,0 +1,134 @@
+---
+title: "Terraform data sources"
+description: "Look up Fireweave projects and environments with fireweave_project, fireweave_projects, and fireweave_environments."
+---
+
+Use data sources when you need to read org infrastructure that Terraform in this workspace does not manage — or to inspect what you just applied.
+
+Generated schema: [data sources on the Terraform Registry](https://registry.terraform.io/providers/FireWeave-HQ/fireweave/latest/docs).
+
+## `fireweave_project`
+
+Looks up one project. Provide either `id` or `slug`.
+
+| Name | Type | Role |
+| --- | --- | --- |
+| `id` | String | Optional + computed. Project identifier. |
+| `slug` | String | Optional + computed. Project slug within the organisation. |
+| `name` | String | Computed. |
+| `description` | String | Computed. Null when the API has no description. |
+| `status` | String | Computed. `active` or `archived`. |
+
+Exactly one of `id` or `slug` should be set. If you set `id`, the provider calls `GET /v1/projects/{projectID}`. If you set `slug`, it lists projects and matches the slug.
+
+```hcl
+data "fireweave_project" "by_slug" {
+  slug = "payments"
+}
+
+data "fireweave_project" "by_id" {
+  id = "01234567-89ab-cdef-0123-456789abcdef"
+}
+
+output "project_name" {
+  value = data.fireweave_project.by_slug.name
+}
+```
+
+## `fireweave_projects`
+
+Lists every project owned by the organisation associated with the API key. No arguments.
+
+| Name | Type | Role |
+| --- | --- | --- |
+| `projects` | List | Computed. Each item has `id`, `name`, `slug`, and `status`. |
+
+`status` is present when the list API returns it. It may be empty for list-shaped responses.
+
+```hcl
+data "fireweave_projects" "all" {}
+
+output "project_slugs" {
+  value = [for p in data.fireweave_projects.all.projects : p.slug]
+}
+```
+
+## `fireweave_environments`
+
+Lists deploy environments for a given project.
+
+| Name | Type | Role |
+| --- | --- | --- |
+| `project_id` | String | Required. Project whose environments should be listed. |
+| `environments` | List | Computed. Each item has `id`, `slug`, `display_name`, and `is_default`. |
+
+The list is in promotion order as returned by the API.
+
+<Note>
+  The list endpoint can return **partial** objects. `id` may be empty when the API returns list-shape fields (`slug`, `display_name`, `is_default`) without `envId`. Use `slug` to identify a row in that case. A managed `fireweave_environment` resource still has a populated `id` from create or import.
+</Note>
+
+```hcl
+data "fireweave_project" "app" {
+  slug = "payments"
+}
+
+data "fireweave_environments" "pipeline" {
+  project_id = data.fireweave_project.app.id
+}
+
+output "default_env" {
+  value = one([
+    for e in data.fireweave_environments.pipeline.environments : e.slug
+    if e.is_default
+  ])
+}
+```
+
+There is no single-environment data source. Filter `fireweave_environments.environments` by `slug` or `is_default`.
+
+## Combined example
+
+```hcl
+data "fireweave_projects" "all" {}
+
+data "fireweave_project" "selected" {
+  slug = var.project_slug
+}
+
+data "fireweave_environments" "pipeline" {
+  project_id = data.fireweave_project.selected.id
+}
+
+variable "project_slug" {
+  type        = string
+  description = "Slug of an existing Fireweave project to inspect"
+}
+
+output "all_project_slugs" {
+  value = [for p in data.fireweave_projects.all.projects : p.slug]
+}
+
+output "selected_project" {
+  value = {
+    id     = data.fireweave_project.selected.id
+    name   = data.fireweave_project.selected.name
+    status = data.fireweave_project.selected.status
+  }
+}
+
+output "environment_slugs" {
+  value = [for e in data.fireweave_environments.pipeline.environments : e.slug]
+}
+```
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Projects" href="/infrastructure/terraform/projects" icon="folder">
+    Manage the project these data sources read.
+  </Card>
+  <Card title="Environments" href="/infrastructure/terraform/environments" icon="layer-group">
+    Create stages instead of only listing them.
+  </Card>
+</Columns>

@@ -1,0 +1,220 @@
+---
+title: "Rust"
+description: "Install and use the fireweave crate to evaluate control points and register targets. Rust 1.75+."
+---
+
+`fireweave` is the Fireweave server SDK for Rust. It evaluates **control points** and registers **targets** — the two v1 capabilities. The crate is **blocking and synchronous**, like the Python SDK. The wire protocol still uses the parameter name `flagKey`.
+
+## Supported versions
+
+From `Cargo.toml`:
+
+| | Value |
+| --- | --- |
+| Crate | `fireweave` **2.3.0** |
+| `rust-version` | **1.75** |
+| Dependencies | exactly `ureq`, `serde`, `serde_json` |
+
+The SDK reads **no** environment variables. Every option is an explicit field on `InitOptions`.
+
+## Install
+
+```bash
+cargo add fireweave
+```
+
+Or in `Cargo.toml`:
+
+```toml
+fireweave = "2.3.0"
+```
+
+## Initialize
+
+`init_fireweave` is the single entry point. `mode` is required and never inferred. Init returns `Err` (kind `Configuration`) when mode is missing, remote credentials are blank, `api_url` fails the host allowlist, or local mode is combined with credentials.
+
+```rust
+use fireweave::{init_fireweave, InitOptions};
+use std::collections::HashMap;
+
+let mut control_points = HashMap::new();
+control_points.insert("new-checkout".to_string(), true);
+let client = init_fireweave(InitOptions::local_with_control_points(control_points)).unwrap();
+
+assert!(client.control_points.get_boolean_value("new-checkout", false, None));
+client.shutdown();
+```
+
+Production:
+
+```rust
+use fireweave::{init_fireweave, EvaluationContext, InitOptions, RegisterTargetOptions};
+
+let client = init_fireweave(InitOptions::remote(
+    "project-api-key_...",
+    "https://app-server.fireweave.ai",
+)).unwrap();
+
+let properties = serde_json::json!({ "plan": "pro" }).as_object().unwrap().clone();
+client.register_target(
+    "user_42",
+    Some(&RegisterTargetOptions { properties: Some(properties), ..Default::default() }),
+);
+
+let ctx = EvaluationContext::new().with_targeting_key("user_42");
+let enabled = client.control_points.get_boolean_value("new-checkout", false, Some(&ctx));
+
+client.shutdown();
+```
+
+`InitOptions::local()` seeds an empty map. `InitOptions::remote(api_key, api_url)` sets `Mode::Remote`.
+
+Lower-level construction:
+
+```rust
+use fireweave::{FireweaveClient, FireweaveRuntime, InMemoryAdapter, RuntimeConfig};
+use std::sync::Arc;
+
+let adapter = InMemoryAdapter::new(
+    serde_json::json!({
+        "new-checkout": { "type": "boolean", "enabled": true, "variant": "on", "value": true }
+    })
+    .as_object()
+    .unwrap()
+    .clone(),
+);
+let runtime = Arc::new(FireweaveRuntime::new(Box::new(adapter), RuntimeConfig::default()));
+runtime.initialize().unwrap();
+let client = FireweaveClient::new(runtime);
+```
+
+## Configuration and authentication
+
+| Field / constructor | Mode | Description |
+| --- | --- | --- |
+| `InitOptions::remote(api_key, api_url)` | `remote` | fw-server credentials (required) |
+| `allowed_hosts` / `with_allowed_hosts` | `remote` | SSRF allowlist override |
+| `request_timeout_ms` | `remote` | Default `3000` |
+| `InitOptions::local_with_control_points` | `local` | Seeded boolean map |
+| `log` / `with_log` | `local` | Sink for the `[fireweave:local]` trace. Default `eprintln!` |
+
+Auth: `Authorization: Bearer <key>` over `ureq`. Paths: `POST /v1/flags/evaluate`, `POST /v1/targets/register`.
+
+`https` is required off-loopback; `http` is loopback-only. Default allowlist: `app-server.fireweave.ai`, `staging-app-server.fireweave.ai`, plus loopback.
+
+See [Configuration and auth](/production/configuration).
+
+## Targets
+
+`register_target` lives on the client. It never panics.
+
+```rust
+use fireweave::RegisterTargetOptions;
+
+let properties = serde_json::json!({ "plan": "pro", "region": "eu-west" })
+    .as_object()
+    .unwrap()
+    .clone();
+let result = client.register_target(
+    "user_42",
+    Some(&RegisterTargetOptions {
+        properties: Some(properties),
+        ..Default::default()
+    }),
+);
+if !result.ok {
+    eprintln!("register_target failed {:?}", result.error);
+}
+```
+
+`options` may be `None`. In local mode the adapter records the target in-process and traces the call. Recorded targets are readable by downcasting the runtime adapter:
+
+```rust
+use fireweave::{init_fireweave, FireweaveLocalAdapter, InitOptions};
+
+let client = init_fireweave(InitOptions::local()).unwrap();
+client.register_target("user_42", None);
+
+let local_adapter = client
+    .runtime()
+    .adapter()
+    .as_any()
+    .downcast_ref::<FireweaveLocalAdapter>()
+    .expect("local mode is always backed by FireweaveLocalAdapter");
+assert_eq!(local_adapter.registered_targets()[0].targeting_key, "user_42");
+```
+
+See [Targeting and targets](/concepts/targeting).
+
+## Control points
+
+`client.control_points` is the product API. `client.flags()` returns a reference to the same field (`std::ptr::eq` holds). The alias is silent at runtime.
+
+```rust
+use fireweave::{EvaluationContext, FlagType, JsonValue};
+
+let ctx = EvaluationContext::new().with_targeting_key("user_42");
+
+let on = client.control_points.get_boolean_value("new-checkout", false, Some(&ctx));
+let theme = client.control_points.get_string_value("checkout-theme", "classic", Some(&ctx));
+let decision = client.control_points.get_boolean_details("new-checkout", false, Some(&ctx));
+
+let general = client.control_points.evaluate(
+    "new-checkout",
+    FlagType::Boolean,
+    JsonValue::Bool(false),
+    Some(&ctx),
+    None,
+);
+```
+
+Nine methods: `get_boolean_value`, `get_string_value`, `get_number_value`, `get_object_value`, `get_boolean_details`, `get_string_details`, `get_number_details`, `get_object_details`, `evaluate`. Evaluation **never panics**. `JsonValue` is `serde_json::Value`.
+
+See [Control points](/concepts/control-points).
+
+## Adapters
+
+| Adapter | Use |
+| --- | --- |
+| `FireweaveRemoteAdapter` | Production fw-server (`ureq`) |
+| `FireweaveLocalAdapter` | Dev boolean map |
+| `InMemoryAdapter` | Tests / fixtures |
+
+See [Adapters](/concepts/adapters).
+
+## Errors
+
+`FireweaveError` with the same 15 `ErrorKind` values. Evaluation never panics; init returns `Result`. `register_target` returns `RegisterTargetResult { ok, error }`.
+
+See [Errors](/production/errors).
+
+## Testing
+
+Local mode for an offline boolean seed. `InMemoryAdapter` for fixture-driven tests. The repo test-server stub does **not** implement `POST /v1/targets/register`.
+
+See [Testing](/testing).
+
+## Shutdown
+
+```rust
+client.shutdown();
+```
+
+See [Initialize, ready, shutdown](/production/lifecycle).
+
+## Not in this SDK
+
+- An async runtime or `async`/`await` client
+- `FireweaveProvider` / OpenFeature
+- `releases`, `exposures`, `signals`, `capabilities`, `guardrails`
+- Environment-variable auto-read
+- Dependencies beyond `ureq`, `serde`, and `serde_json`
+
+## Next
+
+<Card title="Quickstart" href="/quickstart">
+  Offline evaluate in every language.
+</Card>
+<Card title="Compatibility" href="/sdks/compatibility">
+  Seven-language surface and the 65×7 aggregate.
+</Card>

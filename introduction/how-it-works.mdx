@@ -1,117 +1,96 @@
 ---
 title: "How it works"
-description: "How the FireWeave SDK evaluates control points, optionally registers targets, and records exposures and signals through FireweaveRuntime and a BackendAdapter."
+description: "How the Fireweave SDK boots with initFireweave, evaluates control points, and registers targets through a runtime and an adapter."
 ---
 
-A FireWeave integration is one **runtime**, one **adapter**, and two public faces: **FireweaveClient** (native control points and extensions) and **FireweaveProvider** (OpenFeature). Both call the same `FireweaveRuntime`. The runtime never invents an identity (you pass `targetingKey`) and evaluation **never throws** — failures come back as a Decision carrying your default.
+A Fireweave integration is one **client**, built by `initFireweave` (or the language equivalent), sitting on one **runtime** and one **adapter**. You evaluate [control points](/concepts/control-points) and [register targets](/concepts/targeting). That is the whole v1 surface.
 
-OpenFeature and the HTTP body still say `flagKey`. The product noun is **control point**.
+The runtime never invents an identity (you pass `targetingKey`) and evaluation **never throws** — failures come back as a Decision carrying your default.
+
+The wire still says `flagKey`. The product noun is **control point**.
 
 ```mermaid
 flowchart LR
   App[Application]
-  OF[OpenFeature client]
-  Client[FireweaveClient]
-  Provider["FireweaveProvider / FireweaveWebProvider"]
-  Runtime["FireweaveRuntime / FireweaveWebRuntime"]
-  Adapter[BackendAdapter]
+  Init["initFireweave / Init"]
+  Client[Client]
+  Runtime[Runtime]
+  Adapter[Adapter]
   Server[fw-server]
 
-  App --> OF
-  App --> Client
-  OF --> Provider
-  Provider --> Runtime
+  App --> Init
+  Init --> Client
   Client --> Runtime
   Runtime --> Adapter
   Adapter -->|"POST /v1/flags/evaluate"| Server
-  Adapter -->|"POST /v1/capture"| Server
   Adapter -->|"POST /v1/targets/register"| Server
+  Adapter -->|"POST /v1/capture"| Server
 ```
 
-`POST /v1/targets/register` is implemented on the Node, Python, and Web remote adapters only. Go and Java remote adapters speak evaluate and capture.
+There is no OpenFeature provider in this picture. See [OpenFeature](/openfeature).
 
-## 1. Construct a runtime on an adapter
+## 1. Init with a required mode
 
-| Adapter | Role | Languages |
+`mode` is `'remote'` or `'local'` and is never inferred. Remote without credentials is a boot error.
+
+| Mode | Adapter | Languages |
 | --- | --- | --- |
-| `FireweaveRemoteAdapter` / `FireweaveRemoteWebAdapter` | Production HTTP to fw-server | All five |
-| `InMemoryAdapter` / `InMemoryWebAdapter` | Deterministic fixtures; no network | All five (Java: `ai.fireweave.testing`) |
-| `FireweaveLocalAdapter` / `FireweaveLocalWebAdapter` | Dev boolean map | Node, Python, Web |
-| `PostHogAdapter` | Direct-vendor escape hatch | Python extra, Go package; Java seam only (`UnsupportedCapability` from `create(config)`) |
+| `remote` | `FireweaveRemoteAdapter` / `FireweaveRemoteWebAdapter` | All seven |
+| `local` | `FireweaveLocalAdapter` / `FireweaveLocalWebAdapter` | All seven |
 
-Node 2.1 has no PostHog adapter. In-memory and local adapters do **not** persist target registration — they report `UnsupportedCapability`.
+Construct `InMemoryAdapter` yourself for fixture-driven tests. See [Adapters](/concepts/adapters).
+
+The SDK reads no environment variables. Your application may read `FW_API_URL` / `FW_PROJECT_API_KEY` and pass them in.
 
 ## 2. Initialize, then wait for a usable state
 
-`initialize` moves the runtime through `UNINITIALIZED` → `INITIALIZING` → `READY` (or `FATAL` / `ERROR` on failure). Reads before READY degrade to your default with `NotReady`.
+`initFireweave` / `Init` / `Fireweave.init` validates options, constructs the adapter, and brings the runtime to `READY` — or throws `Configuration`.
 
-The browser runtime adds a load-bearing **STALE** state: if the initial prefetch loses a 5 second ceiling, sync reads return defaults with reason `STALE`. That is not the same as READY with every control point off. See [Architecture](/introduction/architecture) and [Lifecycle](/production/lifecycle).
+Reads before READY degrade to your default with `NotReady`.
 
-<Tip>
-  Node's OpenFeature provider defaults `lazyReady` to **true**. If you use `OpenFeature.setProviderAndWait`, pass `{ lazyReady: false }` when you need READY before the first read. Native `FireweaveClient.initialize()` is explicit.
-</Tip>
+The browser-shaped runtimes (Web, Swift) add a load-bearing **STALE** state: if the initial prefetch loses a 5 second ceiling, sync reads return defaults with reason `STALE`. That is not the same as READY with every control point off. See [Lifecycle](/production/lifecycle).
 
-## 3. Optionally register a target
+## 3. Register a target
 
-A **target** is who the decision is for, keyed by `targetingKey` (the OpenFeature field; the console synonym is “cohort key”).
+A **target** is who the decision is for, keyed by `targetingKey`.
 
-Where the API exists, register durable properties once (login / device provision):
+Register durable properties once (login / device provision). `registerTarget` exists in **all seven** languages and **never throws** — check `ok`.
 
-- Node: `runtime.registerTarget(targetingKey, options?)` → `{ ok, error? }`, **never throws**
-- Python: `runtime.register_target(targeting_key, options?)`
-- Web: `client.identify(targetingKey, options?)` → `registerTarget`, then `setContext({ targetingKey })`
+- Server SDKs: `registerTarget` / `register_target` / `RegisterTarget`
+- Web and Swift: `registerTarget`, plus `identify` (register, then re-prefetch under that id)
 
 Options include `kind` (`user` | `device`) and `properties`. `fw_`-prefixed property keys are reserved and stripped server-side.
 
-Go and Java have **no** registration API on `master`. Pass `targetingKey` and per-request `attributes` on evaluate.
-
-Two identity paths compose on fw-server: stored `registerTarget` properties, plus per-evaluate `attributes` (attributes win for that call). In-memory adapters and the repo test-server stub do not persist registration.
+Two identity paths compose on fw-server: stored `registerTarget` properties, plus per-evaluate attributes (attributes win for that call). Local mode records in-process and traces `[fireweave:local]`. In-memory adapters and the repo test-server stub do not persist registration.
 
 ## 4. Evaluate a control point
 
-Native surfaces (language-specific names):
+The nine methods live on `controlPoints` / `control_points` / `ControlPoints`:
 
-| Language | Call |
-| --- | --- |
-| Node / Web | `client.controlPoints.getBooleanValue` / `evaluate` (Web is **synchronous**) |
-| Python | `client.control_points.get_boolean_value` / `evaluate` |
-| Go | `client.Flags().Evaluate` only — no typed getters, no `controlPoints` |
-| Java | `client.getBooleanValue` / `getStringValue`, or `evaluate` for other types |
-
-You can instead call OpenFeature `getBooleanValue` (and typed siblings) through the provider. The argument is still `flagKey`. FireWeave extensions (releases, exposures, signals, targets, capabilities) stay on `FireweaveClient` — they are not OpenFeature methods.
-
-Every evaluation produces a **Decision**: `flagKey`, `value` (or your default), optional `variant`, `reason`, and error fields. Documented reasons include `TARGETING_MATCH`, `SPLIT`, `DISABLED`, `STALE`, and `ERROR`. If the value looks like your default, inspect `reason` / `errorCode`.
-
-`sendExposure` / `send_exposure` / `SendExposure` defaults **false**. Phase-one OpenFeature evaluate is side-effect-free. Recording assignment is a separate step.
-
-## 5. Record what happened
-
-| Extension | API | Wire |
+| Language | Namespace | Read |
 | --- | --- | --- |
-| Exposure | `exposures.record` / `flush` | `POST /v1/capture` with `type: "exposure"` |
-| Signal | `recordHealth` / `recordError` / `recordMetric` / `recordOutcome` | `POST /v1/capture` with `type: "signal"` |
-| Release | `releases.setContext` / `start` / `complete` / `fail` | Client lifecycle; delivery to fw-server is adapter-dependent |
+| Node | `client.controlPoints` | async |
+| Web | `client.controlPoints` | **synchronous** |
+| Python | `client.control_points` | sync |
+| Go | `client.ControlPoints()` | sync |
+| Java | `client.controlPoints()` | sync |
+| Rust | `client.control_points` | sync |
+| Swift | `client.controlPoints` | **synchronous** |
 
-An **outcome** signal (`recordOutcome`) is telemetry (name + status). Completing a release is a different call (`releases.complete`). Do not collapse them into one API.
+The argument is still `flagKey`. Every evaluation produces a **Decision**: `flagKey`, `value` (or your default), optional `variant`, `reason`, and error fields. If the value looks like your default, inspect `reason` / the error kind.
 
-Signal attributes pass an allowlist (Node’s default list includes `name`, `kind`, `status`, `value`, `unit`, `rolloutId`, `changeId`, `stampId`, `errorKind`, `message`, `flagKey`, `variant`, `environment`, `service`). Messages are secret-redacted.
+A v1 read is side-effect free. No read emits telemetry as a consequence of being called.
 
-<Warning>
-  Do not assume every language delivers every signal and release transition to fw-server. Compatibility notes a sink skew (Go/Java vs Node/Python in-process paths). Confirm on [Signals](/concepts/signals) and [Releases](/concepts/releases) before treating delivery as guaranteed.
-</Warning>
+## 5. Shut down once
 
-## 6. Shut down once
+Share one client. Shut it down once at process exit. Default bound is 10_000 ms where the language exposes it.
 
-Share one runtime. Shut it down once at process exit:
-
-- Node / Python / Web: `client.shutdown()` flushes exposures first
-- Go: `Exposures().Flush(ctx)` then `runtime.Shutdown(ctx)`
-- Java: `exposures().flush()` then `close()` — **`close()` / `runtime.shutdown()` do not flush**
-
-Default shutdown bound is 10_000 ms where the language exposes it.
+- Node / Web / Python / Rust / Swift: `shutdown()`
+- Java: `close()`
+- Go: `client.Runtime().Shutdown(ctx)`
 
 ## What this flow is not
 
-The SDK evaluates and reports. It does not wrap application code, advance a percentage ramp, or run client-side guardrails (`guardrails.evaluate` is an `UnsupportedCapability` stub). Console wrap / ramp / Log-Alert-Block language is not part of this path.
+The SDK evaluates and registers targets. It does not wrap application code, advance a percentage ramp, or run client-side guardrails. The `releases`, `exposures`, `signals`, `capabilities`, and `guardrails` client namespaces are gone. Console wrap / ramp / Log-Alert-Block language is not part of this path.
 
 Next: [Architecture](/introduction/architecture) for layers and wire paths, or [Quickstart](/quickstart) to run an offline evaluate.

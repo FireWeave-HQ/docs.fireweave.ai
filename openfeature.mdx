@@ -1,279 +1,83 @@
 ---
 title: "OpenFeature"
-description: "Evaluate FireWeave control points through OpenFeature providers in Node, Python, Go, Java, and the browser. Tracking (spec §6) is not implemented."
+description: "v1 retired the bundled OpenFeature provider. Evaluate control points on the native controlPoints surface. An optional bridge package remains possible."
 ---
 
-FireWeave ships an [OpenFeature](https://openfeature.dev) provider in **all five** packages. OpenFeature is the portable evaluation API. FireWeave extensions — [releases](/concepts/releases), [exposures](/concepts/exposures), [signals](/concepts/signals), [targets](/concepts/targeting), and [capabilities](/concepts/capabilities) — live on `FireweaveClient`, not on the OpenFeature client.
+Fireweave v1 does **not** ship an OpenFeature provider.
 
-OpenFeature and the wire protocol still say **`flagKey`**. The product name is [control point](/concepts/control-points) ([ADR-0007](https://github.com/FireWeave-HQ/fireweave-sdk/blob/master/docs/adr/0007-control-point-vocabulary.md)). Do not pass `controlPointKey`.
-
-Compliance floor: OpenFeature specification **v0.8.0**.
+[ADR-0010](https://github.com/FireWeave-HQ/fireweave-sdk/blob/master/docs/adr/0010-control-points-only-v1.md) (accepted 2026-08-20) retired `FireweaveProvider` and `FireweaveWebProvider` from every language SDK. There is no `makeFireweaveLocalProvider`, and no OpenFeature extra or peer dependency in the core packages.
 
 <Warning>
-  OpenFeature Tracking (spec §6) is **not implemented**. There is no `track` API. Record assignment with [`exposures.record` / `flush`](/concepts/exposures) or opt-in `sendExposure` (default **false**). Record results with [`signals.recordOutcome`](/concepts/signals).
+  If you arrived here looking for a drop-in OpenFeature provider, that path is gone from the core SDK. Use the native [`controlPoints`](/concepts/control-points) surface, and follow [Migrate 2.1 to 2.3](/migration/v1).
 </Warning>
 
-## OpenFeature vs FireWeave-native
+## Why the provider was unbundled
 
-| Concern | Use |
-| --- | --- |
-| Boolean / string / number / object evaluation | OpenFeature getters, or the native evaluate APIs on each [SDK](/sdks/node) |
-| Hooks, domains, named clients, provider events | OpenFeature SDK |
-| Releases, exposures, signals, target registration, capabilities | `FireweaveClient` (or `FireweaveWebClient`) |
-| Guardrails | Typed stub — always `UnsupportedCapability`. Not an OpenFeature feature |
+ADR-0010's rationale, not a restatement of it:
 
-You can use **only** OpenFeature, **only** the FireWeave client, or both against the [same runtime](/concepts/adapters).
+- The provider was a thin delegation layer, not a second evaluation path. `getBooleanValue` and `resolveBooleanEvaluation` both called the same runtime.
+- The OpenFeature peer dependency was mandatory by accident. A consumer who only called `controlPoints.*` was still told to install an OpenFeature SDK they never imported.
+- The surface is seven languages. Requiring a mature OpenFeature SDK in each language made Rust and Swift depend on another project's coverage.
 
-## Providers
+OpenFeature compatibility is **unbundled, not forbidden**. Nothing in ADR-0010 prevents a future optional bridge package that depends on both this SDK and an OpenFeature SDK. What is retired is the bridge shipping *inside* the core, where every consumer pays for it.
 
-| Binding | Provider | OpenFeature SDK pin | `runsOn` | Metadata name | Resolvers |
-| --- | --- | --- | --- | --- | --- |
-| [Node](/sdks/node) | `FireweaveProvider` | `@openfeature/server-sdk` `^1.22.0` (peer) | `server` | `fireweave` | boolean, string, **number**, object |
-| [Python](/sdks/python) | `fireweave.openfeature.FireweaveProvider` | `openfeature-sdk` `>=0.10,<0.11` (extra; pre-1.0) | server | `fireweave` | boolean, string, **integer**, **float**, object |
-| [Go](/sdks/go) | `openfeature.Provider` via `NewProvider(client)` | `github.com/open-feature/go-sdk` `v1.17.2` | server | `fireweave` | boolean, string, float, **int64**, object |
-| [Java](/sdks/java) | `ai.fireweave.openfeature.FireweaveProvider` | `dev.openfeature:sdk` **1.15.1** | server | `fireweave` | boolean, string, **32-bit Integer**, double, object |
-| [Web](/sdks/web) | `FireweaveWebProvider` | `@openfeature/web-sdk` `^1.9.0` (peer) | `client` | `fireweave-web` | boolean, string, **number**, object — **synchronous** |
+## What you call instead
 
-<Note>
-  Document the **actual** Java pin (**1.15.1**). An older brief mentioned 1.21.0; that version does not exist on Maven Central.
-</Note>
-
-FireWeave ships **no product hooks** except Go’s reserved-key **guard** hook. User-registered OpenFeature hooks work unmodified.
-
-## Install and register
-
-As of 2026-08-17: `@fireweaveai/sdk` npm **latest is 2.1.0**, `@fireweaveai/web-sdk` is on npm at **2.1.0**, and `pip install 'fireweave[openfeature]'` is valid (PyPI **0.1.0**). Go and Java remain unpublished — install those from a checkout. See [Quickstart](/quickstart) and [packages](/reference/packages). CHANGELOG/docs previously described 2.1.0 as unpublished.
-
-<Tabs>
-  <Tab title="Node">
-    Peer: `@openfeature/server-sdk`. The provider wraps a `FireweaveRuntime`.
-
-    ```ts
-    import { OpenFeature } from '@openfeature/server-sdk';
-    import { FireweaveProvider, FireweaveRuntime, InMemoryAdapter } from '@fireweaveai/sdk';
-
-    const runtime = new FireweaveRuntime(new InMemoryAdapter({ flags: {} }));
-    await OpenFeature.setProviderAndWait(
-      new FireweaveProvider(runtime, { lazyReady: false }),
-    );
-    const client = OpenFeature.getClient();
-    ```
-
-    `FireweaveProviderOptions`:
-
-    | Option | Default | Meaning |
-    | --- | --- | --- |
-    | `lazyReady` | **`true`** | `initialize()` returns immediately. Until the runtime is `READY`, evaluations return the default with `PROVIDER_NOT_READY` and `fireweave.errorKind: NotReady`. Pass `false` when you call `setProviderAndWait` and need it to wait. |
-    | `sendExposure` | **`false`** | Opt in to emit a FireWeave exposure on a successful evaluation. |
-    | `includePayload` | `false` | Attach `fireweave.payload` (sorted-key JSON string) on `flagMetadata`. |
-  </Tab>
-  <Tab title="Python">
-    Requires the `fireweave[openfeature]` extra. Import the provider from `fireweave.openfeature` — it is not in the core `__init__`.
-
-    ```python
-    from openfeature import api
-    from fireweave import FireweaveRuntime, InMemoryAdapter
-    from fireweave.openfeature import FireweaveProvider
-
-    runtime = FireweaveRuntime(InMemoryAdapter({}))
-    api.set_provider(FireweaveProvider(runtime))  # sync init
-    client = api.get_client()
-    ```
-
-    Constructor: `backend_required=False`, `include_payload=False`. `backend_required=True` makes missing/invalid backend config fail fatally (`PROVIDER_FATAL`).
-  </Tab>
-  <Tab title="Go">
-    The provider wraps a `*fireweave.Client`, not the runtime directly.
-
-    ```go
-    import (
-        "github.com/open-feature/go-sdk/openfeature"
-        fw "github.com/FireWeave-HQ/fireweave-sdk/sdks/go/fireweave"
-        fwprovider "github.com/FireWeave-HQ/fireweave-sdk/sdks/go/openfeature"
-        "github.com/FireWeave-HQ/fireweave-sdk/sdks/go/adapters/inmemory"
-    )
-
-    runtime := fw.NewRuntime(inmemory.New(), fw.Config{})
-    client := fw.NewClient(runtime)
-    err := openfeature.SetProviderAndWait(fwprovider.NewProvider(client))
-    ofClient := openfeature.NewDefaultClient()
-    ```
-
-    Payload attachment is `fireweave.WithIncludePayload(ctx)` — OpenFeature has no per-call provider options in Go.
-  </Tab>
-  <Tab title="Java">
-    Module `ai.fireweave:fireweave-openfeature` (`0.1.0-SNAPSHOT`, unpublished). Resolvers are **synchronous** (`InitMode.AUTOMATIC` or `MANUAL`; no `CompletionStage`).
-
-    ```java
-    OpenFeatureAPI api = OpenFeatureAPI.getInstance();
-    api.setProviderAndWait("my-domain", new FireweaveProvider(runtime));
-    Client client = api.getClient("my-domain");
-    ```
-  </Tab>
-  <Tab title="Web">
-    Peer: `@openfeature/web-sdk`. Resolvers return `ResolutionDetails` **directly — never a Promise**. Prefetch happens in `initialize` / `onContextChange`.
-
-    ```ts
-    import { OpenFeature } from '@openfeature/web-sdk';
-    import {
-      FireweaveWebProvider,
-      FireweaveWebRuntime,
-      InMemoryWebAdapter,
-    } from '@fireweaveai/web-sdk';
-
-    const runtime = new FireweaveWebRuntime(new InMemoryWebAdapter({ flags: {} }));
-    await OpenFeature.setProviderAndWait(new FireweaveWebProvider(runtime));
-    const client = OpenFeature.getClient();
-    const on = client.getBooleanValue('new-checkout', false); // sync
-    ```
-
-    Provider option: `name` (defaults to `fireweave-web`).
-  </Tab>
-</Tabs>
-
-## Evaluate
-
-Every getter takes `flagKey`, a default, and evaluation context. Evaluation **never throws**: failures return your default with an `errorCode`. Inspect `*Details` when the value looks like the default.
+v1 exposes exactly two capabilities: [control-point](/concepts/control-points) reads and [target registration](/concepts/targeting).
 
 <CodeGroup>
 ```ts Node
-const on = await client.getBooleanValue('new-checkout', false, {
-  targetingKey: 'user_42',
+import { initFireweave } from '@fireweaveai/server-sdk';
+
+const fireweave = await initFireweave({
+  mode: 'remote',
+  apiUrl: process.env.FW_API_URL!,
+  apiKey: process.env.FW_PROJECT_API_KEY!,
 });
 
-const details = await client.getStringDetails('checkout-theme', 'classic', {
+const enabled = await fireweave.controlPoints.getBooleanValue('new-checkout', false, {
   targetingKey: 'user_42',
 });
-// details.value, details.variant, details.reason,
-// details.errorCode, details.flagMetadata
-```
-
-```python Python
-from openfeature.evaluation_context import EvaluationContext
-
-on = client.get_boolean_value(
-    "new-checkout", False, EvaluationContext("user_42")
-)
-details = client.get_string_details(
-    "checkout-theme", "classic", EvaluationContext("user_42")
-)
-```
-
-```go Go
-ctx := context.Background()
-evalCtx := openfeature.NewEvaluationContext("user_42", nil)
-on := ofClient.Boolean(ctx, "new-checkout", false, evalCtx)
-details, err := ofClient.BooleanValueDetails(ctx, "new-checkout", false, evalCtx)
-```
-
-```java Java
-MutableContext ctx = new MutableContext("user_42");
-boolean on = client.getBooleanValue("new-checkout", false, ctx);
-FlagEvaluationDetails<Boolean> details =
-    client.getBooleanDetails("new-checkout", false, ctx);
 ```
 
 ```ts Web
-const on = client.getBooleanValue('new-checkout', false);
-const details = client.getStringDetails('checkout-theme', 'classic');
+import { initFireweave } from '@fireweaveai/web-sdk';
+
+const fireweave = await initFireweave({
+  mode: 'remote',
+  apiKey: PUBLIC_FW_PROJECT_API_KEY,
+  apiUrl: PUBLIC_FW_API_URL,
+  context: { targetingKey: 'anonymous' },
+});
+
+// Synchronous — safe inside a render path.
+const enabled = fireweave.controlPoints.getBooleanValue('new-checkout', false);
 ```
 </CodeGroup>
 
-A type mismatch between the stored value and the getter returns the default with `errorCode = TYPE_MISMATCH`.
+The nine methods (`getBooleanValue`, `getStringValue`, `getNumberValue`, `getObjectValue`, the four `*Details` variants, and `evaluate`) live on `controlPoints` / `control_points` / `ControlPoints` in every language. See [Control points](/concepts/control-points).
 
-## Supported types
+`flagKey` is still the parameter name on the wire, on Decision envelopes, and in conformance fixtures. Removing the OpenFeature *dependency* did not rename `flagKey`. The product noun in prose is **control point**.
 
-| Getter | Node | Python | Go | Java | Web |
-| --- | --- | --- | --- | --- | --- |
-| Boolean | `getBooleanValue` / `Details` | `get_boolean_value` / `details` | `Boolean` / `BooleanValueDetails` | `getBooleanValue` / `Details` | `getBooleanValue` / `Details` (**sync**) |
-| String | `getStringValue` / `Details` | `get_string_value` / `details` | `String` / `StringValueDetails` | `getStringValue` / `Details` | `getStringValue` / `Details` (**sync**) |
-| Number | **one** `getNumberValue` (IEEE-754) | `get_integer_*` and `get_float_*` | `Int` (`int64`) and `Float` | `getIntegerValue` (**32-bit**) and `getDoubleValue` | **one** `getNumberValue` (**sync**) |
-| Object | `getObjectValue` / `Details` | `get_object_value` / `details` | `ObjectValueDetails` | `getObjectValue` / `Details` | `getObjectValue` / `Details` (**sync**) |
+## What was removed
 
-<Warning>
-  **Node / Web:** integers beyond ±(2^53−1) are not lossless (single `number` resolver). **Java:** values outside `Integer` range resolve as `TYPE_MISMATCH` + default — never silent truncation. Cross-language integer reliability is guaranteed within ±(2^53−1).
-</Warning>
-
-## Targeting context
-
-Identity is caller-owned. Set `targetingKey` to a stable identifier (the OpenFeature `targetingKey` **is** the cohort key). The SDK never invents an ID. See [Targeting](/concepts/targeting).
-
-OpenFeature merges context layers per spec §3.2.3 — later wins:
-
-```text
-API (global) → transaction → client → invocation → before-hook output
-```
-
-FireWeave does not re-merge. The provider receives the already-merged context.
-
-FireWeave then enforces context bounds **before** any network call: 128 attributes, 256-byte keys, 4 KiB values, nesting depth 6, 64 KiB serialized. Violations return the default with `INVALID_CONTEXT`. A missing `targetingKey` when required returns `TARGETING_KEY_MISSING`.
-
-Reserved attribute names: `targetingKey`, `kind`, and the `fireweave.*` namespace. Group targeting uses `fireweave.groups` / `fireweave.groupProperties` (plain `groups` / `groupProperties` alias). Other `fireweave.*` keys are `InvalidContext`.
-
-<Note>
-  Transaction context (spec §3.3) is usable where your OpenFeature SDK ships it. No FireWeave API depends on it.
-</Note>
-
-<Warning>
-  [registerTarget](/concepts/targeting) / `identify` exist on **Node, Python, and Web only**. Go and Java have no registration API. Pass attributes on each evaluate call in those languages.
-</Warning>
-
-## Lifecycle
-
-Registering the provider initializes the shared runtime (idempotent if a `FireweaveClient` already initialized it).
-
-| Runtime state | OpenFeature status |
+| 2.1 symbol | v1 status |
 | --- | --- |
-| `UNINITIALIZED` / `INITIALIZING` | `NOT_READY` |
-| `READY` | `READY` |
-| `STALE` | `STALE` |
-| `ERROR` | `ERROR` |
-| `FATAL` | `FATAL` |
-| `SHUTDOWN` | `NOT_READY` (`fireweave.errorKind: AlreadyClosed`) |
+| `FireweaveProvider` | Removed from every language |
+| `FireweaveWebProvider` | Removed |
+| `makeFireweaveLocalProvider` / `getFwLocalCaptures` / `resetFwLocalCaptures` | Removed |
+| OpenFeature peer / extra (`@openfeature/server-sdk`, `fireweave[openfeature]`, …) | Not required by the core SDK |
+| Provider lifecycle (`setProviderAndWait`, `lazyReady`, domains) | Not an SDK concern |
 
-The OpenFeature SDK synthesizes `PROVIDER_READY` / `PROVIDER_ERROR` from the provider’s `initialize` outcome.
-
-**Web:** if the initial prefetch loses a 5 s ceiling, the runtime enters `STALE` (not `READY`) and the provider emits `Stale`. Reads return defaults with reason `STALE`. `onContextChange` prefetches again and emits `ConfigurationChanged` only for keys whose decisions moved.
-
-**Node:** default `lazyReady: true` means `setProviderAndWait` does **not** wait unless you pass `lazyReady: false`.
-
-Shut down with `OpenFeature.close()` / `api.shutdown()` / `of.Shutdown()` — that calls the provider close path. See [Initialize, ready, shutdown](/production/lifecycle) for flush differences (Java `close()` does **not** flush the client exposure queue).
-
-## Domains
-
-Providers are domain-safe. Provider state lives in the shared runtime:
-
-```ts
-await OpenFeature.setProviderAndWait('checkout', provider);
-const flags = OpenFeature.getClient('checkout');
-```
-
-Do not share one runtime across conflicting credential sets. Use one runtime per backend project. FireWeave does not declare `domainScoped`.
-
-## Side effects
-
-OpenFeature evaluate is **side-effect-free by default**. `sendExposure` / `send_exposure` / `SendExposure` defaults to **false** in every language. Exposures are an explicit [FireWeave API](/concepts/exposures), or a per-call / provider opt-in.
-
-## What is not implemented
-
-- **Tracking (OpenFeature spec §6)** — planned, not present. Do not call `track`.
-- **Product hooks** — empty provider-hook list (Go reserved-key guard excepted).
-- **Python multi-provider** — compatible where OpenFeature ships it on Node; **untested on Python**.
-- **Guardrails** — stub on `FireweaveClient`, not an OpenFeature feature.
+A search for those symbols in a v1 install should find nothing. `conformance/surface/control-points.surface.json` asserts `mustNotExpose` for `FireweaveProvider` and `FireweaveWebProvider`.
 
 ## Next
 
 <Columns cols={2}>
-  <Card title="Configuration and auth" href="/production/configuration" icon="key">
-    `FW_API_URL`, `FW_PROJECT_API_KEY`, and language exceptions
+  <Card title="Migrate 2.1 to 2.3" href="/migration/v1" icon="arrow-right">
+    Before and after call sites for the provider removal and the package rename
   </Card>
-  <Card title="Errors" href="/production/errors" icon="triangle-exclamation">
-    15-kind taxonomy and OpenFeature code map
-  </Card>
-  <Card title="Testing" href="/testing" icon="flask">
-    InMemoryAdapter behind a real OpenFeature client
-  </Card>
-  <Card title="Package index" href="/reference/packages" icon="box">
-    Pins, peers, and publish state
+  <Card title="Control points" href="/concepts/control-points" icon="toggle-on">
+    The nine-method native surface
   </Card>
 </Columns>

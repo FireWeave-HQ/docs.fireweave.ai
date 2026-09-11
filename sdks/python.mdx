@@ -1,13 +1,9 @@
 ---
 title: "Python"
-description: "Install and use the fireweave Python SDK to evaluate control points, register targets, and report releases, exposures, and signals."
+description: "Install and use the fireweave Python SDK to evaluate control points and register targets."
 ---
 
-`fireweave` is the FireWeave server SDK for Python. It evaluates **control points**, optionally registers **targets**, drives a **release** lifecycle, and records **exposures** and **signals**. OpenFeature and the wire protocol still use the parameter name `flagKey`.
-
-<Note>
-  FireWeave is pre-release. Core has **zero runtime dependencies**. OpenFeature and the PostHog adapter are extras.
-</Note>
+`fireweave` is the Fireweave server SDK for Python. It evaluates **control points** and registers **targets** — the two v1 capabilities. The wire protocol still uses the parameter name `flagKey`.
 
 ## Supported versions
 
@@ -15,113 +11,115 @@ From `pyproject.toml`:
 
 | | Value |
 | --- | --- |
-| Package | `fireweave` `0.1.0` |
+| Package | `fireweave` **2.3.0** |
 | Python | `>=3.10` |
-| Extra `fireweave[openfeature]` | `openfeature-sdk>=0.10.0,<0.11` (**pre-1.0**) |
-| Extra `fireweave[posthog]` | `posthog==7.31.0` |
-| Extra `fireweave[dev]` | both extras + pytest |
+| Runtime dependencies | **none** |
+| Extra | `dev` (`pytest>=8`) only |
 
-Classifiers list 3.10–3.13. CI runs 3.10 and 3.14. Treat `>=3.10` as the supported floor; do not treat floating CI cells as a support guarantee.
+There is no `[openfeature]` extra and no `[posthog]` extra. Do not run those install commands.
 
 ## Install
 
-PyPI has `fireweave==0.1.0` (verified 2026-08-17). `pip install 'fireweave[openfeature]'` is valid. Checkout remains an alternative for a specific commit or an unreleased tree.
+```bash
+pip install fireweave
+```
 
-<Tabs>
-  <Tab title="PyPI 0.1.0">
-    Verified 2026-08-17: [PyPI `fireweave`](https://pypi.org/project/fireweave/) `0.1.0`, requires Python `>=3.10`, homepage `FireWeave-HQ/fireweave-sdk`.
+For local checkout development:
 
-    ```bash
-    pip install 'fireweave[openfeature]'
-    # optional: pip install 'fireweave[posthog]'
-    ```
-
-    Re-check the index if you need extras or a newer tree than 0.1.0.
-  </Tab>
-  <Tab title="From checkout">
-    From `docs/quickstart.md`:
-
-    ```bash
-    git clone https://github.com/FireWeave-HQ/fireweave-sdk && cd fireweave-sdk
-    python -m venv .venv
-    .venv/bin/pip install -e 'sdks/python[openfeature]'
-    ```
-
-    Add `,posthog` for the PostHog adapter. From `sdks/python/`: `pip install -e '.[dev]'`.
-  </Tab>
-</Tabs>
-
-<Warning>
-  `FIREWEAVE_POSTHOG_KEY` and `FIREWEAVE_POSTHOG_HOST` appear in `examples/python/` only. They are **not** SDK configuration. Remote-adapter env vars are `FW_API_URL` and `FW_PROJECT_API_KEY`.
-</Warning>
+```bash
+git clone https://github.com/FireWeave-HQ/fireweave-sdk && cd fireweave-sdk
+python -m venv .venv
+.venv/bin/pip install -e 'sdks/python[dev]'
+```
 
 ## Initialize
 
-Construct the adapter and runtime explicitly. No hidden globals.
+`init_fireweave` is the single entry point. `mode` is required and never inferred. Init raises `ConfigurationError` when mode is missing, remote credentials are blank, `api_url` fails the host allowlist, or local mode is combined with credentials.
+
+```python
+from fireweave import EvaluationContext, init_fireweave
+
+client = init_fireweave(mode="local", local={"control_points": {"new-checkout": True}})
+
+enabled = client.control_points.get_boolean_value(
+    "new-checkout", False, EvaluationContext(targeting_key="user_42")
+)
+print("new-checkout:", enabled)
+
+client.shutdown()
+```
+
+Production — pass credentials explicitly. The SDK reads **no** environment variables:
+
+```python
+import os
+from fireweave import init_fireweave
+
+client = init_fireweave(
+    mode="remote",
+    api_key=os.environ["FW_PROJECT_API_KEY"],
+    api_url=os.environ["FW_API_URL"],
+)
+```
+
+`FireweaveClient` is a context manager: `with init_fireweave(mode="local") as client:`.
+
+Lower-level construction:
 
 ```python
 from fireweave import FireweaveClient, FireweaveRuntime, InMemoryAdapter
 
 adapter = InMemoryAdapter({
-    "new-checkout": {"type": "boolean", "enabled": True, "variant": "on", "value": True},
+    "new-checkout": {"enabled": True, "variant": "on", "value": True},
 })
 runtime = FireweaveRuntime(adapter)
 runtime.initialize()
 client = FireweaveClient(runtime)
-
-assert client.control_points.get_boolean_value("new-checkout", False) is True
-client.shutdown()
 ```
 
-`FireweaveClient` is also a context manager: `with FireweaveClient(runtime) as client:`.
-
-`initialize(backend_required=False)`. `shutdown(timeout_ms=None)` flushes exposures, then closes the adapter; **never raises**; idempotent. Default shutdown timeout: `10_000` ms.
-
-Async: `from fireweave.aio import AsyncFireweaveClient` — not in the core `__all__`. Wrappers offload via `asyncio.to_thread`.
+The async `fireweave.aio` / `AsyncFireweaveClient` surface is **gone**.
 
 ## Configuration and authentication
 
-`FireweaveConfig` fields: `project_api_key`, `host`, `personal_api_key`, `secret_key`, `local_evaluation`, `only_evaluate_locally`, `require_targeting_key`, `allow_anonymous`, `allowed_hosts`, `reserved_attribute_keys`, `limits`, `feature_flags_request_timeout_ms` (default 3000), `shutdown_timeout_ms` (default 10000).
+Remote mode speaks `POST /v1/flags/evaluate` and `POST /v1/targets/register`. Auth is `Authorization: Bearer <key>`.
 
-`FireweaveRemoteAdapter` reads `FW_API_URL` and `FW_PROJECT_API_KEY` when options are omitted. Auth: `Authorization: Bearer <key>`.
+| Option | Mode | Description |
+| --- | --- | --- |
+| `api_url` | `remote` | fw-server base URL (required) |
+| `api_key` | `remote` | Fireweave project key (required) |
+| `allowed_hosts` | `remote` | SSRF allowlist override |
+| `local.control_points` | `local` | Seeded boolean map |
+| `local.log` | `local` | Sink for the `[fireweave:local]` register_target trace |
 
-`FW_DEPRECATION_WARNINGS=1` emits a one-shot notice when you use `client.flags`.
-
-Default `DEFAULT_ALLOWED_HOSTS`: five PostHog hosts (`app.posthog.com`, `us.posthog.com`, `eu.posthog.com`, `us.i.posthog.com`, `eu.i.posthog.com`) plus loopback. `https` off-loopback; `http` on loopback only. A literal `"*"` disables host pinning.
-
-```python
-from fireweave import FireweaveRemoteAdapter, FireweaveRuntime
-
-adapter = FireweaveRemoteAdapter()  # reads FW_API_URL + FW_PROJECT_API_KEY
-runtime = FireweaveRuntime(adapter)
-runtime.initialize()
-```
+`https` off-loopback; `http` on loopback only. A literal `"*"` disables host pinning.
 
 See [Configuration and auth](/production/configuration).
 
 ## Targets
 
+`register_target` lives on the **client**.
+
 ```python
 from fireweave import RegisterTargetOptions
 
-result = runtime.register_target(
+result = client.register_target(
     "user_42",
     RegisterTargetOptions(kind="user", properties={"plan": "pro", "region": "eu-west"}),
 )
 print(result.ok, result.error)
 ```
 
-`RegisterTargetOptions`: `kind`, `properties`, `environment`. The remote adapter posts `POST /v1/targets/register`, retries once on retryable failures, and returns `ok=False` rather than raising.
+`RegisterTargetOptions`: `kind` (`"user"` or `"device"`), `properties`, `environment`. Returns `ok=False` rather than raising.
 
-In-memory and local adapters report `UnsupportedCapability`.
+In local mode the adapter records the target in-process and traces the call. `InMemoryAdapter` does not implement registration.
 
 See [Targeting and targets](/concepts/targeting).
 
 ## Control points
 
-`client.control_points` is the product API. `client.flags` is the same object (deprecated alias).
+`client.control_points` is the product API. `client.flags` is the same object. The alias shares identity. On first access Python emits one `DeprecationWarning` per process.
 
-`FlagType`: `BOOLEAN`, `STRING`, `INTEGER`, `FLOAT`, `OBJECT`.
+`FlagType`: `BOOLEAN`, `STRING`, `NUMBER`, `OBJECT`. There is no separate integer/float type in v1.
 
 ```python
 from fireweave import EvaluationContext, FlagType
@@ -130,159 +128,62 @@ ctx = EvaluationContext(targeting_key="user_42", attributes={"tier": "gold"})
 
 on = client.control_points.get_boolean_value("new-checkout", False, ctx)
 theme = client.control_points.get_string_value("checkout-theme", "classic", ctx)
-count = client.control_points.get_integer_value("max-items", 0, ctx)
-ratio = client.control_points.get_float_value("discount", 0.0, ctx)
+ratio = client.control_points.get_number_value("discount", 0.0, ctx)
 
-decision = client.control_points.evaluate(
-    "new-checkout", FlagType.BOOLEAN, False, ctx,
-    include_payload=False,
-    send_exposure=False,
-)
+decision = client.control_points.get_boolean_details("new-checkout", False, ctx)
 print(decision.value, decision.reason)
+
+general = client.control_points.evaluate(
+    "new-checkout", FlagType.BOOLEAN, False, ctx,
+)
 ```
 
-Also: `get_object_value`, `get_details` (alias of `evaluate`). Evaluation **never raises**. `send_exposure` defaults to **false**.
+Nine methods: `get_boolean_value`, `get_string_value`, `get_number_value`, `get_object_value`, `get_boolean_details`, `get_string_details`, `get_number_details`, `get_object_details`, `evaluate`. Evaluation **never raises**.
+
+`get_integer_value` is a deprecated alias of `get_number_value`. It still works and logs one `DeprecationWarning` per process. Use `get_number_value`.
 
 See [Control points](/concepts/control-points).
-
-## Releases
-
-Snake_case. `set_context` requires `rollout_id` and `stamp_ids` (`stmp_` + 26 Crockford characters). Optional `change_id` (`chg_` + 26).
-
-```python
-fw = client
-fw.releases.set_context(
-    rollout_id="rollout_01HZX3",
-    change_id="chg_01HZXEX0000000000000000001",
-    stamp_ids=["stmp_01HZXEX0000000000000000001"],
-)
-fw.releases.start()
-fw.releases.complete()
-# or: fw.releases.fail(reason="...")
-```
-
-<Note>
-  Whether release transitions always reach fw-server is **NEEDS VERIFICATION** (compatibility known gap: Node/Python may record some paths in-process only).
-</Note>
-
-See [Releases](/concepts/releases).
-
-## Exposures
-
-```python
-client.exposures.record("user_42", "new-checkout", "on", True)
-client.exposures.flush()
-```
-
-`record(targeting_key, flag_key, variant=None, value=None, rollout_id=None)`. Dedup is on `(targetingKey, flagKey, variant, value)`. `send_exposure` on evaluate defaults to **false**. `shutdown()` flushes first.
-
-See [Exposures](/concepts/exposures).
-
-## Signals
-
-```python
-client.signals.record_health("checkout-service", "ok", rollout_id="rollout_01HZX3")
-client.signals.record_error("checkout-service", error_kind="Timeout", message="upstream")
-client.signals.record_metric("checkout.latency_ms", 42.0, unit="ms")
-client.signals.record_outcome("checkout", "completed")
-```
-
-See [Signals and outcomes](/concepts/signals).
-
-## Capabilities
-
-```python
-caps = client.capabilities.get()
-```
-
-`guardrails.check` / `guardrails.evaluate` are stubs (`UnsupportedCapability`).
-
-See [Capabilities](/concepts/capabilities).
 
 ## Adapters
 
 | Adapter | Import | Use |
 | --- | --- | --- |
 | `FireweaveRemoteAdapter` | `from fireweave import FireweaveRemoteAdapter` | Production fw-server |
-| `InMemoryAdapter` | `from fireweave import InMemoryAdapter` | Tests / offline |
-| `FireweaveLocalAdapter` | `from fireweave import FireweaveLocalAdapter` | Dev `dev_flags` boolean map |
-| `PostHogAdapter` | `from fireweave.adapters.posthog import PostHogAdapter` | Extra `fireweave[posthog]`. Not in core `__init__`. |
-
-Local OpenFeature helper (requires the openfeature extra):
-
-```python
-from fireweave.openfeature import (
-    make_fireweave_local_provider,
-    get_fw_local_captures,
-    reset_fw_local_captures,
-)
-
-provider = make_fireweave_local_provider(dev_flags={"new-checkout": True})
-```
-
-In-process local evaluation via PostHog (`secret_key` / `personal_api_key` + `local_evaluation`) is available on the PostHog extra, not on the remote adapter.
+| `FireweaveLocalAdapter` | `from fireweave import FireweaveLocalAdapter` | Dev `control_points` boolean map |
+| `InMemoryAdapter` | `from fireweave import InMemoryAdapter` | Tests / fixtures |
 
 See [Adapters](/concepts/adapters).
 
-## OpenFeature
-
-Not in core `__init__`. Requires `fireweave[openfeature]`:
-
-```python
-from openfeature import api
-from openfeature.evaluation_context import EvaluationContext
-from fireweave import FireweaveRuntime, InMemoryAdapter
-from fireweave.openfeature import FireweaveProvider
-
-runtime = FireweaveRuntime(InMemoryAdapter({
-    "new-checkout": {"type": "boolean", "enabled": True, "value": True, "variant": "on"},
-}))
-api.set_provider(FireweaveProvider(runtime))
-of_client = api.get_client()
-
-enabled = of_client.get_boolean_value(
-    "new-checkout", False, EvaluationContext(targeting_key="user_42"))
-print("new-checkout:", enabled)
-
-api.shutdown()
-```
-
-Resolvers: `resolve_boolean_details`, `resolve_string_details`, `resolve_integer_details`, `resolve_float_details`, `resolve_object_details`.
-
-Ctor: `backend_required=False`, `include_payload=False`.
-
-Multi-provider is **untested** on Python. OpenFeature Tracking is **not implemented**.
-
-See [OpenFeature](/openfeature).
-
 ## Errors
 
-`ErrorKind` has the same 15 PascalCase kinds. Concrete subclasses include `NotReadyError`, `FlagNotFoundError`, `TypeMismatchError`, `InvalidContextError`, `TargetingKeyMissingError` (subtype of `InvalidContextError`, OF code `TARGETING_KEY_MISSING`), `AuthenticationError`, `AuthorizationError`, `RateLimitedError`, `TimeoutError_`, `NetworkError`, `BackendUnavailableError`, `MalformedResponseError`, `UnsupportedCapabilityError`, `ConfigurationError`, `AlreadyClosedError`, `InternalError`.
+`ErrorKind` has the same 15 PascalCase kinds. Concrete subclasses include `NotReadyError`, `FlagNotFoundError`, `TypeMismatchError`, `InvalidContextError`, `TargetingKeyMissingError`, `AuthenticationError`, `AuthorizationError`, `RateLimitedError`, `TimeoutError_`, `NetworkError`, `BackendUnavailableError`, `MalformedResponseError`, `UnsupportedCapabilityError`, `ConfigurationError`, `AlreadyClosedError`, `InternalError`.
 
-Evaluation **never raises**.
+Evaluation **never raises**. Init can raise `ConfigurationError`.
 
 See [Errors](/production/errors).
 
 ## Testing
 
-`InMemoryAdapter` fixture fields used in tests: `type`, `enabled`, `value`, `variant`, optional `matchAttribute`. The repo test-server does **not** implement `POST /v1/targets/register`.
+`InMemoryAdapter` fixture fields used in tests: `type`, `enabled`, `value`, `variant`, optional `matchAttribute`. Local mode is enough for an offline boolean seed. The repo test-server does **not** implement `POST /v1/targets/register`.
 
 See [Testing](/testing).
 
 ## Shutdown
 
 ```python
-client.shutdown()  # flushes exposures, closes adapter, never raises
-api.shutdown()     # if you used OpenFeature
+client.shutdown()  # never raises; idempotent
 ```
 
 See [Initialize, ready, shutdown](/production/lifecycle).
 
 ## Not in this SDK
 
-- A `controlPoints` camelCase namespace (Python is `control_points`).
-- Working guardrails.
-- OpenFeature Tracking.
+- `fireweave[openfeature]` or `fireweave[posthog]`
+- `FireweaveProvider` / `make_fireweave_local_provider`
+- `releases`, `exposures`, `signals`, `capabilities`, `guardrails`
+- Environment-variable auto-read
+- `AsyncFireweaveClient` / `fireweave.aio`
+- A camelCase `controlPoints` namespace (Python is `control_points`)
 
 ## Next
 
@@ -290,5 +191,5 @@ See [Initialize, ready, shutdown](/production/lifecycle).
   Offline evaluate in every language.
 </Card>
 <Card title="Compatibility" href="/sdks/compatibility">
-  Type split, adapters, and conformance.
+  Seven-language surface and the 65×7 aggregate.
 </Card>

@@ -1,0 +1,70 @@
+---
+title: "Terraform org members"
+description: "Schema for fireweave_org_member. Org API keys currently receive 401 — do not apply this resource until that is fixed."
+---
+
+`fireweave_org_member` is designed to manage an organisation **member role assignment**. Create and update call `PUT /api/organizations/:orgId/members/:userId/role`. Destroy calls `DELETE /api/organizations/:orgId/members/:userId`.
+
+<Warning>
+  Do not apply this resource yet. The member endpoints currently reject org API keys with **401 Unauthorized**. Fireweave's own internal Terraform leaves these resources commented out for that reason.
+
+  The schema below is accurate. Applying it with `FIREWEAVE_API_KEY` will fail. Track [terraform-provider-fireweave#3](https://github.com/FireWeave-HQ/terraform-provider-fireweave/issues/3).
+</Warning>
+
+Generated schema: [fireweave_org_member on the Terraform Registry](https://registry.terraform.io/providers/FireWeave-HQ/fireweave/latest/docs/resources/org_member).
+
+## What the resource will do (once unblocked)
+
+The target user must already be a member of the organisation (for example after accepting an invite). This resource does **not** send invitations.
+
+The organisation `owner` role cannot be assigned or changed here. Valid roles are `admin`, `member`, and `viewer` only.
+
+Changing `organization_id` or `user_id` forces a new resource. `role` updates in place.
+
+## Arguments
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `organization_id` | String | Yes | Organisation identifier. **Forces replacement.** |
+| `user_id` | String | Yes | User identifier of the member. **Forces replacement.** |
+| `role` | String | Yes | One of `admin`, `member`, or `viewer`. Not `owner`. |
+
+### Read-only
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `id` | String | Terraform identifier, shaped `{organization_id}/{user_id}`. |
+| `member_id` | String | Membership row identifier returned by Fireweave. |
+
+## Example (do not apply)
+
+```hcl
+resource "fireweave_org_member" "alice_admin" {
+  organization_id = var.organization_id
+  user_id         = var.user_id
+  role            = "admin"
+}
+```
+
+Use variables for identifiers. Do not commit organisation or user ids.
+
+## Import
+
+Import by organisation id and user id:
+
+```bash
+terraform import fireweave_org_member.alice_admin <organization_id>/<user_id>
+```
+
+Import talks to the same member APIs, so it currently fails with 401 for org API keys as well.
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Projects" href="/infrastructure/terraform/projects" icon="folder">
+    Project and environment resources work with org API keys today.
+  </Card>
+  <Card title="Provider issue #3" href="https://github.com/FireWeave-HQ/terraform-provider-fireweave/issues/3" icon="github">
+    Follow the 401 fix for member endpoints.
+  </Card>
+</Columns>

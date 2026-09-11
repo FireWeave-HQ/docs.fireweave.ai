@@ -1,54 +1,38 @@
 ---
 title: "Go"
-description: "Install and use the FireWeave Go SDK to evaluate flags, drive releases, and report exposures and signals. Target registration is not in this SDK."
+description: "Install and use the Fireweave Go SDK to evaluate control points and register targets. Published as …/sdks/go/v2."
 ---
 
-The Go module is `github.com/FireWeave-HQ/fireweave-sdk/sdks/go`. It evaluates flags through `client.Flags().Evaluate`, drives a **release** lifecycle, and records **exposures** and **signals**. OpenFeature and the wire protocol use `flagKey`.
+The Go module is `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2`. It evaluates **control points** through `client.ControlPoints()` and registers **targets** through `client.RegisterTarget`. Those are the two v1 capabilities. The wire protocol uses `flagKey`.
 
-<Warning>
-  This module is **not published** as a tagged module on the Go proxy (verified 2026-08-17: `proxy.golang.org` returned 404). There is no working `go get` of a released version. Install with a `replace` directive from a checkout.
-</Warning>
-
-<Warning>
-  **`RegisterTarget` is not in this SDK.** There is no `RegisterTarget` / `register_target` symbol under `sdks/go` on `master`. Pass properties on each evaluate call. See [Targeting and targets](/concepts/targeting).
-</Warning>
+The `/v2` suffix is **required** in both `go get` and import paths. `sdks/go/v2.2.0` does not resolve — pin **v2.3.0** or later.
 
 ## Supported versions
 
-From `go.mod` and the compatibility matrix:
+From `go.mod`:
 
 | | Value |
 | --- | --- |
-| Module | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go` |
-| Package version (matrix) | `0.1.0` |
-| `go` directive | `1.25.12` |
-| OpenFeature | `github.com/open-feature/go-sdk v1.17.2` |
-| PostHog (optional adapter) | `github.com/posthog/posthog-go v1.22.0` |
-
-CI runs `1.25.x` and `stable`. Document the `go.mod` floor (`1.25.12`); do not treat the floating `stable` cell as a support guarantee.
-
-<Note>
-  The quickstart uses `v0.0.0` + `replace`. The matrix says package version `0.1.0`. No public module tag was verified. **NEEDS VERIFICATION** of any existing git tags.
-</Note>
+| Module | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2` |
+| Published | **v2.3.0** |
+| `go` directive | `1.25.13` |
+| Runtime dependencies | **none** (standard library only) |
 
 ## Install
 
-From `docs/quickstart.md`. Until the module path is public, use a `replace`:
-
-```
-require github.com/FireWeave-HQ/fireweave-sdk/sdks/go v0.0.0
-replace github.com/FireWeave-HQ/fireweave-sdk/sdks/go => ../fireweave-sdk/sdks/go
-```
-
 ```bash
-git clone https://github.com/FireWeave-HQ/fireweave-sdk
+go get github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2@v2.3.0
 ```
 
-Do not run `go get github.com/FireWeave-HQ/fireweave-sdk/sdks/go@latest` as if a released tag exists.
+```go
+import "github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2/fireweave"
+```
+
+Callers import the `fireweave` façade only. `Init` is the composition root.
 
 ## Initialize
 
-Every blocking call takes `context.Context`.
+`fireweave.Init` is the single entry point. `Mode` is required and never inferred. `Init` returns a non-nil error (kind `Configuration`) when mode is missing, remote credentials are blank, `APIURL` fails the host allowlist, or local mode is combined with credentials.
 
 ```go
 package main
@@ -57,215 +41,156 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/FireWeave-HQ/fireweave-sdk/sdks/go/adapters/inmemory"
-	"github.com/FireWeave-HQ/fireweave-sdk/sdks/go/fireweave"
-	fwprovider "github.com/FireWeave-HQ/fireweave-sdk/sdks/go/openfeature"
-	of "github.com/open-feature/go-sdk/openfeature"
+	"github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2/fireweave"
 )
 
 func main() {
-	ctx := context.Background()
-
-	adapter := inmemory.New(inmemory.WithFlags(map[string]inmemory.Flag{
-		"new-checkout": {Type: fireweave.FlagTypeBoolean, Enabled: true, Value: true, Variant: "on"},
-	}))
-	runtime := fireweave.NewRuntime(adapter, fireweave.Config{})
-	client := fireweave.NewClient(runtime)
-
-	if err := of.SetProviderAndWait(fwprovider.NewProvider(client)); err != nil {
+	client, err := fireweave.Init(fireweave.Options{
+		Mode: fireweave.ModeLocal,
+		Local: &fireweave.LocalOptions{
+			ControlPoints: map[string]bool{"new-checkout": true},
+		},
+	})
+	if err != nil {
 		panic(err)
 	}
 
-	enabled := of.NewClient("app").Boolean(ctx, "new-checkout", false,
-		of.NewEvaluationContext("user_42", nil))
+	evalCtx := fireweave.NewEvaluationContext("user_42", nil)
+	enabled := client.ControlPoints().GetBooleanValue("new-checkout", false, &evalCtx)
 	fmt.Println("new-checkout:", enabled)
 
-	of.Shutdown()
+	_ = client.Runtime().Shutdown(context.Background())
 }
 ```
 
-`runtime.Initialize(ctx)` / `Flush(ctx)` / `Shutdown(ctx)`. Provider: `Init` / `InitWithContext`, `Shutdown` / `ShutdownWithContext`.
-
-## Configuration and authentication
-
-`fireweave.Config` on the runtime: `Limits`, `RequireTargetingKey`, `GlobalContext`. **No API URL or key on the runtime.**
-
-`adapters/remote.Config`:
-
-| Field | Env | Default |
-| --- | --- | --- |
-| `APIURL` | `FW_API_URL` | required on init if unset |
-| `APIKey` | `FW_PROJECT_API_KEY` | required on init if unset |
-| `AllowedHosts` | — | API URL hostname + loopback |
-| `RequestTimeout` | — | 3s |
-| `CloseTimeout` | — | 10s |
-| `HTTPClient` | — | tests |
+Production:
 
 ```go
-import "github.com/FireWeave-HQ/fireweave-sdk/sdks/go/adapters/remote"
-
-adapter := remote.New(remote.Config{
-	APIURL: os.Getenv("FW_API_URL"),
+client, err := fireweave.Init(fireweave.Options{
+	Mode:   fireweave.ModeRemote,
 	APIKey: os.Getenv("FW_PROJECT_API_KEY"),
+	APIURL: os.Getenv("FW_API_URL"),
 })
 ```
 
-Auth: `Authorization: Bearer <key>`. Paths: `/v1/flags/evaluate`, `/v1/capture` only — **no** `/v1/targets/register`.
+The SDK reads **no** environment variables. `os.Getenv` in the snippet is your app, not the SDK.
 
-`FW_POSTHOG_HOST` and `FW_SECRET_KEY` appear in `examples/go/main.go` only. They are **not** read by the remote adapter.
+Public `ControlPoints()` methods and `RegisterTarget` do **not** take `context.Context`. They call the runtime with `context.Background()`. The remote adapter's configured request timeout bounds the HTTP call.
+
+`Runtime` and `Client` are safe for concurrent use.
+
+## Configuration and authentication
+
+`Options` on `Init`:
+
+| Field | Mode | Description |
+| --- | --- | --- |
+| `Mode` | both | `ModeLocal` or `ModeRemote` (required) |
+| `APIURL` | `remote` | fw-server base URL (required) |
+| `APIKey` | `remote` | Fireweave project key (required) |
+| `AllowedHosts` | `remote` | SSRF allowlist override |
+| `Local.ControlPoints` | `local` | Seeded boolean map |
+| `Local.Log` | `local` | Sink for the `[fireweave:local]` trace |
+
+Default allowlist (`infrastructure/adapters/remote.DefaultAllowedHosts`) is Fireweave production/staging hosts plus loopback. It is **not** derived from your `APIURL` hostname. A self-hosted fw-server must list its own host, or pass `AllowedHosts: []string{"*"}`.
+
+Auth: `Authorization: Bearer <key>`. Paths: `POST /v1/flags/evaluate`, `POST /v1/targets/register`.
 
 See [Configuration and auth](/production/configuration).
 
 ## Targets
 
-**Not in this SDK.** There is no registration API on `master`. The compatibility matrix marks it planned. Pass `targetingKey` and attributes on each `Evaluate` / OpenFeature call.
+`RegisterTarget` is on the client.
+
+```go
+registered := client.RegisterTarget("user_42", &fireweave.RegisterTargetOptions{
+	Kind:       fireweave.TargetKindUser,
+	Properties: map[string]any{"plan": "pro", "region": "eu-west"},
+})
+if !registered.OK {
+	fmt.Println("registerTarget failed", registered.Error)
+}
+```
+
+`opts` may be `nil`. The call never panics. In local mode the adapter records the target in-process and traces `[fireweave:local]`.
 
 See [Targeting and targets](/concepts/targeting).
 
-## Flags (no `controlPoints` namespace)
+## Control points
 
-Go has **`Flags()` only**. There is no `controlPoints` / `control_points` facade and **no** `GetBooleanValue`-style helpers on `Flags`.
+`client.ControlPoints()` is the documented namespace. `client.Flags()` is the same object (deprecated alias, silent at runtime).
 
-`FlagType`: `"boolean"`, `"string"`, `"integer"`, `"float"`, `"object"`.
+`FlagType`: `FlagTypeBoolean`, `FlagTypeString`, `FlagTypeNumber`, `FlagTypeObject`. There is no separate integer/float type in v1.
 
 ```go
-fwCtx := fireweave.EvaluationContext{
-	TargetingKey: "org_01HZXEXAMPLE0000000000001",
-	Attributes:   map[string]any{"tier": "pro", "region": "us"},
+evalCtx := fireweave.NewEvaluationContext("user_42", map[string]any{"tier": "pro"})
+
+on := client.ControlPoints().GetBooleanValue("new-checkout", false, &evalCtx)
+theme := client.ControlPoints().GetStringValue("theme", "light", &evalCtx)
+
+details := client.ControlPoints().GetBooleanDetails("new-checkout", false, &evalCtx)
+if details.Error != nil {
+	fmt.Printf("default %v (%s)\n", details.Value, details.Error.Kind)
 }
-decision := client.Flags().Evaluate(ctx, "theme", fireweave.FlagTypeString, "light", fwCtx, fireweave.EvaluateOptions{})
-if decision.Error != nil {
-	fmt.Printf("default %v (%s: %s)\n", decision.Value, decision.Error.Kind, decision.Error.Message)
-} else {
-	fmt.Printf("value=%v variant=%q reason=%s\n", decision.Value, decision.Variant, decision.Reason)
-}
+
+decision := client.ControlPoints().Evaluate(
+	"new-checkout",
+	fireweave.FlagTypeBoolean,
+	false,
+	&evalCtx,
+	nil,
+)
 ```
 
-`EvaluateOptions`: `IncludePayload`, `SendExposure *bool` (nil / unset means default **false**). Evaluation **never returns an error**: failures are `Decision{Reason: ERROR}`.
+Nine methods: `GetBooleanValue`, `GetStringValue`, `GetNumberValue`, `GetObjectValue`, `GetBooleanDetails`, `GetStringDetails`, `GetNumberDetails`, `GetObjectDetails`, `Evaluate`. Evaluation **never returns an error** and never panics — failures are `Decision{Reason: ERROR}`.
 
-Payload via `fireweave.WithIncludePayload(ctx)` (Go context; OpenFeature has no per-call provider options).
+`EvaluateOptions` has one real field: `IncludePayload`.
 
 See [Control points](/concepts/control-points).
-
-## Releases
-
-`SetContext` / `Start` / `Complete` / `Fail` **return `error`**, not a result struct. `Start`/`Complete`/`Fail` take the `rolloutID` string.
-
-```go
-release := fireweave.ReleaseContext{
-	RolloutID: "rollout_example_checkout_redesign",
-	ChangeID:  "chg_01HZXEG0000000000000000001",
-	StampIDs:  []string{"stmp_01HZXEG0000000000000000001"},
-}
-if err := client.Releases().SetContext(ctx, release); err != nil {
-	log.Fatal(err)
-}
-if err := client.Releases().Start(ctx, release.RolloutID); err != nil {
-	log.Fatal(err)
-}
-```
-
-`rolloutId` 1–128 characters; `stampIds` 1–64 unique `stmp_` + 26 Crockford characters; optional `chg_` change ID.
-
-See [Releases](/concepts/releases).
-
-## Exposures
-
-```go
-_, err := client.Exposures().Record(ctx, fireweave.Exposure{
-	TargetingKey: "user_42",
-	FlagKey:      "new-checkout",
-	Variant:      "on",
-	Value:        true,
-})
-n, err := client.Exposures().Flush(ctx)
-_ = client.Exposures().Pending()
-```
-
-`SendExposure` on evaluate defaults to **false**.
-
-See [Exposures](/concepts/exposures).
-
-## Signals
-
-```go
-err := client.Signals().RecordHealth(ctx, fireweave.HealthSignal{
-	Name: "provider", Status: "ok", RolloutID: release.RolloutID,
-})
-_ = client.Signals().RecordError(ctx, fireweave.ErrorSignal{Name: "checkout", Message: "failed"})
-_ = client.Signals().RecordMetric(ctx, fireweave.MetricSignal{Name: "latency_ms", Value: 42})
-_ = client.Signals().RecordOutcome(ctx, fireweave.OutcomeSignal{Name: "checkout", Status: "completed"})
-```
-
-See [Signals and outcomes](/concepts/signals).
-
-## Capabilities
-
-```go
-caps := client.Capabilities().Get()
-ops := client.Capabilities().Operations()
-client.Capabilities().Invoke("capabilities.get")
-```
-
-`Guardrails().Check` is a stub.
-
-See [Capabilities](/concepts/capabilities).
 
 ## Adapters
 
 | Package | Use |
 | --- | --- |
-| `…/adapters/remote` | Production fw-server |
-| `…/adapters/inmemory` | Tests / offline (`New(WithFlags(...))`) |
-| `…/adapters/posthog` | Direct PostHog escape hatch |
+| `…/v2/infrastructure/adapters/remote` | Production fw-server |
+| `…/v2/infrastructure/adapters/local` | Dev boolean seed (`Init` `Mode: local`) |
+| `…/v2/infrastructure/adapters/inmemory` | Tests / conformance fixtures |
 
-There is **no** local/dev adapter (`FireweaveLocalAdapter`) on Go.
-
-`adapters/posthog.Config` includes `ProjectAPIKey`, `SecretKey`, `Endpoint`, `AllowedHosts`, `LocalEvaluationOnly`, `FlagRequestTimeout`, `FlagRequestRetries` (default 0), `SendExposureEvents` (default false), `CloseTimeout`, `Transport`. Default PostHog allowlist: five PostHog hosts + loopback.
+Prefer `fireweave.Init`. Construct adapters directly only for custom wiring.
 
 See [Adapters](/concepts/adapters).
 
-## OpenFeature
-
-Package `openfeature`, constructor `NewProvider(*fireweave.Client)`. Metadata name `"fireweave"`.
-
-Resolvers: `BooleanEvaluation`, `StringEvaluation`, `FloatEvaluation`, `IntEvaluation` (`int64`), `ObjectEvaluation`.
-
-FireWeave ships one provider hook: reserved-key **guard**. No `controlPoints` naming. Tracking is **not implemented**.
-
-See [OpenFeature](/openfeature).
-
 ## Errors
 
-`fireweave.Error` with `ErrorKind` constants — the same 15 kinds. Implements `error`. Evaluation still returns a `Decision`; extension methods return `error`.
+`fireweave.Error` with `ErrorKind` constants — the same 15 kinds. Implements `error`. Evaluation still returns a `Decision`; `Init` and `Runtime.Shutdown` return `error`.
 
 See [Errors](/production/errors).
 
 ## Testing
 
-`adapters/inmemory` with `WithFlags`. Harness env: `FIREWEAVE_TEST_SERVER_URL` or `FW_TEST_SERVER_URL`. The test-server stub does **not** implement target registration.
+Local mode for an offline boolean seed. `infrastructure/adapters/inmemory` with `WithFlags` for fixture-driven tests. The test-server stub does **not** implement target registration.
 
 See [Testing](/testing).
 
 ## Shutdown
 
+There is no `Client.Shutdown`. Shut down the runtime:
+
 ```go
 shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 defer cancel()
-_ = of.ShutdownWithContext(shutdownCtx)
-// or: runtime.Shutdown(ctx)
+_ = client.Runtime().Shutdown(shutdownCtx)
 ```
 
 See [Initialize, ready, shutdown](/production/lifecycle).
 
 ## Not in this SDK
 
-- `RegisterTarget` / `register_target`
-- `controlPoints` / `control_points` namespace
-- Typed getters (`GetBooleanValue`, …) on `Flags`
-- Local/dev adapter
-- Working guardrails
-- OpenFeature Tracking
+- An unsuffixed `…/sdks/go` module path
+- `FireweaveProvider` / any OpenFeature package
+- `Releases()`, `Exposures()`, `Signals()`, `Capabilities()`, `Guardrails()`
+- Environment-variable auto-read
+- `context.Context` on `ControlPoints()` / `RegisterTarget`
 
 ## Next
 
@@ -273,5 +198,5 @@ See [Initialize, ready, shutdown](/production/lifecycle).
   Offline evaluate in every language.
 </Card>
 <Card title="Compatibility" href="/sdks/compatibility">
-  Type split, adapters, and conformance.
+  Seven-language surface and the 65×7 aggregate.
 </Card>

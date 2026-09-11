@@ -1,0 +1,400 @@
+---
+title: "CLI commands"
+description: "Reference for every visible fw command: flags, behaviour, and exit codes. Hidden automation commands are omitted. fw pr check and fw merge register are not generally available."
+---
+
+`fw --help` lists these names and no others.
+
+There is no `fw rollout` and no `fw flag`. Those commands were deleted. Rollout control lives in the console, skills, and MCP tools.
+
+Hidden-but-invokable commands (`api`, `repo`, `token`, `migrate`) exist for automation and back-compat. They are omitted here on purpose.
+
+Global: `fw --version` prints `<version> (<channel>)`, for example `2.5.2 (stable)`.
+
+## Auth and identity
+
+### `fw login`
+
+Authenticate via OAuth device flow and save a named profile. See [Authentication](/cli/authentication).
+
+```bash
+fw login
+fw login --staging --alias staging
+fw login --url https://fw.example.com --alias corp
+```
+
+| Flag | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `--cloud` | No | Channel default | Production cloud. Incompatible with `--url` / `--staging`. |
+| `--staging` | No | — | Staging cloud. Incompatible with `--url` / `--cloud`. |
+| `--url <url>` | No | — | Custom server. |
+| `--alias <name>` | No | Derived | 1–64 chars, alphanumeric plus `-` `.` `_`. |
+| `--webapp-url <url>` | No | Cloud webapp | Override the verification URL. |
+| `--timeout <seconds>` | No | `300` | Total wall-clock timeout. |
+| `--inline-device-flow` | No | off | Non-interactive stderr output. |
+| `--local` | — | — | Rejected. Use `--url http://localhost:3001`. |
+
+Exit `0` on success, `1` on failure.
+
+### `fw logout`
+
+Clear stored credentials.
+
+| Flag | Notes |
+| --- | --- |
+| `--profile <alias>` | Log out of that profile. Default: the active profile. |
+| `--all` | Clear every profile and the active-profile pointer. |
+
+### `fw whoami`
+
+Print the resolved user, org, bound project, and profile source.
+
+| Flag | Notes |
+| --- | --- |
+| `--profile <alias>` | Override profile resolution. |
+| `--force` | Re-fetch `GET` session info and update the cached profile. |
+
+Exit `0` when a profile exists (even with no project bound). Exit `1` when you are not logged in.
+
+### `fw profile`
+
+Manage local login profiles.
+
+```bash
+fw profile list
+fw profile use staging
+fw profile remove old-alias --force
+```
+
+| Subcommand | Flags |
+| --- | --- |
+| `list` | — |
+| `use <alias>` | — |
+| `remove <alias>` | `--force` — required if the alias is active |
+
+## Repo setup
+
+### `fw init`
+
+Guided, re-runnable per-repo setup. Scaffolds `.fireweave/`, picks a profile, binds org + project + server into committed `.fireweave/project.json`, and pins your profile in gitignored `.fireweave/local.json`.
+
+Re-running with the same choices is a no-op. A repo that already has a committed binding reuses it and only re-pins the profile.
+
+| Flag | Notes |
+| --- | --- |
+| `--profile <alias>` | Skip the profile picker. |
+| `--project-id <id>` | Skip the project picker (ignored when the repo is already bound). |
+| `--env <slug>` | Team default environment, written to `project.json`. |
+| `--user-env <slug>` | Personal environment override, written to `local.json`. |
+
+### `fw select-project`
+
+Choose a Fireweave project for this repo. Writes the same committed binding as `fw init`.
+
+| Flag | Notes |
+| --- | --- |
+| `--project-id <id>` | Non-interactive. |
+| `--profile <alias>` | Override profile resolution. |
+
+Create the project in the Fireweave app first if none are listed.
+
+## Health
+
+### `fw status`
+
+Report whether the CLI is ready: auth + project + reachability.
+
+| Flag | Notes |
+| --- | --- |
+| `--machine-readable` | Emit JSON. |
+| `--silent` | Exit code only. |
+| `--profile <alias>` | Override profile resolution. |
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Ready. |
+| `1` | Missing profile or project. |
+| `2` | Token expired or refresh failed. |
+| `3` | Server unreachable. |
+
+JSON always includes a `cli` object with `version`, `channel`, and `releaseBuild`, including on the not-ready arm.
+
+### `fw doctor`
+
+Print a diagnostic report. Always exits `0` — it never gates a pipeline.
+
+| Flag | Notes |
+| --- | --- |
+| `--fix` | Repair shell PATH wiring only (`~/.fireweave/bin`). |
+| `--repair` | Apply every repairable finding, then re-check. Includes `--fix`. |
+
+`--repair` is non-destructive: it converts rather than deletes (for example it quarantines an unreplayable queue entry instead of unlinking it). Network-dependent repairs report that they need a network instead of failing silently.
+
+In CI, `fw doctor` reports the org API key session when `FW_ORG_API_KEY` is in play.
+
+### `fw verify`
+
+Run the seven rollout verifications headless.
+
+```bash
+fw verify --json
+```
+
+| Flag | Notes |
+| --- | --- |
+| `--json` | Print `{ pass, results }`. |
+
+Checks, in order: `cohort-keying`, `no-orphan-flags`, `safe-defaults`, `no-mixed-provider-calls`, `telemetry-completeness`, `rollout-config-schema`, `provider-health`.
+
+Exit `0` if every check passed, `1` if any failed.
+
+This is a verification suite, not rollout control. Sealing and ramping still happen in the console and skills.
+
+## Sync and manifests
+
+After `fw init`, rollout-ready contracts live on the server, not in your git tree. `fw sync` is the command every gate tells you to run.
+
+### `fw sync`
+
+Drain queued manifest edits, then pull server-owned repo state into `.fireweave/.cache/`.
+
+```bash
+fw sync
+fw sync --machine-readable
+```
+
+CI recipe (see [Authentication](/cli/authentication#ci-credentials)):
+
+```yaml
+- run: fw sync
+  env:
+    FW_ORG_API_KEY: ${{ secrets.FW_ORG_API_KEY }}
+```
+
+| Flag | Notes |
+| --- | --- |
+| `--branch <name>` | Reader view for this branch instead of `HEAD`. Required when `HEAD` is detached. |
+| `--profile <alias>` | Interactive profile override. Ignored when `FW_ORG_API_KEY` is set unless you pass this flag (the flag wins). |
+| `--machine-readable` | Emit JSON. |
+| `--drop <ulid>` | Discard one queued manifest edit without replaying it. |
+
+A pointer ↔ server mismatch is fatal and writes nothing. An unbound repo (`bound: false`, no mismatches) is reported and is not treated as a contradiction.
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Synced. Queue fully drained. |
+| `1` | No `.fireweave/project.json` / no git identity / detached `HEAD` without `--branch`. |
+| `2` | No profile (interactive), unresolvable pointer, or not authorized. |
+| `3` | Server error or other API failure. |
+| `4` | Pointer/server mismatch, or `FW_ORG_API_KEY` org does not match the repo. |
+| `5` | Cache written, but the offline queue did not fully drain. |
+
+### `fw manifest`
+
+Read and move the rollout-ready contract for a feature. Subcommands: `show`, `promote`, `retire`, `archive`, `gc`.
+
+Shared flags on every subcommand: `--project <id>` (required in a multi-project repo), `--profile <alias>`, `--json`.
+
+#### `fw manifest show`
+
+Render a feature's flag contract for a branch.
+
+| Flag | Notes |
+| --- | --- |
+| `--feature <slug>` | **Required.** |
+| `--branch <name>` | Reader view. Default: `HEAD`. |
+
+`show` degrades to the local cache with a staleness warning if the server is unreachable. Absence is three different states — never authored, not fetched (`fw sync`), or not authorized — and the command says which.
+
+#### `fw manifest promote`
+
+Promote a draft to shipped and retire the branch key.
+
+| Flag | Notes |
+| --- | --- |
+| `--feature <slug>` | **Required.** |
+| `--branch <name>` | Source branch. Default: `HEAD`. |
+| `--supersede` | Replace a live shipped incumbent. Refused with `409` unless a change stamp ties this feature+branch to a non-terminal rollout. |
+
+Writes fail closed. They never degrade to the cache.
+
+#### `fw manifest retire`
+
+Tombstone a shipped manifest on this branch. The shipped row stays visible elsewhere until the cleanup lands.
+
+| Flag | Notes |
+| --- | --- |
+| `--feature <slug>` | **Required.** |
+| `--branch <name>` | Branch the cleanup lives on. Default: `HEAD`. |
+
+Prefer this over `archive`.
+
+#### `fw manifest archive`
+
+Retire a manifest **immediately and globally**. Break-glass. Prefer `retire`.
+
+| Flag | Notes |
+| --- | --- |
+| `--feature <slug>` | **Required.** |
+| `--branch <name>` | Branch whose draft to retire. Default: `HEAD`. |
+| `--shipped` | Retire the branch-agnostic shipped row instead. |
+
+#### `fw manifest gc`
+
+Sweep drafts and tombstones off branches that no longer exist. Flags them `orphaned` — the row stays readable; it stops shadowing.
+
+| Flag | Notes |
+| --- | --- |
+| `--project <id>` | Required in a multi-project repo. |
+| `--profile <alias>` | Override profile. |
+| `--json` | Keep the full manifest of every swept row. |
+
+There is no `--dry-run`. `gc` is a deliberate verb: do not run it from a shallow or single-branch clone.
+
+## Agent tooling
+
+### `fw plugins`
+
+Install Fireweave agent skills and plugins into supported tools.
+
+```bash
+fw plugins list
+fw plugins install <plugin>
+fw plugins info <plugin>
+```
+
+| Subcommand | Flags |
+| --- | --- |
+| `install <plugin>` | `--tool <claude-code\|cursor\|codex\|opencode\|cline>`, `--scope <user\|project-shared\|project-private>`, `--target <path>`, `--yes`. Accepts `<plugin>@<version>` or latest. |
+| `list` | `--installed` — local installs only. |
+| `update <plugin>` | `--scope <name>` |
+| `uninstall <plugin>` | `--scope <name>`, `--yes` |
+| `info <plugin>` | Latest version, install commands, install state. |
+
+Claude Code and Cursor use their native marketplaces — `install` prints instructions rather than copying files. Codex, OpenCode, and Cline clone and materialise into the tool's plugin directory.
+
+### `fw mcp`
+
+Write Fireweave MCP-server config into a host that has no plugin-root path token.
+
+```bash
+fw mcp install codex --from <plugin-bundle-dir>
+```
+
+| Argument / flag | Notes |
+| --- | --- |
+| `<host>` | `codex`, `opencode`, or `cline`. |
+| `--from <dir>` | Bundle directory that contains `mcp-install.json`. Default: cwd. |
+| `--project <dir>` | OpenCode only: write `<dir>/.opencode/opencode.json` instead of the global config. |
+
+`cursor`, `claude-code`, and `claude` need no install. They resolve the bundle path automatically.
+
+## Maintenance
+
+### `fw self-update`
+
+Fetch the latest binary, verify checksum, and swap in place. See [Upgrade](/cli/overview#upgrade).
+
+| Flag | Notes |
+| --- | --- |
+| `--force` | Reinstall even when already current. |
+| `--channel <stable\|staging>` | Pull from that tree. Default: the running binary's channel. |
+
+## Feedback
+
+### `fw feedback`
+
+Report that Fireweave behaved wrong in this session.
+
+Collection never requires auth. A broken login is exactly the session worth hearing about. If you are not authenticated, the bundle stays on disk and `fw` prints the resume command.
+
+```bash
+fw feedback --remarks "sync reported ready but the gate stayed red"
+fw feedback --dry-run --json
+fw feedback --submit <bundle> --yes
+```
+
+| Flag | Notes |
+| --- | --- |
+| `--remarks <text>` | What felt off. Required unless `--remarks-file` or `--submit`. |
+| `--remarks-file <path>` | Read remarks from a file. |
+| `--agent-summary-file <path>` | Agent's account of the session. |
+| `--category <key>` | Issue category. Default `uncategorised`. |
+| `--severity <level>` | `low` \| `medium` \| `high` \| `critical`. Default `medium`. |
+| `--session <path>` | Explicit transcript path. |
+| `--no-transcript` | Omit the session transcript. |
+| `--out <dir>` | Where to write the bundle. |
+| `--dry-run` | Collect and preview only. |
+| `--submit <bundle>` | Upload a bundle collected earlier. |
+| `-y, --yes` | Skip the confirmation prompt. |
+| `--json` | Machine-readable output. |
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Ok (including "user declined send"). |
+| `2` | Bad input. |
+| `3` | Not authenticated — bundle kept. |
+| `4` | Server rejected the upload. |
+| `5` | Upload failed. |
+
+## Not generally available
+
+<Warning>
+  `fw pr check` and `fw merge register` belong to a gated pre-merge pipeline. The feature is implemented but **not generally available**. No customer environment has it enabled. Do not add these commands to a required check today. The rest of this section is the command contract only.
+</Warning>
+
+These two commands are the deliberate CLI exceptions to "no rollout commands": they are a pre-merge gate and a merge extraction, not rollout control. You still will not find `fw rollout`.
+
+### `fw pr check`
+
+Ask whether this pull request is ready for a safe rollout. Deterministic: tree + diff range + manifests file. No network and no credential.
+
+```bash
+fw pr check --manifests manifests.json
+fw pr check --manifests manifests.json --json
+```
+
+| Flag | Notes |
+| --- | --- |
+| `--manifests <file>` | **Required.** JSON of the project's rollout-ready manifests (`fw manifest show --json` exports this shape). |
+| `--base <sha>` | Diff base. Default: `merge-base origin/HEAD HEAD`. |
+| `--head <sha>` | Diff head. Default: `HEAD`. |
+| `--json` | Print the readiness report as JSON. |
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Ready, or no relevant surface in the diff. |
+| `1` | Not ready. This is data about the PR, not a command failure. |
+| `2` | Could not evaluate (including a missing `--manifests`). A gate must treat `2` as not-approved. |
+
+### `fw merge register`
+
+Extract every control point in the tree plus the dependency edges decidable from syntax. `--dry-run` is **required** in this build. Registration is not performed locally.
+
+```bash
+fw merge register --dry-run
+fw merge register --dry-run --json
+```
+
+| Flag | Notes |
+| --- | --- |
+| `--dry-run` | **Required.** Print the extraction; register nothing. |
+| `--base <sha>` | Diff base. Default: first parent of `HEAD`. |
+| `--head <sha>` | Merge commit. Default: `HEAD`. |
+| `--json` | Print the extraction as JSON. |
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Printed. |
+| `2` | Usage (missing `--dry-run`). |
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Authentication" href="/cli/authentication" icon="key">
+    Profiles vs `FW_ORG_API_KEY`.
+  </Card>
+  <Card title="HTTP API" href="/reference/http-api" icon="brackets-curly">
+    Management-plane routes behind the same org key.
+  </Card>
+</Columns>

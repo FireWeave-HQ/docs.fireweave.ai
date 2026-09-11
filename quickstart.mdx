@@ -1,250 +1,185 @@
 ---
 title: "Quickstart"
-description: "Install a FireWeave SDK, evaluate a control point offline, register a target where the API exists, record an outcome, and shut down."
+description: "Install a Fireweave SDK, initialize with a required mode, evaluate a control point, register a target, and shut down."
 ---
 
-This walkthrough goes **Install → Configure → Initialize → Register target → Evaluate → Record outcome → Shutdown**. Examples use the deterministic in-memory adapter, so you do not need a network or a project key. Example keys match the SDK docs: `new-checkout` and `user_42`.
+This walkthrough goes **Install → Initialize → Register target → Evaluate → Shutdown**. Examples use **local mode**, so you do not need a network or a project key. Example keys match the SDK docs: `new-checkout` and `user_42`.
 
-OpenFeature and the wire still say `flagKey`. The product name is **control point**. Evaluation **never throws** — a failure returns your default.
+The wire protocol still says `flagKey`. The product name is **control point**. Evaluation **never throws** — a failure returns your default.
 
-<Warning>
-  **Lead with the registry** where the package is published (verified 2026-08-17): npm `@fireweaveai/sdk@2.1.0` (`latest` = 2.1.0), `@fireweaveai/web-sdk@2.1.0`, and PyPI `fireweave` 0.1.0. Pin Node **2.1.0** — npm **2.0.0** is a different API (direct PostHog adapter and `./posthog`). The Go module and Java `0.1.0-SNAPSHOT` artifacts are still unpublished. Checkout remains an alternative for contributing or an unreleased tree.
-</Warning>
+`mode` is required and never inferred. Remote without credentials is a boot error. The SDK never falls back to local.
 
 ## Prerequisites
 
-- **Node / Bun / Deno:** Node.js ≥ 20.20, or Bun ≥ 1.2, or Deno ≥ 2.0. Optional peer `@openfeature/server-sdk` only if you use the provider.
-- **Python:** Python ≥ 3.10 and a virtualenv.
-- **Go:** Go 1.25. The module is unpublished — clone [FireWeave-HQ/fireweave-sdk](https://github.com/FireWeave-HQ/fireweave-sdk) and use a `replace` directive.
-- **Java:** JDK 11+ and Maven. Clone the SDK repo; artifacts install to your local `~/.m2` as `0.1.0-SNAPSHOT`.
-- **Browser:** A frontend toolchain. `@fireweaveai/web-sdk@2.1.0` is on npm. The package reads **no** environment variables.
+- **Node / Bun / Deno:** Node.js `>=20.20`, or Bun `>=1.2`, or Deno `>=2.0`.
+- **Python:** Python `>=3.10` and a virtualenv.
+- **Go:** Go 1.25.13 or later. The module path requires the `/v2` suffix.
+- **Java:** JDK 11+.
+- **Rust:** Rust 1.75 or later.
+- **Browser:** A frontend toolchain. Use a `fw_public_` key in production — see [Configuration](/production/configuration).
 
-Offline steps need no FireWeave credentials. Production needs a project key (`project-api-key_…`) and a fw-server base URL — see [Configuration](/production/configuration).
+Offline steps need no Fireweave credentials. Production needs a project key and a fw-server base URL. Pass them as explicit init options. The SDK reads **no** environment variables.
 
 <Steps>
   <Step title="Install">
-    Use the published registry where it exists. Checkout is optional except for Go and Java.
+    Packages published 2026-09-09 at **2.3.0**.
 
     <Tabs>
       <Tab title="Node">
-        npm `latest` is **2.1.0** (verified 2026-08-17). Pin it. **2.0.0** is still published and still ships PostHog / `./posthog`.
+        Install `@fireweaveai/server-sdk`. Do not install `@fireweaveai/sdk` — that name is frozen at 2.1.0.
 
         ```bash
-        npm install @fireweaveai/sdk@2.1.0
+        npm install @fireweaveai/server-sdk
         ```
 
-        Add `@openfeature/server-sdk` only if you use the provider. Deno can `import { … } from 'npm:@fireweaveai/sdk'` with no install step; that follows npm `latest` (**2.1.0** today). Pin `@2.1.0` in an import map if you need to stay off 2.0.0.
-
-        <Note>
-          APIs on this page are from SDK `master`. The npm 2.1.0 tarball `gitHead` is `fd19cad`, not audit commit `dfeb478` — **NEEDS VERIFICATION** that every snippet matches that tarball exactly. Checkout if you need a specific tree.
-        </Note>
+        Bun:
 
         ```bash
-        git clone https://github.com/FireWeave-HQ/fireweave-sdk && cd fireweave-sdk
-        (cd sdks/node && npm install && npm run build)
-        # in your app:
-        npm install ../fireweave-sdk/sdks/node/packages/sdk
+        bun add @fireweaveai/server-sdk
+        ```
+
+        Deno needs no install step:
+
+        ```ts
+        import { initFireweave } from 'npm:@fireweaveai/server-sdk';
         ```
       </Tab>
       <Tab title="Python">
-        PyPI has `fireweave` **0.1.0** (verified 2026-08-17):
-
         ```bash
         python -m venv .venv
-        .venv/bin/pip install 'fireweave[openfeature]'
+        .venv/bin/pip install fireweave
         ```
 
-        Omit `[openfeature]` if you will not use the provider. Checkout if you need a specific commit:
-
-        ```bash
-        git clone https://github.com/FireWeave-HQ/fireweave-sdk && cd fireweave-sdk
-        python -m venv .venv
-        .venv/bin/pip install -e 'sdks/python[openfeature]'
-        ```
+        There is no `[openfeature]` or `[posthog]` extra. The only extra is `dev` (pytest).
       </Tab>
       <Tab title="Go">
-        No verified public module tag. In your app `go.mod`:
-
-        ```
-        require github.com/FireWeave-HQ/fireweave-sdk/sdks/go v0.0.0
-        replace github.com/FireWeave-HQ/fireweave-sdk/sdks/go => ../fireweave-sdk/sdks/go
-        ```
-
-        Clone the repo so the `replace` path exists. Do not `go get` a published version as if it works.
-      </Tab>
-      <Tab title="Java">
-        Not on Maven Central. Parent POM: do not publish.
+        The `/v2` suffix is required in both `go get` and import paths.
 
         ```bash
-        git clone https://github.com/FireWeave-HQ/fireweave-sdk && cd fireweave-sdk/sdks/java
-        mvn install
+        go get github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2@v2.3.0
         ```
+      </Tab>
+      <Tab title="Java">
+        Maven Central, `ai.fireweave:fireweave-sdk` **2.3.0**. `fireweave-openfeature`, `fireweave-adapter-posthog`, and `fireweave-testing` remain at **0.1.0** and are not this SDK.
 
         ```xml
         <dependency>
           <groupId>ai.fireweave</groupId>
           <artifactId>fireweave-sdk</artifactId>
-          <version>0.1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-          <groupId>ai.fireweave</groupId>
-          <artifactId>fireweave-testing</artifactId>
-          <version>0.1.0-SNAPSHOT</version>
-          <scope>test</scope>
+          <version>2.3.0</version>
         </dependency>
         ```
+      </Tab>
+      <Tab title="Rust">
+        ```bash
+        cargo add fireweave
+        ```
 
-        Add `fireweave-openfeature` only if you use OpenFeature (`dev.openfeature:sdk` **1.15.1**).
+        Or in `Cargo.toml`:
+
+        ```toml
+        fireweave = "2.3.0"
+        ```
       </Tab>
       <Tab title="Browser">
-        `@fireweaveai/web-sdk` **2.1.0** is on npm (verified 2026-08-17; tarball `gitHead` `dfeb478`).
-
         ```bash
-        npm install @fireweaveai/web-sdk@2.1.0
+        npm install @fireweaveai/web-sdk
         ```
-
-        Add `@openfeature/web-sdk` only if you use the provider. Checkout if you need an unreleased tree:
-
-        ```bash
-        git clone https://github.com/FireWeave-HQ/fireweave-sdk && cd fireweave-sdk
-        (cd sdks/web && npm install && npm run build)
-        # in your app:
-        npm install ../fireweave-sdk/sdks/web/packages/sdk
-        ```
-      </Tab>
-    </Tabs>
-  </Step>
-
-  <Step title="Configure">
-    Construct an adapter and a runtime. In-memory fixtures use `type`, `enabled`, `value`, and `variant`.
-
-    <Tabs>
-      <Tab title="Node">
-        ```js
-        import { FireweaveClient, FireweaveRuntime, InMemoryAdapter } from '@fireweaveai/sdk';
-
-        const runtime = new FireweaveRuntime(new InMemoryAdapter({
-          flags: {
-            'new-checkout': { type: 'boolean', enabled: true, value: true, variant: 'on' },
-          },
-        }));
-        const fireweave = new FireweaveClient(runtime);
-        ```
-      </Tab>
-      <Tab title="Python">
-        ```python
-        from fireweave import FireweaveClient, FireweaveRuntime, InMemoryAdapter
-
-        runtime = FireweaveRuntime(InMemoryAdapter({
-            "new-checkout": {"type": "boolean", "enabled": True, "value": True, "variant": "on"},
-        }))
-        fireweave = FireweaveClient(runtime)
-        ```
-      </Tab>
-      <Tab title="Go">
-        ```go
-        adapter := inmemory.New(inmemory.WithFlags(map[string]inmemory.Flag{
-            "new-checkout": {Type: fireweave.FlagTypeBoolean, Enabled: true, Value: true, Variant: "on"},
-        }))
-        runtime := fireweave.NewRuntime(adapter, fireweave.Config{})
-        client := fireweave.NewClient(runtime)
-        ```
-
-        Imports: `…/sdks/go/fireweave` and `…/sdks/go/adapters/inmemory`.
-      </Tab>
-      <Tab title="Java">
-        ```java
-        import ai.fireweave.sdk.FireweaveClient;
-        import ai.fireweave.sdk.FireweaveConfig;
-        import ai.fireweave.sdk.FireweaveRuntime;
-        import ai.fireweave.testing.FlagDefinition;
-        import ai.fireweave.testing.InMemoryAdapter;
-        import com.fasterxml.jackson.databind.ObjectMapper;
-
-        import java.util.Map;
-
-        ObjectMapper mapper = new ObjectMapper();
-        Map<String, FlagDefinition> flags = Map.of("new-checkout",
-            FlagDefinition.fromJson(mapper.readTree(
-                "{\"type\":\"boolean\",\"enabled\":true,\"variant\":\"on\",\"value\":true}")));
-        FireweaveRuntime runtime = new FireweaveRuntime(
-            FireweaveConfig.builder().build(), new InMemoryAdapter(flags));
-        FireweaveClient fireweave = new FireweaveClient(runtime);
-        ```
-
-        Java does not read `FW_*` from the environment. Pass `FireweaveConfig` explicitly when you leave in-memory mode.
-      </Tab>
-      <Tab title="Browser">
-        ```js
-        import {
-          FireweaveWebClient,
-          FireweaveWebRuntime,
-          InMemoryWebAdapter,
-        } from '@fireweaveai/web-sdk';
-
-        const runtime = new FireweaveWebRuntime(new InMemoryWebAdapter({
-          flags: {
-            'new-checkout': { type: 'boolean', enabled: true, value: true, variant: 'on' },
-          },
-        }));
-        const fireweave = new FireweaveWebClient(runtime);
-        ```
-
-        The web SDK never reads `process.env` or `import.meta.env`.
       </Tab>
     </Tabs>
   </Step>
 
   <Step title="Initialize">
-    Wait until the runtime is usable before treating values as live. After shutdown, evaluations return defaults with `AlreadyClosed`.
+    Call the language entry point with `mode: 'local'` and a seeded map. Init fails loudly on bad configuration. Reads on the returned client never throw.
 
     <Tabs>
       <Tab title="Node">
         ```js
-        await fireweave.initialize();
+        import { initFireweave } from '@fireweaveai/server-sdk';
+
+        const fireweave = await initFireweave({
+          mode: 'local',
+          local: { controlPoints: { 'new-checkout': true } },
+        });
         ```
       </Tab>
       <Tab title="Python">
         ```python
-        fireweave.initialize()
+        from fireweave import init_fireweave
+
+        fireweave = init_fireweave(
+            mode="local",
+            local={"control_points": {"new-checkout": True}},
+        )
         ```
       </Tab>
       <Tab title="Go">
         ```go
-        ctx := context.Background()
-        if err := runtime.Initialize(ctx); err != nil {
+        import "github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2/fireweave"
+
+        client, err := fireweave.Init(fireweave.Options{
+            Mode: fireweave.ModeLocal,
+            Local: &fireweave.LocalOptions{
+                ControlPoints: map[string]bool{"new-checkout": true},
+            },
+        })
+        if err != nil {
             panic(err)
         }
         ```
 
-        Every blocking Go call takes `context.Context`.
+        Public control-point methods do **not** take `context.Context`. They use `context.Background()` internally.
       </Tab>
       <Tab title="Java">
+        Types live under `ai.fireweave.sdk.application` and `ai.fireweave.sdk.domain` — there is no facade re-export package.
+
         ```java
-        runtime.initialize();
+        import ai.fireweave.sdk.application.Fireweave;
+        import ai.fireweave.sdk.application.FireweaveClient;
+        import ai.fireweave.sdk.application.InitOptions;
+
+        import java.util.Map;
+
+        FireweaveClient fireweave = Fireweave.init(
+            InitOptions.local(Map.of("new-checkout", true)));
+        ```
+      </Tab>
+      <Tab title="Rust">
+        ```rust
+        use fireweave::{init_fireweave, InitOptions};
+        use std::collections::HashMap;
+
+        let mut control_points = HashMap::new();
+        control_points.insert("new-checkout".to_string(), true);
+        let fireweave = init_fireweave(
+            InitOptions::local_with_control_points(control_points)
+        ).unwrap();
         ```
       </Tab>
       <Tab title="Browser">
         ```js
-        await fireweave.initialize();
+        import { initFireweave } from '@fireweaveai/web-sdk';
+
+        const fireweave = await initFireweave({
+          mode: 'local',
+          local: { controlPoints: { 'new-checkout': true } },
+        });
         ```
 
-        Initialize prefetches the decision cache. Reads after that are **synchronous**. If prefetch exceeds 5 seconds against a remote adapter, the runtime enters **STALE** and getters return defaults with reason `STALE`.
+        Reads after init are **synchronous**. If a remote prefetch exceeds 5 seconds, the runtime enters **STALE** and getters return defaults with reason `STALE`.
       </Tab>
     </Tabs>
   </Step>
 
   <Step title="Register a target">
-    Node, Python, and Web can register durable properties (`kind`, `properties`). The call **never throws** (Node returns `{ ok, error? }`). Go and Java have **no** `registerTarget` on `master` — skip this step and pass `targetingKey` on evaluate.
+    Register durable properties once per login. The call **never throws**. Check `ok` — a silently unregistered target is how targeting rules match nobody.
 
-    <Warning>
-      `InMemoryAdapter` / `InMemoryWebAdapter` do not implement registration. They return `UnsupportedCapability` so a harness does not look registered when it is not. The repo test-server stub also does **not** implement `POST /v1/targets/register`. This step is real against `FireweaveRemoteAdapter` (Node/Python/Web).
-    </Warning>
+    In local mode the adapter records the target in-process, emits a `[fireweave:local]` trace line, and returns `{ ok: true }`. Nothing is sent to fw-server.
 
     <Tabs>
       <Tab title="Node">
         ```js
-        const registered = await runtime.registerTarget('user_42', {
+        const registered = await fireweave.registerTarget('user_42', {
           kind: 'user',
           properties: { plan: 'pro', region: 'eu-west' },
         });
@@ -257,12 +192,60 @@ Offline steps need no FireWeave credentials. Production needs a project key (`pr
         ```python
         from fireweave import RegisterTargetOptions
 
-        result = runtime.register_target(
+        result = fireweave.register_target(
             "user_42",
             RegisterTargetOptions(kind="user", properties={"plan": "pro", "region": "eu-west"}),
         )
         if not result.ok:
             print("register_target failed", result.error)
+        ```
+      </Tab>
+      <Tab title="Go">
+        ```go
+        registered := client.RegisterTarget("user_42", &fireweave.RegisterTargetOptions{
+            Kind:       fireweave.TargetKindUser,
+            Properties: map[string]any{"plan": "pro", "region": "eu-west"},
+        })
+        if !registered.OK {
+            fmt.Println("registerTarget failed", registered.Error)
+        }
+        ```
+      </Tab>
+      <Tab title="Java">
+        ```java
+        import ai.fireweave.sdk.application.RegisterTargetOptions;
+        import ai.fireweave.sdk.domain.JsonValue;
+        import ai.fireweave.sdk.domain.TargetKind;
+
+        var registered = fireweave.registerTarget("user_42",
+            RegisterTargetOptions.builder()
+                .kind(TargetKind.USER)
+                .property("plan", JsonValue.of("pro"))
+                .property("region", JsonValue.of("eu-west"))
+                .build());
+        if (!registered.ok()) {
+            System.out.println("registerTarget failed " + registered.error());
+        }
+        ```
+      </Tab>
+      <Tab title="Rust">
+        ```rust
+        use fireweave::RegisterTargetOptions;
+
+        let properties = serde_json::json!({ "plan": "pro", "region": "eu-west" })
+            .as_object()
+            .unwrap()
+            .clone();
+        let registered = fireweave.register_target(
+            "user_42",
+            Some(&RegisterTargetOptions {
+                properties: Some(properties),
+                ..Default::default()
+            }),
+        );
+        if !registered.ok {
+            eprintln!("register_target failed {:?}", registered.error);
+        }
         ```
       </Tab>
       <Tab title="Browser">
@@ -273,7 +256,7 @@ Offline steps need no FireWeave credentials. Production needs a project key (`pr
         });
         ```
 
-        `identify` calls `registerTarget` and then `setContext({ targetingKey })`. It is not OpenFeature `identify`.
+        `identify` calls `registerTarget`, then `setContext({ targetingKey })` so the next prefetch buckets on that id. You can also call `registerTarget` directly.
       </Tab>
     </Tabs>
   </Step>
@@ -290,7 +273,7 @@ Offline steps need no FireWeave credentials. Production needs a project key (`pr
         console.log('new-checkout:', enabled);
         ```
 
-        Detailed Decision: `fireweave.controlPoints.evaluate('new-checkout', 'boolean', false, { targetingKey: 'user_42' })`. `client.flags` is the same object as `client.controlPoints` (deprecated alias; not removed in 2.x).
+        Detailed decision: `fireweave.controlPoints.getBooleanDetails('new-checkout', false, { targetingKey: 'user_42' })`.
       </Tab>
       <Tab title="Python">
         ```python
@@ -301,36 +284,37 @@ Offline steps need no FireWeave credentials. Production needs a project key (`pr
         )
         print("new-checkout:", enabled)
         ```
-
-        `client.flags` is the same object as `client.control_points`.
       </Tab>
       <Tab title="Go">
         ```go
-        decision := client.Flags().Evaluate(
-            ctx,
-            "new-checkout",
-            fireweave.FlagTypeBoolean,
-            false,
-            fireweave.NewEvaluationContext("user_42", nil),
-            fireweave.EvaluateOptions{},
-        )
-        fmt.Println("new-checkout:", decision.Value)
+        evalCtx := fireweave.NewEvaluationContext("user_42", nil)
+        enabled := client.ControlPoints().GetBooleanValue("new-checkout", false, &evalCtx)
+        fmt.Println("new-checkout:", enabled)
         ```
-
-        Go has no `controlPoints` namespace and no typed getters. `EvaluateOptions.SendExposure` defaults to false when left unset.
       </Tab>
       <Tab title="Java">
         ```java
-        import ai.fireweave.sdk.EvaluationContext;
+        import ai.fireweave.sdk.domain.EvaluationContext;
 
-        boolean enabled = fireweave.getBooleanValue(
+        boolean enabled = fireweave.controlPoints().getBooleanValue(
             "new-checkout",
             false,
             EvaluationContext.builder().targetingKey("user_42").build());
         System.out.println("new-checkout: " + enabled);
         ```
+      </Tab>
+      <Tab title="Rust">
+        ```rust
+        use fireweave::EvaluationContext;
 
-        Native helpers are **boolean and string only**. Other types use `evaluate` or the OpenFeature provider. There is no `controlPoints` facade.
+        let ctx = EvaluationContext::new().with_targeting_key("user_42");
+        let enabled = fireweave.control_points.get_boolean_value(
+            "new-checkout",
+            false,
+            Some(&ctx),
+        );
+        println!("new-checkout: {enabled}");
+        ```
       </Tab>
       <Tab title="Browser">
         ```js
@@ -345,49 +329,12 @@ Offline steps need no FireWeave credentials. Production needs a project key (`pr
     </Tabs>
 
     <Note>
-      Evaluate-path exposures are **off** unless you pass `sendExposure: true` (or the language equivalent). Default is **false** in every language.
+      A v1 read is side-effect free. It does not record exposures or emit telemetry because you called it.
     </Note>
   </Step>
 
-  <Step title="Record an outcome">
-    Optional for a first run; this completes the release-safety loop. `recordOutcome` is a **signal** (kind `outcome`), not `releases.complete`.
-
-    <Tabs>
-      <Tab title="Node">
-        ```js
-        fireweave.signals.recordOutcome({ name: 'checkout', status: 'completed' });
-        ```
-      </Tab>
-      <Tab title="Python">
-        ```python
-        fireweave.signals.record_outcome("checkout", "completed")
-        ```
-      </Tab>
-      <Tab title="Go">
-        ```go
-        _ = client.Signals().RecordOutcome(ctx, fireweave.OutcomeSignal{
-            Name:   "checkout",
-            Status: "completed",
-        })
-        ```
-
-        Go extensions return `error`, not a result struct.
-      </Tab>
-      <Tab title="Java">
-        ```java
-        fireweave.signals().recordOutcome("checkout", "completed");
-        ```
-      </Tab>
-      <Tab title="Browser">
-        ```js
-        fireweave.signals.recordOutcome({ name: 'checkout', status: 'completed' });
-        ```
-      </Tab>
-    </Tabs>
-  </Step>
-
   <Step title="Shut down">
-    One runtime, one shutdown. Node, Python, and Web flush exposures inside `shutdown`. Java does **not**.
+    One runtime, one shutdown.
 
     <Tabs>
       <Tab title="Node">
@@ -400,141 +347,118 @@ Offline steps need no FireWeave credentials. Production needs a project key (`pr
         fireweave.shutdown()
         ```
 
-        Never raises; idempotent. You can also use `with FireweaveClient(runtime) as fireweave:`.
+        Never raises; idempotent. You can also use `with init_fireweave(...) as fireweave:`.
       </Tab>
       <Tab title="Go">
         ```go
-        _ = client.Exposures().Flush(ctx)
-        _ = runtime.Shutdown(ctx)
+        shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+        defer cancel()
+        _ = client.Runtime().Shutdown(shutdownCtx)
         ```
       </Tab>
       <Tab title="Java">
         ```java
-        fireweave.exposures().flush();
-        fireweave.close(); // does not flush
+        fireweave.close();
+        ```
+      </Tab>
+      <Tab title="Rust">
+        ```rust
+        fireweave.shutdown();
         ```
       </Tab>
       <Tab title="Browser">
         ```js
         await fireweave.shutdown();
         ```
-
-        The client also flushes on `visibilitychange` → hidden and `pagehide` (`keepalive` / `sendBeacon`) unless you disable unload flush.
       </Tab>
     </Tabs>
   </Step>
 </Steps>
 
-## Production (remote adapter)
+## Production (remote mode)
 
-Swap the in-memory adapter for `FireweaveRemoteAdapter` (Web: `FireweaveRemoteWebAdapter`). Auth is `Authorization: Bearer <key>`. Use a FireWeave project key (`project-api-key_…`), not a PostHog `phc_` / `phs_` / `phx_` key.
+Swap local mode for `mode: 'remote'` and pass `apiUrl` / `apiKey` (or the language equivalent) as **explicit options**. The SDK does not read `FW_API_URL` or `FW_PROJECT_API_KEY`. Your app may read those itself and pass them in.
+
+Auth is `Authorization: Bearer <key>`. Use a Fireweave project key (`project-api-key_…`), not a PostHog `phc_` / `phs_` / `phx_` key. In the browser, use a `fw_public_` key — see [Configuration](/production/configuration).
 
 <Tabs>
   <Tab title="Node">
-    Reads `FW_API_URL` and `FW_PROJECT_API_KEY` when omitted.
-
     ```js
-    import { FireweaveClient, FireweaveRemoteAdapter, FireweaveRuntime } from '@fireweaveai/sdk';
+    import { initFireweave } from '@fireweaveai/server-sdk';
 
-    const runtime = new FireweaveRuntime(new FireweaveRemoteAdapter({
+    const fireweave = await initFireweave({
+      mode: 'remote',
       apiUrl: process.env.FW_API_URL,
       apiKey: process.env.FW_PROJECT_API_KEY,
-    }));
-    const fireweave = new FireweaveClient(runtime);
-    await fireweave.initialize();
+    });
     ```
 
     `https` is required off-loopback; `http` is loopback-only.
   </Tab>
   <Tab title="Python">
     ```python
-    from fireweave import FireweaveClient, FireweaveRemoteAdapter, FireweaveRuntime
+    from fireweave import init_fireweave
+    import os
 
-    runtime = FireweaveRuntime(FireweaveRemoteAdapter())  # FW_API_URL, FW_PROJECT_API_KEY
-    fireweave = FireweaveClient(runtime)
-    fireweave.initialize()
+    fireweave = init_fireweave(
+        mode="remote",
+        api_url=os.environ["FW_API_URL"],
+        api_key=os.environ["FW_PROJECT_API_KEY"],
+    )
     ```
-
-    Or pass `api_url=` / `api_key=` on `FireweaveRemoteAdapter`.
   </Tab>
   <Tab title="Go">
     ```go
-    adapter := remote.New(remote.Config{}) // FW_API_URL, FW_PROJECT_API_KEY
-    runtime := fireweave.NewRuntime(adapter, fireweave.Config{})
-    client := fireweave.NewClient(runtime)
-    if err := runtime.Initialize(ctx); err != nil {
+    client, err := fireweave.Init(fireweave.Options{
+        Mode:   fireweave.ModeRemote,
+        APIURL: os.Getenv("FW_API_URL"),
+        APIKey: os.Getenv("FW_PROJECT_API_KEY"),
+    })
+    if err != nil {
         panic(err)
     }
     ```
-
-    Import `…/sdks/go/adapters/remote`.
   </Tab>
   <Tab title="Java">
-    Java does **not** call `System.getenv`. Set `host` and `projectApiKey` on `FireweaveConfig`. Default `allowedHosts` is PostHog hosts + loopback — add your fw-server hostname or initialize will fail configuration checks.
+    Java does **not** call `System.getenv`. Read env in your app and pass the values in.
 
     ```java
-    import ai.fireweave.sdk.FireweaveRemoteAdapter;
+    FireweaveClient fireweave = Fireweave.init(
+        InitOptions.remote(apiKey, apiUrl));
+    ```
+  </Tab>
+  <Tab title="Rust">
+    ```rust
+    use fireweave::{init_fireweave, InitOptions};
 
-    import java.util.Set;
-
-    FireweaveConfig config = FireweaveConfig.builder()
-        .host(apiUrl)
-        .projectApiKey(apiKey)
-        .allowedHosts(Set.of(/* fw-server hostname */, "localhost", "127.0.0.1"))
-        .build();
-    FireweaveRuntime runtime = new FireweaveRuntime(config, new FireweaveRemoteAdapter());
-    runtime.initialize();
+    let fireweave = init_fireweave(InitOptions::remote(
+        std::env::var("FW_PROJECT_API_KEY").unwrap(),
+        std::env::var("FW_API_URL").unwrap(),
+    )).unwrap();
     ```
   </Tab>
   <Tab title="Browser">
-    `apiUrl` and `apiKey` are **required constructor fields**. Do not embed an `attest:write` project key in a browser bundle.
+    `apiUrl` and `apiKey` are required. Use a `fw_public_` key scoped to `flags:evaluate` and `events:write`. Do not embed a secret or `attest:write` project key in a browser bundle. See [Configuration](/production/configuration).
 
     ```js
-    import {
-      FireweaveRemoteWebAdapter,
-      FireweaveWebClient,
-      FireweaveWebRuntime,
-    } from '@fireweaveai/web-sdk';
+    import { initFireweave } from '@fireweaveai/web-sdk';
 
-    const runtime = new FireweaveWebRuntime(
-      new FireweaveRemoteWebAdapter({ apiUrl, apiKey }),
-    );
-    const fireweave = new FireweaveWebClient(runtime);
-    await fireweave.initialize();
+    const fireweave = await initFireweave({
+      mode: 'remote',
+      apiUrl,
+      apiKey,
+      context: { targetingKey: 'anonymous' },
+    });
     ```
-
-    Spec/ADR-0009 describe a scoped `fw_public_…` browser key family. Whether fw-server already issues those keys is **not verified** from the SDK repo.
   </Tab>
 </Tabs>
 
-Which hostname is the customer-facing fw-server URL is **not verified** from the SDK repository. Set `FW_API_URL` / `apiUrl` / Java `host` from your project.
-
-## OpenFeature
-
-You can evaluate through OpenFeature instead of (or in addition to) `FireweaveClient`. Extensions stay on the FireWeave client. Providers exist in all five packages. Tracking (OF spec §6) is not implemented.
-
-Node example (wait for READY; `lazyReady` defaults **true** on `FireweaveProvider`):
-
-```js
-import { OpenFeature } from '@openfeature/server-sdk';
-import { FireweaveProvider, FireweaveRuntime, InMemoryAdapter } from '@fireweaveai/sdk';
-
-const runtime = new FireweaveRuntime(new InMemoryAdapter({
-  flags: { 'new-checkout': { type: 'boolean', enabled: true, value: true, variant: 'on' } },
-}));
-await OpenFeature.setProviderAndWait(new FireweaveProvider(runtime, { lazyReady: false }));
-const enabled = await OpenFeature.getClient().getBooleanValue('new-checkout', false, {
-  targetingKey: 'user_42',
-});
-await OpenFeature.close();
-```
-
-Per-language providers and resolver tables: [OpenFeature](/openfeature).
+Set the fw-server URL from your project. A self-hosted host must appear in `allowedHosts`, or pass `['*']` / language equivalent to opt out of the allowlist.
 
 ## Next steps
 
-- Language surfaces: [Node](/sdks/node), [Python](/sdks/python), [Go](/sdks/go), [Java](/sdks/java), [Browser](/sdks/web), [Compatibility](/sdks/compatibility)
-- Concepts: [Control points](/concepts/control-points), [Targeting](/concepts/targeting), [Exposures](/concepts/exposures), [Signals](/concepts/signals), [Adapters](/concepts/adapters)
+- Language surfaces: [Node](/sdks/node), [Python](/sdks/python), [Go](/sdks/go), [Java](/sdks/java), [Browser](/sdks/web), [Rust](/sdks/rust), [Compatibility](/sdks/compatibility)
+- Concepts: [Control points](/concepts/control-points), [Targeting](/concepts/targeting), [Adapters](/concepts/adapters)
 - Production: [Configuration](/production/configuration), [Lifecycle](/production/lifecycle), [Errors](/production/errors)
 - Tests without a network: [Testing](/testing)
 - If a getter always returns the default: [Troubleshooting](/troubleshooting)

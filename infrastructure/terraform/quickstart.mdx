@@ -1,0 +1,166 @@
+---
+title: "Terraform quickstart"
+description: "Install the Fireweave provider, authenticate with FIREWEAVE_API_KEY, and apply a project with stage and prod environments."
+---
+
+This walkthrough creates one Fireweave project and two environments (`stage`, `prod`) with git ref rules.
+
+<Note>
+  You need Terraform **>= 1.5** and an org-scoped API key (`fw_org_…`). Create the key before you apply — see [Authentication](/infrastructure/terraform/authentication).
+</Note>
+
+<Steps>
+  <Step title="Create a working directory">
+    ```bash
+    mkdir fireweave-terraform && cd fireweave-terraform
+    ```
+  </Step>
+
+  <Step title="Declare the provider">
+    The registry address is `FireWeave-HQ/fireweave`. Pin `~> 0.1`.
+
+    ```hcl main.tf
+    terraform {
+      required_version = ">= 1.5.0"
+
+      required_providers {
+        fireweave = {
+          source  = "FireWeave-HQ/fireweave"
+          version = "~> 0.1"
+        }
+      }
+    }
+
+    provider "fireweave" {
+      # Configure via environment variables:
+      #   FIREWEAVE_API_KEY      (required)
+      #   FIREWEAVE_ENDPOINT     (optional)
+    }
+    ```
+
+    Leave `api_key` out of the file. Export `FIREWEAVE_API_KEY` instead.
+
+    <Warning>
+      The provider reads `FIREWEAVE_API_KEY` and `FIREWEAVE_ENDPOINT`. It does **not** read the SDK's `FW_API_URL` or `FW_PROJECT_API_KEY`. See [Authentication](/infrastructure/terraform/authentication).
+    </Warning>
+  </Step>
+
+  <Step title="Define a project and environments">
+    Append this to `main.tf`. Changing `slug` on either resource forces replacement.
+
+    ```hcl
+    resource "fireweave_project" "demo" {
+      name        = "Demo Project"
+      slug        = "demo-project"
+      description = "Promotion pipeline managed by Terraform"
+    }
+
+    resource "fireweave_environment" "stage" {
+      project_id   = fireweave_project.demo.id
+      slug         = "stage"
+      display_name = "Stage"
+      is_default   = true
+
+      branch_rules = [
+        {
+          kind  = "exact"
+          value = "main"
+        },
+      ]
+
+      tag_rules = [
+        {
+          kind  = "prefix"
+          value = "stage-"
+        },
+      ]
+
+      webhook_aliases = ["staging"]
+    }
+
+    resource "fireweave_environment" "prod" {
+      project_id   = fireweave_project.demo.id
+      slug         = "prod"
+      display_name = "Production"
+
+      branch_rules = [
+        {
+          kind  = "exact"
+          value = "release"
+        },
+      ]
+
+      tag_rules = [
+        {
+          kind  = "glob"
+          value = "v*"
+        },
+      ]
+    }
+
+    output "project_id" {
+      description = "Fireweave project identifier"
+      value       = fireweave_project.demo.id
+    }
+
+    output "stage_env_id" {
+      value = fireweave_environment.stage.id
+    }
+
+    output "prod_env_id" {
+      value = fireweave_environment.prod.id
+    }
+    ```
+  </Step>
+
+  <Step title="Export your key and apply">
+    ```bash
+    export FIREWEAVE_API_KEY="fw_org_…"
+    terraform init
+    terraform plan
+    terraform apply
+    ```
+
+    `terraform init` downloads `FireWeave-HQ/fireweave` from the Terraform Registry. `apply` calls `POST /v1/projects` and `POST /v1/projects/{projectID}/environments`.
+  </Step>
+</Steps>
+
+## What you created
+
+- A project with slug `demo-project`.
+- A default `stage` environment that matches the `main` branch, tags prefixed `stage-`, and the webhook alias `staging`.
+- A `prod` environment that matches the `release` branch and tags matching `v*`.
+
+Read the project id from state:
+
+```bash
+terraform output
+```
+
+Or look the project up later with a data source — see [Data sources](/infrastructure/terraform/data-sources).
+
+## Import an existing project
+
+If the project already exists, import it instead of creating a second copy:
+
+```bash
+terraform import fireweave_project.demo <project_id>
+terraform import fireweave_environment.stage <project_id>/<env_id>
+```
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Authentication" href="/infrastructure/terraform/authentication" icon="key">
+    Org keys, `FIREWEAVE_*` vs `FW_*`, and custom endpoints.
+  </Card>
+  <Card title="Projects" href="/infrastructure/terraform/projects" icon="folder">
+    `name`, `slug`, `status`, and import.
+  </Card>
+  <Card title="Environments" href="/infrastructure/terraform/environments" icon="layer-group">
+    Ref-rule kinds and what Terraform does not expose.
+  </Card>
+  <Card title="Registry schema" href="https://registry.terraform.io/providers/FireWeave-HQ/fireweave/latest/docs" icon="book">
+    Generated argument reference on the Terraform Registry.
+  </Card>
+</Columns>

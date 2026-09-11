@@ -1,0 +1,136 @@
+---
+title: "Terraform environments"
+description: "Manage Fireweave environments with fireweave_environment: slugs, default stage, branch and tag rules, and webhook aliases."
+---
+
+`fireweave_environment` manages a Fireweave **environment** — a named stage in a project's promotion pipeline (for example `dev`, `stage`, or `prod`).
+
+Environments can declare branch and tag matching rules so Fireweave can resolve which stage a git ref belongs to.
+
+Generated schema: [fireweave_environment on the Terraform Registry](https://registry.terraform.io/providers/FireWeave-HQ/fireweave/latest/docs/resources/environment).
+
+## Example
+
+```hcl
+resource "fireweave_project" "app" {
+  name = "Payments Service"
+  slug = "payments"
+}
+
+resource "fireweave_environment" "stage" {
+  project_id   = fireweave_project.app.id
+  slug         = "stage"
+  display_name = "Stage"
+  is_default   = true
+
+  branch_rules = [
+    {
+      kind  = "exact"
+      value = "main"
+    },
+  ]
+
+  tag_rules = [
+    {
+      kind  = "prefix"
+      value = "stage-"
+    },
+  ]
+
+  webhook_aliases = ["staging", "stg"]
+}
+
+resource "fireweave_environment" "prod" {
+  project_id   = fireweave_project.app.id
+  slug         = "prod"
+  display_name = "Production"
+
+  branch_rules = [
+    {
+      kind  = "exact"
+      value = "release"
+    },
+  ]
+
+  tag_rules = [
+    {
+      kind  = "glob"
+      value = "v*"
+    },
+  ]
+}
+```
+
+Changing `project_id` or `slug` forces a new resource. `display_name`, `is_default`, `branch_rules`, `tag_rules`, and `webhook_aliases` update in place.
+
+## Arguments
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `project_id` | String | Yes | ID of the owning project. **Forces replacement.** |
+| `slug` | String | Yes | Unique within the project (for example `stage`). **Forces replacement.** |
+| `display_name` | String | Yes | Human-readable name shown in the Fireweave UI. |
+| `is_default` | Boolean | No | Whether this environment is the project's default. Optional + computed. Defaults to `false`. |
+| `branch_rules` | List of ref-rule objects | No | Rules that map git branches to this environment. |
+| `tag_rules` | List of ref-rule objects | No | Rules that map git tags to this environment. |
+| `webhook_aliases` | List of String | No | Alternate names accepted from deploy / webhook payloads. |
+
+### Read-only
+
+| Name | Type | Notes |
+| --- | --- | --- |
+| `id` | String | Environment identifier (`envId`) assigned by Fireweave. |
+
+## Ref rules
+
+`branch_rules` and `tag_rules` share the same object shape:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `kind` | String | Yes | `exact` (full string match), `prefix` (value is a prefix of the ref name), or `glob` (shell-style glob). |
+| `value` | String | Yes | Pattern to match. |
+| `repo` | String | No | Limit the rule to a repository full name (for example `acme/payments`). |
+
+```hcl
+branch_rules = [
+  {
+    kind  = "exact"
+    value = "main"
+    repo  = "acme/payments"
+  },
+]
+```
+
+## Not exposed in Terraform
+
+The environment API also returns fields the provider does not manage:
+
+- `promotionRank`
+- `environmentName`
+- `createdAt`
+- `updatedAt`
+
+Do not expect those attributes on the resource. Use `slug`, `display_name`, and `is_default` instead.
+
+## Import
+
+Import with `<project_id>/<env_id>`:
+
+```bash
+terraform import fireweave_environment.stage <project_id>/<env_id>
+```
+
+## List environments
+
+`fireweave_environments` lists environments for a project. The list endpoint can return partial objects, so `id` may be empty. See [Data sources](/infrastructure/terraform/data-sources).
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Projects" href="/infrastructure/terraform/projects" icon="folder">
+    Create the project that owns these environments.
+  </Card>
+  <Card title="Data sources" href="/infrastructure/terraform/data-sources" icon="magnifying-glass">
+    List environments and find the default slug.
+  </Card>
+</Columns>
