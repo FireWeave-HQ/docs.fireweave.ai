@@ -4,28 +4,28 @@
 **Script:** `scripts/validate-examples.mjs`
 **SDK checkout:** /tmp/fw-audit/sdk
 **SDK layout:** v1
-**MDX files:** 39
-**Fenced blocks:** 213
+**MDX files:** 42
+**Fenced blocks:** 222
 
 ## Block counts by language
 
-- `bash`: 41
+- `bash`: 44
 - `ts`: 29
-- `js`: 22
+- `js`: 23
 - `python`: 19
 - `go`: 19
 - `java`: 19
 - `rust`: 18
 - `hcl`: 13
 - `json`: 12
+- `text`: 6
 - `mermaid`: 5
 - `swift`: 3
 - `http`: 3
 - `yaml`: 2
-- `text`: 2
+- `powershell`: 2
 - `xml`: 2
 - `toml`: 2
-- `powershell`: 1
 - `(none)`: 1
 
 ## Checks performed
@@ -86,6 +86,9 @@ _None._
 - `introduction/how-it-works.mdx`
 - `migration/node-2.mdx`
 - `migration/v1.mdx`
+- `onboarding.mdx`
+- `onboarding/first-change.mdx`
+- `onboarding/setup.mdx`
 - `openfeature.mdx`
 - `production/configuration.mdx`
 - `production/errors.mdx`

@@ -1,11 +1,11 @@
 ---
 title: "Ship your first change"
-description: "Wrap a real change in a FireWeave flag, register the rollout, watch the ramp, and retire flags that are measurably dead."
+description: "Wrap a real change in a Fireweave flag, register the rollout, watch the ramp, and retire flags that are measurably dead."
 ---
 
-Part 2 of the [onboarding guide](/onboarding). Finish [Set up FireWeave](/onboarding/setup) first.
+Part 2 of the [onboarding guide](/onboarding). Finish [Set up Fireweave](/onboarding/setup) first.
 
-The change is whatever you want to make to try a FireWeave rollout — a feature, a bug fix, an optimization. FireWeave wraps it in a flag, a manifest, and a rollout, so it ships gradually with an audit trail instead of all at once.
+The change is whatever you want to make to try a Fireweave rollout — a feature, a bug fix, an optimization. Fireweave wraps it in a flag, a manifest, and a rollout, so it ships gradually with an audit trail instead of all at once.
 
 This is the moment everything above was setting up. Block **45 minutes** and do the first one with us on a call. Pick something real but small.
 
@@ -17,7 +17,13 @@ This is the moment everything above was setting up. Block **45 minutes** and do 
 
     ```js
     // @fireweave-flag checkout-express-lane
-    if (await fw.flag('checkout-express-lane', { targetingKey: userId })) {
+    const expressLane = await fireweave.controlPoints.getBooleanValue(
+      'checkout-express-lane',
+      false,
+      { targetingKey: userId },
+    );
+
+    if (expressLane) {
       return renderExpressLane();
     }
     return renderStandardCheckout();
