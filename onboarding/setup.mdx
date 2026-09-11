@@ -1,0 +1,131 @@
+---
+title: "Set up FireWeave"
+description: "Once per project: create your account, install the fw CLI, add the FireWeave plugin to your coding agent, and initialise the SDK."
+---
+
+Part 1 of the [onboarding guide](/onboarding). Do this **once per project**.
+
+<Steps>
+  <Step title="Account setup">
+    **Goal:** Everyone who will use FireWeave has an account, and the project is ready to receive repos.
+
+    1. Go to [https://app.fireweave.ai](https://app.fireweave.ai)
+    2. Register with your **work email** (this auto-joins you to your org)
+    3. Complete your profile — name, role, GitHub handle
+    4. Invite the rest of your team from **Settings** → **Members**
+    5. **Admin only:** Connect PostHog and GitHub, create the project, and bind your logs, metrics, traces, and repository to the project dashboard
+
+    <Check>
+      You land on the FireWeave dashboard and see your org, with PostHog and GitHub showing as connected and at least staging and production defined as environments.
+    </Check>
+
+    <Warning>
+      If you see a **create new workspace** screen instead, your email didn't auto-match. Contact FireWeave and we'll fix the domain mapping.
+    </Warning>
+  </Step>
+
+  <Step title="Install the fw CLI">
+    **Goal:** You have the `fw` binary on your machine, authenticated to your org. This is how the coding-agent plugin talks to our backend.
+
+    Static, self-contained binaries are available for Linux x64/arm64, macOS x64/arm64, and Windows x64.
+
+    <Tabs>
+      <Tab title="macOS / Linux">
+        ```bash
+        curl https://assets-fireweave-ai.s3.us-east-2.amazonaws.com/cli/latest/install.sh | bash
+        ```
+      </Tab>
+      <Tab title="Windows">
+        PowerShell:
+
+        ```powershell
+        iwr https://assets-fireweave-ai.s3.us-east-2.amazonaws.com/cli/latest/install.ps1 -UseBasicParsing | iex
+        ```
+      </Tab>
+    </Tabs>
+
+    Verify the install:
+
+    ```bash
+    fw login
+    fw whoami
+    ```
+
+    `fw login` opens a browser. You authenticate, and the CLI picks up your tenant. `fw whoami` confirms your session.
+
+    <Check>
+      `fw whoami` prints your email and your org's tenant ID.
+    </Check>
+
+    <AccordionGroup>
+      <Accordion title="command not found: fw">
+        Your shell hasn't picked up the new PATH. Open a new terminal, or run `source ~/.zshrc` / `source ~/.bashrc`. The installer puts the binary in `~/.fireweave/bin` — add that directory to `PATH` if it isn't already there.
+      </Accordion>
+      <Accordion title="Corporate proxy or certificate issues">
+        Flag it with FireWeave and we'll send a manual binary download link.
+      </Accordion>
+    </AccordionGroup>
+  </Step>
+
+  <Step title="Install the FireWeave plugin">
+    **Goal:** FireWeave shows up as a first-class plugin inside your coding agent, so your engineers don't have to context-switch.
+
+    <Tabs>
+      <Tab title="Claude Code">
+        ```text
+        /plugin marketplace add FireWeave-HQ/plugins-marketplace
+        /plugin install fireweave@fireweave
+        ```
+      </Tab>
+      <Tab title="Cursor">
+        Open **Settings** → **Plugins** → **Import**, and use the same marketplace repo: [FireWeave-HQ/plugins-marketplace](https://github.com/FireWeave-HQ/plugins-marketplace).
+      </Tab>
+      <Tab title="Codex / OpenCode / Cline">
+        ```bash
+        fw plugins install fireweave
+        fw mcp install codex
+        ```
+
+        Replace `codex` with `opencode` or `cline` to match your agent.
+      </Tab>
+    </Tabs>
+
+    <Check>
+      Three commands are available in your agent: `/fireweave:initialise`, `/fireweave:safe-rollout`, and `/fireweave:cleanup`.
+    </Check>
+  </Step>
+
+  <Step title="Initialise the SDK">
+    **Goal:** The SDK and the mapped capabilities are installed, and your runtimes can report what they're running.
+
+    Run this in your coding agent:
+
+    ```text
+    /fireweave:initialise
+    ```
+
+    It runs mostly on its own and stops to ask you two things:
+
+    | Question | What to answer |
+    | --- | --- |
+    | How does this app already know which environment it's in? | Whatever you already use — `NODE_ENV`, Vite `MODE`, `VERCEL_ENV`, or a function in your repo |
+
+    Then:
+
+    - Commit the `fireweave/` folder (one per surface), the `.fireweave/` folder, and the one line added to your entrypoint
+    - Do **not** commit `.fireweave/deploy-beacon.env.local`
+    - Copy `FW_ATTEST_URL` and `FW_PROJECT_API_KEY` from that file into your runtime
+
+    <Warning>
+      Without those two environment variables, rollouts never start.
+    </Warning>
+
+    <Check>
+      The repo is initialised with no changes to your existing product code, and both runtimes hold the two environment variables.
+    </Check>
+  </Step>
+</Steps>
+
+## Next
+
+You're ready to ship. Continue with [Ship your first change](/onboarding/first-change).
