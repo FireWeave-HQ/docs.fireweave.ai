@@ -1,0 +1,143 @@
+---
+title: "CLI authentication"
+description: "Sign in with fw login (OAuth device flow) or authenticate CI with FW_ORG_API_KEY. These are two disjoint credential paths."
+---
+
+`fw` has two authentication paths. They do not share a credential lifetime.
+
+1. **Interactive** — `fw login` runs an OAuth device flow and stores a named profile.
+2. **CI** — `FW_ORG_API_KEY` supplies an org-scoped API key. When that variable is set, `fw` skips profiles entirely.
+
+<Warning>
+  Do not put a project runtime key (`project-api-key_…` or `fw_public_…`) in `FW_ORG_API_KEY`. That family authenticates the [SDK runtime plane](/production/configuration), not the CLI. Org keys start with `fw_org_`.
+</Warning>
+
+## Interactive login
+
+```bash
+fw login
+```
+
+`fw` starts a device-flow session against the Fireweave cloud, opens your browser to a verification URL with the user code embedded, and waits for approval (default **300** seconds).
+
+On success it writes a named profile under `~/.fireweave/profiles/` and stores the token in the system keyring when one is available. The first profile you create becomes the active profile. Later logins do not auto-switch.
+
+A no-flag `fw login` follows the binary's stamped channel: a stable build targets production; a staging build targets staging.
+
+| Flag | Effect |
+| --- | --- |
+| `--cloud` | Production cloud (`https://app-server.fireweave.ai`). Overrides a staging-channel default. Cannot combine with `--url` or `--staging`. |
+| `--staging` | Staging cloud (`https://staging-app-server.fireweave.ai`). Cannot combine with `--url` or `--cloud`. |
+| `--url <url>` | Custom server. Default alias is the hostname. |
+| `--alias <name>` | Profile name. Defaults to `cloud`, `staging`, or the custom hostname. Auto-suffixed on collision (`dev-2`, …). |
+| `--webapp-url <url>` | Override the verification URL you are told to open. Rare — only when the server's webapp URL is wrong. |
+| `--timeout <seconds>` | Wall-clock timeout for the flow. Default `300`. |
+| `--inline-device-flow` | Flat, non-interactive output on stderr (hooks / headless / SSH). |
+| `--local` | Removed. Use `--url http://localhost:3001`. |
+
+`--cloud`, `--staging`, and `--url` are mutually exclusive.
+
+After login, if this folder is not bound to a project, `fw` tells you to run `fw init`. If it is already bound, run `fw status`.
+
+### Profiles
+
+A profile is a person's OAuth session: access token, refresh token, alias, and expiry. `fw` renews the access token silently while the refresh token is valid.
+
+| Command | Effect |
+| --- | --- |
+| `fw profile list` | List profiles. The active one is marked. |
+| `fw profile use <alias>` | Set the global active profile. |
+| `fw profile remove <alias>` | Delete the profile file and keyring entry. Pass `--force` to remove the active profile. |
+| `fw logout` | Clear the active profile. `--profile <alias>` targets one. `--all` clears every profile. |
+| `fw whoami` | Print user, org, bound project, and how the profile was resolved. `--force` re-fetches from the server. |
+
+Resolution order for an interactive command (when `FW_ORG_API_KEY` is **not** set):
+
+1. `--profile <alias>`
+2. Repo pin in `.fireweave/local.json`
+3. Repo binding / org match against `.fireweave/project.json`
+4. Global `activeProfile`
+5. The only stored profile, if there is exactly one
+
+`--profile` always wins, including over `FW_ORG_API_KEY`. That lets you debug a CI failure locally without the ambient key hijacking your session.
+
+### Bind a repo
+
+```bash
+fw init
+# or, if you are already logged in:
+fw select-project
+```
+
+`fw init` scaffolds `.fireweave/`, lets you pick or create a profile, and writes the committed binding (org, project, server URL) to `.fireweave/project.json`. Your personal profile alias goes only to the gitignored `.fireweave/local.json`.
+
+`fw select-project --project-id <id>` skips the picker. Create the project in the Fireweave app first if the list is empty.
+
+## CI credentials
+
+On a machine with no human, set **`FW_ORG_API_KEY`** to an org API key.
+
+```yaml
+- run: fw sync
+  env:
+    FW_ORG_API_KEY: ${{ secrets.FW_ORG_API_KEY }}
+```
+
+When the variable is set and non-empty, `fw` uses it as the bearer token and does **not** read `~/.fireweave/`, `local.json`, or `activeProfile`.
+
+The key must start with `fw_org_`. A value that does not match that prefix is **refused** — `fw` will not fall back to a leftover developer profile. A CI job that silently authenticates as a person is worse than one that fails.
+
+The key says who you are, not where to send it. The repo must already have `.fireweave/project.json` with a `server.url` (written by `fw init`). Without that URL, `fw` refuses the key.
+
+If the pointer names an `orgId`, `fw` checks it against the org the server attributes to the key. A mismatch fails closed (exit 4 on `fw sync`) and writes nothing to `.fireweave/.cache/`.
+
+`fw doctor` prints the credential actually in use. In CI it reports `org API key` rather than "no profile", so a working `fw sync` and a missing login are not the same symptom.
+
+### Scopes
+
+Org API keys are minted with an explicit scope. The two valid values are a closed set:
+
+| Scope | Use |
+| --- | --- |
+| `org:ci-read` | Read-only credential for CI. This is what `fw sync` needs on a fresh checkout. It cannot write rollouts or manage projects. |
+| `org:management` | Full access to the org management plane (`/v1/projects`, environments, and the rest of the [HTTP API](/reference/http-api)). Use this for Terraform and other automation that creates projects. |
+
+Scope is enforced on the server. A leaked `org:ci-read` key cannot write just because a client asked.
+
+<Note>
+  Provision a second key, update the CI secret, then revoke the first. Revocation takes effect on the next request. Keys do not expire.
+</Note>
+
+### Create a key
+
+Create the key from a signed-in Fireweave session. The raw value is shown **once**.
+
+1. Sign in to the Fireweave app for your organisation.
+2. Mint a key with a name and a required `scope` (`org:ci-read` for CI, `org:management` for Terraform / HTTP management).
+3. Store the returned `key` (`fw_org_…`) in your secret manager.
+
+See [Terraform authentication](/infrastructure/terraform/authentication) for the session-authenticated mint request and the `FIREWEAVE_API_KEY` variable the Terraform provider reads. The CLI reads **`FW_ORG_API_KEY`**, not `FIREWEAVE_API_KEY` and not `FW_PROJECT_API_KEY`.
+
+Org API key management may be disabled for an organisation. In that case the mint endpoint returns 404.
+
+## Which credential to use
+
+| Situation | Credential | Variable |
+| --- | --- | --- |
+| You, at a terminal | `fw login` profile | none |
+| CI job running `fw sync` | Org API key, scope `org:ci-read` | `FW_ORG_API_KEY` |
+| Terraform / HTTP management | Org API key, scope `org:management` | `FIREWEAVE_API_KEY` (Terraform) or `Authorization: Bearer` ([HTTP API](/reference/http-api)) |
+| Application evaluate / capture | Project runtime key | `FW_PROJECT_API_KEY` |
+
+These secrets are not interchangeable. An org key does not evaluate control points. A project key does not authenticate `fw`.
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Commands" href="/cli/commands" icon="terminal">
+    `fw sync`, `fw init`, `fw doctor`, and the rest of the surface.
+  </Card>
+  <Card title="HTTP API" href="/reference/http-api" icon="brackets-curly">
+    Management-plane routes that accept the same org key.
+  </Card>
+</Columns>

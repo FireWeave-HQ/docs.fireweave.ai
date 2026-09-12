@@ -1,0 +1,100 @@
+---
+title: "Terraform authentication"
+description: "Authenticate the Fireweave provider with an org-scoped fw_org_… key via FIREWEAVE_API_KEY — not the SDK's FW_* variables."
+---
+
+The provider authenticates with an **org-scoped API key** (`fw_org_…`). It sends `Authorization: Bearer <key>` to the Fireweave control plane.
+
+<Warning>
+  Use `FIREWEAVE_API_KEY` and `FIREWEAVE_ENDPOINT`. The provider does **not** read `FW_API_URL`, `FW_PROJECT_API_KEY`, or any other `FW_*` variable.
+
+  The SDK docs on this site use `FW_*` for **project** keys (`project-api-key_…`) that evaluate control points. Terraform uses a different key family and a different prefix. Exporting only `FW_PROJECT_API_KEY` is the most common first-run failure: Terraform reports a missing API key.
+</Warning>
+
+## Provider settings
+
+| Argument | Environment variable | Default | Required |
+| --- | --- | --- | --- |
+| `api_key` (sensitive) | `FIREWEAVE_API_KEY` | none | Yes — argument or env |
+| `endpoint` | `FIREWEAVE_ENDPOINT` | `https://app-server.fireweave.ai` | No |
+
+`api_key` is optional in the provider schema only because the environment variable can supply it. Configure fails if both are empty:
+
+> Set the provider `api_key` argument or the `FIREWEAVE_API_KEY` environment variable.
+
+Prefer the environment variable over committing secrets to configuration.
+
+```hcl
+provider "fireweave" {
+  # api_key  = var.fireweave_api_key # optional if FIREWEAVE_API_KEY is set
+  # endpoint = "https://app-server.fireweave.ai"
+}
+```
+
+```bash
+export FIREWEAVE_API_KEY="fw_org_…"
+```
+
+For a self-hosted or local API:
+
+```bash
+export FIREWEAVE_ENDPOINT="http://localhost:3001"
+```
+
+## Creating an API key
+
+1. Sign in to the Fireweave app for your organisation.
+2. Create a key with a session-authenticated request:
+
+```http
+POST /api/organizations/{orgId}/api-keys
+Content-Type: application/json
+
+{ "name": "terraform" }
+```
+
+3. Store the returned `key` value once — it is shown only at creation time.
+4. Export it as `FIREWEAVE_API_KEY` (or pass `api_key` in the provider block).
+
+<Note>
+  Org API key management is enabled when the Fireweave `org-api-keys-v1-management` feature flag is on for your organisation.
+</Note>
+
+The key is org-scoped. It authorizes project and environment APIs under `/v1/projects`. It is not a project evaluation key and it is not interchangeable with `FW_PROJECT_API_KEY`.
+
+## Terraform vs SDK credentials
+
+| | Terraform provider | Application SDKs |
+| --- | --- | --- |
+| Env vars | `FIREWEAVE_API_KEY`, `FIREWEAVE_ENDPOINT` | `FW_PROJECT_API_KEY`, `FW_API_URL` |
+| Key shape | `fw_org_…` | Project key (`project-api-key_…`) |
+| Header | `Authorization: Bearer <key>` | `Authorization: Bearer <key>` |
+| Purpose | Org infrastructure (projects, environments) | Evaluate, capture, register targets |
+| Docs | This page | [Configuration and auth](/production/configuration) |
+
+Both use Bearer tokens. They are still different secrets. Do not put an org key in an SDK adapter, and do not put a project key in the Terraform provider.
+
+## Common mistakes
+
+<AccordionGroup>
+  <Accordion title="Missing Fireweave API key">
+    You exported `FW_PROJECT_API_KEY` (or `FW_API_URL`) and expected Terraform to pick it up. Set `FIREWEAVE_API_KEY` instead.
+  </Accordion>
+  <Accordion title="Wrong registry source">
+    The published address is `FireWeave-HQ/fireweave`. `fireweave/fireweave` and `fireweaveai/fireweave` do not exist.
+  </Accordion>
+  <Accordion title="401 on fireweave_org_member">
+    Org member endpoints currently reject org API keys. That is a known provider limitation, not a bad `FIREWEAVE_API_KEY`. See [Org members](/infrastructure/terraform/org-members).
+  </Accordion>
+</AccordionGroup>
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Quickstart" href="/infrastructure/terraform/quickstart" icon="rocket">
+    Apply a project and environments with the key you just created.
+  </Card>
+  <Card title="SDK configuration" href="/production/configuration" icon="code">
+    `FW_API_URL` and `FW_PROJECT_API_KEY` for application runtimes.
+  </Card>
+</Columns>

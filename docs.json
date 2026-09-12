@@ -1,8 +1,8 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "FireWeave",
-  "description": "FireWeave SDK documentation: evaluate control points, optionally register targets, drive a release lifecycle, and record exposures and signals. OpenFeature providers ship for Node.js, Python, Go, Java, and the browser.",
+  "name": "Fireweave",
+  "description": "Fireweave documentation: evaluate control points and register targets from seven language SDKs, manage projects and environments with Terraform, and drive releases from the fw CLI.",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
@@ -37,6 +37,7 @@
           "sdks/python",
           "sdks/go",
           "sdks/java",
+          "sdks/rust",
           "sdks/web",
           "sdks/compatibility"
         ]
@@ -47,17 +48,11 @@
           "concepts",
           "concepts/control-points",
           "concepts/targeting",
+          "concepts/adapters",
           "concepts/releases",
           "concepts/exposures",
           "concepts/signals",
-          "concepts/capabilities",
-          "concepts/adapters"
-        ]
-      },
-      {
-        "group": "OpenFeature",
-        "pages": [
-          "openfeature"
+          "concepts/capabilities"
         ]
       },
       {
@@ -66,6 +61,26 @@
           "production/configuration",
           "production/lifecycle",
           "production/errors"
+        ]
+      },
+      {
+        "group": "CLI",
+        "pages": [
+          "cli/overview",
+          "cli/authentication",
+          "cli/commands"
+        ]
+      },
+      {
+        "group": "Terraform",
+        "pages": [
+          "infrastructure/terraform/overview",
+          "infrastructure/terraform/quickstart",
+          "infrastructure/terraform/authentication",
+          "infrastructure/terraform/projects",
+          "infrastructure/terraform/environments",
+          "infrastructure/terraform/data-sources",
+          "infrastructure/terraform/org-members"
         ]
       },
       {
@@ -83,13 +98,16 @@
       {
         "group": "Migration",
         "pages": [
-          "migration/node-2"
+          "migration/v1",
+          "migration/node-2",
+          "openfeature"
         ]
       },
       {
         "group": "Reference",
         "pages": [
-          "reference/packages"
+          "reference/packages",
+          "reference/http-api"
         ]
       }
     ],
@@ -104,6 +122,11 @@
           "anchor": "SDK source",
           "href": "https://github.com/FireWeave-HQ/fireweave-sdk",
           "icon": "github"
+        },
+        {
+          "anchor": "Terraform provider",
+          "href": "https://registry.terraform.io/providers/FireWeave-HQ/fireweave/latest",
+          "icon": "cube"
         }
       ]
     }
@@ -134,11 +157,11 @@
   "seo": {
     "indexing": "navigable",
     "metatags": {
-      "og:site_name": "FireWeave Docs",
+      "og:site_name": "Fireweave Docs",
       "canonical": "https://docs.fireweave.ai"
     },
     "organization": {
-      "name": "FireWeave",
+      "name": "Fireweave",
       "url": "https://fireweave.ai",
       "sameAs": [
         "https://github.com/FireWeave-HQ"
@@ -146,18 +169,24 @@
     }
   },
   "search": {
-    "prompt": "Search FireWeave docs"
+    "prompt": "Search Fireweave docs"
   },
   "metadata": {
     "timestamp": true
   },
   "markdown": {
     "instructions": [
-      "Official FireWeave SDK documentation.",
-      "Product noun is control point. OpenFeature and the wire protocol use flagKey — do not invent controlPointKey.",
-      "Do not invent APIs, packages, env vars, or endpoints. Guardrails are a typed stub (UnsupportedCapability). OpenFeature Tracking (spec section 6) is not implemented.",
-      "registerTarget and identify exist on Node, Python, and Web only. Go and Java have no target-registration API on master.",
-      "sendExposure defaults to false. Java close() does not flush exposures."
+      "Official Fireweave documentation. Brand casing in prose is 'Fireweave'. 'FireWeave-HQ' appears only inside GitHub URLs and the Terraform registry address, which are identifiers — never change those.",
+      "Product noun is control point. The wire protocol, Decision envelopes, conformance fixtures, and capabilities.features.flags still use flagKey — do not invent controlPointKey.",
+      "SDK v1 (ADR-0010) exposes exactly two capabilities: control-point reads and target registration. The OpenFeature providers (FireweaveProvider, FireweaveWebProvider), makeFireweaveLocalProvider, and the releases, exposures, signals, capabilities, and guardrails namespaces were all removed. Do not document them as available APIs.",
+      "The Node package is @fireweaveai/server-sdk. The old @fireweaveai/sdk is frozen at 2.1.0 and must never be presented as the install target.",
+      "mode is a required init option and is never inferred — 'remote' or 'local'. Remote without credentials is a boot error.",
+      "No SDK reads environment variables. Credentials are explicit init options in every language. FW_DEPRECATION_WARNINGS no longer exists.",
+      "registerTarget exists on all seven SDKs, including Go and Java. Go exposes ControlPoints(); Java exposes controlPoints(), getNumberValue, and getObjectValue.",
+      "The flags alias shares identity with controlPoints. It is silent at runtime in every language except Python, which logs one deprecation notice per process.",
+      "Wire paths: all seven remote adapters implement /v1/flags/evaluate and /v1/targets/register. Only the Node and Web adapters implement /v1/capture.",
+      "Terraform uses FIREWEAVE_API_KEY and FIREWEAVE_ENDPOINT — not the SDK's FW_ variables. There are no reusable Fireweave Terraform modules.",
+      "Do not invent APIs, packages, env vars, endpoints, or CLI commands. Never present an unpublished artifact as installable — the Swift SDK exists in-tree but is not distributable. Do not document rollout-ci as generally available, or console-only features such as guardrails and ramp controls."
     ]
   }
 }

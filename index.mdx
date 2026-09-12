@@ -1,78 +1,76 @@
 ---
-title: "FireWeave"
-description: "FireWeave SDK docs: evaluate control points, register targets, and record exposures and signals in Node, Python, Go, Java, and the browser — including OpenFeature providers."
+title: "Fireweave"
+description: "Fireweave SDK docs: evaluate control points and register targets in Node, Python, Go, Java, Rust, and the browser."
 ---
 
-FireWeave SDKs evaluate **control points**, optionally register **targets**, drive a **release** lifecycle, and record **exposures** and **signals**. Your application authenticates with a FireWeave project key and talks to **fw-server**. OpenFeature and the wire protocol still use the parameter name `flagKey`; the product name is control point.
+Fireweave SDKs evaluate **control points** and optionally register **targets**. Your application authenticates with a Fireweave project key and talks to **fw-server**. The wire protocol and canonical envelopes still use the parameter name `flagKey`; the product name is control point.
 
-<Warning>
-  The SDK is **pre-release**. As of 2026-08-17, npm `latest` for `@fireweaveai/sdk` is **2.1.0**, `@fireweaveai/web-sdk@2.1.0` is on npm, and PyPI has `fireweave` **0.1.0**. Pin Node `@2.1.0` — **2.0.0** is still on npm and still ships a direct PostHog adapter and `./posthog`. The Go module and Java `ai.fireweave:*` (`0.1.0-SNAPSHOT`) remain **unpublished** (checkout / `mvn install` only). See [Quickstart](/quickstart).
-</Warning>
+v1 exposes exactly those two capabilities. The SDKs do not ship OpenFeature providers, and they do not expose `releases`, `exposures`, `signals`, `capabilities`, or `guardrails`.
 
 <Columns cols={2}>
   <Card title="Onboarding" icon="list-check" href="/onboarding">
-    Account, CLI, coding-agent plugin, then ship your first change behind a flag.
+    Account, CLI, coding-agent plugin, then ship your first change behind a control point.
   </Card>
   <Card title="SDK quickstart" icon="rocket" href="/quickstart">
-    Install, initialize, evaluate a control point, record an outcome, and shut down — offline first, with real APIs.
+    Install, initialize with a required mode, evaluate a control point, register a target, and shut down.
   </Card>
 </Columns>
 
 ## SDKs
 
-Five packages share one architecture: **FireweaveProvider** and **FireweaveClient** sit on **FireweaveRuntime**, which talks to a **BackendAdapter**.
+Seven language bindings share one surface: a mode-selected adapter, a runtime, and a client with `controlPoints` (cased per language) plus `registerTarget`.
 
 <Columns cols={2}>
   <Card title="Node.js, Bun, and Deno" icon="node-js" href="/sdks/node">
-    `@fireweaveai/sdk` — `controlPoints`, `registerTarget`. npm `latest` is 2.1.0; pin it. 2.0.0 still has PostHog / `./posthog`.
+    `@fireweaveai/server-sdk` **2.3.0** — `initFireweave`, `controlPoints`, `registerTarget`. Node `>=20.20`.
   </Card>
   <Card title="Python" icon="python" href="/sdks/python">
-    `fireweave` — snake_case `control_points` and `register_target`. PyPI `0.1.0`: `pip install 'fireweave[openfeature]'`.
+    `fireweave` **2.3.0** — `init_fireweave`, `control_points`, `register_target`. Python `>=3.10`.
   </Card>
   <Card title="Go" icon="golang" href="/sdks/go">
-    `github.com/FireWeave-HQ/fireweave-sdk/sdks/go` — `Flags().Evaluate` only. No `registerTarget` on master.
+    `…/sdks/go/v2` **v2.3.0** — `Init`, `ControlPoints()`, `RegisterTarget`. The `/v2` suffix is required.
   </Card>
   <Card title="Java" icon="java" href="/sdks/java">
-    `ai.fireweave:*` — `evaluate` / boolean and string helpers. No env auto-read; `close()` does not flush.
+    `ai.fireweave:fireweave-sdk` **2.3.0** — `Fireweave.init`, `controlPoints()`, `registerTarget()`. Java 11+.
   </Card>
   <Card title="Browser" icon="globe" href="/sdks/web">
-    `@fireweaveai/web-sdk` — synchronous reads, `identify`, STALE on prefetch timeout. npm 2.1.0; no env.
+    `@fireweaveai/web-sdk` **2.3.0** — synchronous reads, `registerTarget` / `identify`, `fw_public_` keys.
+  </Card>
+  <Card title="Rust" icon="gear" href="/sdks/rust">
+    crates.io `fireweave` **2.3.0** — `init_fireweave`, `control_points`, `register_target`. Rust 1.75+.
   </Card>
   <Card title="Compatibility" icon="table" href="/sdks/compatibility">
-    Type split, adapter matrix, and language gaps (register, namespaces, flush).
+    Seven-language surface, 65×7 conformance aggregate, and the capability matrix.
+  </Card>
+  <Card title="Package index" icon="cubes" href="/reference/packages">
+    Registry names, versions, and what is actually installable.
   </Card>
 </Columns>
 
 ## What you can do
 
-These capabilities are implemented in the five packages (language differences are called out on the SDK pages):
-
-- **Evaluate** boolean, string, numeric, and object decisions. Evaluation returns a default on failure and **does not throw**.
-- **OpenFeature** providers in every language, so call sites can use `getBooleanValue` / language equivalents with `flagKey`.
-- **Targets** — Node `registerTarget`, Python `register_target`, Web `identify`. Go and Java have no registration API; pass `targetingKey` (and attributes) on each evaluate.
-- **Releases** — `setContext` / `start` / `complete` / `fail`.
-- **Exposures** — `record` / `flush`. Evaluate-path emission is opt-in (`sendExposure` defaults **false**).
-- **Signals** — health, error, metric, and outcome (`recordOutcome` / language equivalent).
-- **Capabilities** — `capabilities.get()` reports what this build and adapter can do. Guardrails are a typed stub (`guardrails: false`).
+- **Evaluate** boolean, string, number, and object decisions through nine methods. A read returns your default on failure and **does not throw**.
+- **Register targets** once at login (`registerTarget` / language equivalent) so targeting rules can match durable properties.
+- **Choose a mode** at init: `remote` (fw-server) or `local` (seeded in-process map). `mode` is required and never inferred.
 
 <Note>
-  The [onboarding guide](/onboarding) is the product path: plugin skills, `fw.flag`, and gradual rollouts. This SDK reference does not document `fw.isOn`, working client-side guardrails, or OpenFeature Tracking (spec §6) — those are absent or unverified against the SDK packages.
+  The product noun is **control point**. `flagKey` remains the key name on the wire, in canonical envelopes, in conformance fixtures, and in `capabilities.features.flags`. The [onboarding guide](/onboarding) covers the product path — plugin skills and gradual rollouts — while these pages are the SDK reference.
 </Note>
 
 ## Architecture and concepts
 
 <Columns cols={2}>
   <Card title="How it works" icon="diagram-project" href="/introduction/how-it-works">
-    Evaluate, register, capture — the SDK runtime path. Product onboarding lives under [Onboarding](/onboarding).
+    Evaluate and register — the runtime path from your app to fw-server.
   </Card>
   <Card title="Architecture" icon="sitemap" href="/introduction/architecture">
-    Provider + Client → Runtime → Adapter, lifecycle states, and the three fw-server paths.
+    Client → Runtime → Adapter, lifecycle states, and the fw-server paths.
   </Card>
   <Card title="Core concepts" icon="book" href="/concepts">
-    Control points, targeting, releases, exposures, signals, capabilities, adapters.
+    Control points, targeting, adapters, and decisions.
   </Card>
-  <Card title="OpenFeature" icon="flag" href="/openfeature">
-    Providers, resolvers, and the `flagKey` boundary. Extensions stay on FireweaveClient.
+  <Card title="Migrate to v1" icon="code-compare" href="/migration/v1">
+    Package rename, required `mode`, and the retired OpenFeature / extension surface.
   </Card>
 </Columns>
 
@@ -80,23 +78,23 @@ These capabilities are implemented in the five packages (language differences ar
 
 <Columns cols={2}>
   <Card title="Configuration and auth" icon="key" href="/production/configuration">
-    `FW_API_URL`, `FW_PROJECT_API_KEY`, Bearer auth. Java and Web do not read the environment.
+    Explicit `apiUrl` / `apiKey` (or language equivalent). The SDK reads no environment variables.
   </Card>
   <Card title="Lifecycle" icon="circle-play" href="/production/lifecycle">
-    Initialize, READY / STALE, shutdown. Java `close()` does not flush exposures.
+    Initialize, READY / STALE, shutdown. Reads after close return defaults.
   </Card>
   <Card title="Errors" icon="circle-exclamation" href="/production/errors">
-    Fifteen error kinds and how they map onto OpenFeature codes.
+    Fifteen error kinds and how reads degrade to your default.
   </Card>
   <Card title="Troubleshooting" icon="wrench" href="/troubleshooting">
-    Defaults that look like “off,” missing targeting keys, and Go/Java checkout installs.
+    Defaults that look like “off,” missing targeting keys, and boot configuration errors.
   </Card>
-  <Card title="Package index" icon="cubes" href="/reference/packages">
-    Package names, peers, and what is actually published.
+  <Card title="HTTP API" icon="brackets-curly" href="/reference/http-api">
+    `POST /v1/flags/evaluate`, `POST /v1/capture`, `POST /v1/targets/register`.
   </Card>
-  <Card title="Node 2.0 → 2.1" icon="code-compare" href="/migration/node-2">
-    Breaking changes from Node 2.0.0 (PostHog / `./posthog`) to published 2.1.0.
+  <Card title="CLI" icon="terminal" href="/cli/overview">
+    Command-line tools for Fireweave projects.
   </Card>
 </Columns>
 
-Start with [Onboarding](/onboarding) to ship a first FireWeave rollout, or the [Quickstart](/quickstart) for a first evaluate in one sitting.
+Start with [Onboarding](/onboarding) to ship a first Fireweave rollout, or the [Quickstart](/quickstart) for a first evaluate in one sitting.

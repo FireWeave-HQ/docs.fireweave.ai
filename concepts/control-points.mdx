@@ -1,23 +1,23 @@
 ---
 title: "Control points"
-description: "A control point is the named decision your code asks FireWeave for. Evaluation uses flagKey; types and APIs differ by language."
+description: "A control point is the named decision your code asks Fireweave for. Every language exposes the same nine methods under controlPoints."
 ---
 
-A **control point** is a point of control over a release. Your application asks FireWeave for a typed value — boolean, string, number, or object — and uses that value to choose a path.
+A **control point** is a named decision the product can change without a deploy. Your application asks Fireweave for a typed value — boolean, string, number, or object — and uses that value to choose a path.
 
-OpenFeature and the wire still say `flagKey`. The product name is control point. Do not invent `controlPointKey`.
+The wire, Decision envelopes, conformance fixtures, and `capabilities.features.flags` still say `flagKey`. The product name is control point. Do not invent `controlPointKey`.
 
 ## Why it exists
 
-Operators reason about a release decision, not “a boolean in a flag console.” Evaluation is still a typed getter so call sites stay small and portable. The rename in the Node/Python/Web clients is **additive**: `client.flags` remains the same object as `client.controlPoints` and is not scheduled for removal in 2.x.
+Operators reason about a release decision, not “a boolean in a flag console.” Evaluation is still a typed getter so call sites stay small. The nine methods are identical across all seven languages. A language missing any of them fails `conformance/surface/`.
 
 ## When to use it
 
-Use a control point whenever your process must choose a value that FireWeave (or a test fixture) owns:
+Use a control point whenever your process must choose a value that Fireweave (or a test fixture) owns:
 
-- Gate a new code path (`getBooleanValue` / language equivalent)
+- Gate a new code path (`getBooleanValue`)
 - Pick a string variant, numeric threshold, or JSON payload
-- Inspect a full [Decision](#the-decision) when you need `reason` or error fields
+- Inspect a full [Decision](#the-decision) with a `*Details` method when you need `reason` or error fields
 
 Do **not** use an in-app helper named `fw.isOn`. That symbol is not in the SDK.
 
@@ -25,69 +25,78 @@ Do **not** use an in-app helper named `fw.isOn`. That symbol is not in the SDK.
 
 | Concept | Relation |
 |---------|----------|
-| [`flagKey`](/concepts#collisions) | Parameter name on evaluate, OpenFeature, Decision, Exposure, and the wire |
+| [`flagKey`](/concepts#collisions) | Parameter name on evaluate, Decision, and `POST /v1/flags/evaluate` |
 | [Targeting](/concepts/targeting) | The same `targetingKey` selects which value you get |
-| [Exposures](/concepts/exposures) | Off unless you pass `sendExposure: true` or call `exposures.record` |
-| [OpenFeature](/openfeature) | Same evaluation; portable getters. Extensions stay on `FireweaveClient` |
-| [Adapters](/concepts/adapters) | Remote, in-memory, or local/dev resolve the value |
+| [Adapters](/concepts/adapters) | Remote, local, or in-memory resolve the value |
+| [OpenFeature](/openfeature) | The bundled provider was retired. This page is the evaluation API |
 
-<Note>
-  Missing `targetingKey` on a backend evaluate returns your **default** with `TARGETING_KEY_MISSING` (`InvalidContext`), unless you opt into `requireTargetingKey`. See [Targeting](/concepts/targeting).
-</Note>
+## The nine methods
 
-## Evaluation types by language
+Every SDK exposes the surface under a namespace named `controlPoints`, cased for the language: `controlPoints` (Node, Web, Java, Swift), `control_points` (Python, Rust), `ControlPoints` (Go).
 
-These are the types the SDKs actually implement. There is no cross-language `int` that every binding shares.
+`flags` / `Flags()` is a deprecated alias pointing at the **same object**. Do not use it in new examples. It is silent at runtime except in Python (one `DeprecationWarning` per process).
 
-| Language | Native types | Typed helpers | Notes |
-|----------|--------------|---------------|-------|
-| **Node** | `'boolean'` \| `'string'` \| `'number'` \| `'object'` | `getBooleanValue`, `getStringValue`, `getNumberValue`, `getObjectValue` | Single IEEE-754 `number`. Integers beyond ±(2^53−1) are not lossless. |
-| **Web** | Same as Node | Same names, **synchronous** | Reads a prefetched cache. No Promise from the getter. |
-| **Python** | `BOOLEAN`, `STRING`, `INTEGER`, `FLOAT`, `OBJECT` | `get_boolean_value`, `get_string_value`, `get_integer_value`, `get_float_value`, `get_object_value` | Separate int and float. |
-| **Go** | `"boolean"`, `"string"`, `"integer"`, `"float"`, `"object"` | **None** on `Flags()` | Only `Flags().Evaluate`. OpenFeature adds typed resolvers (`int64`, float). |
-| **Java** | `BOOLEAN`, `STRING`, `INTEGER`, `FLOAT`, `OBJECT` | `getBooleanValue`, `getStringValue` only | Other types via `evaluate(...)` or OpenFeature. OF integer is 32-bit `Integer`; out-of-range → `TYPE_MISMATCH` + default. |
+| Method | Returns |
+| --- | --- |
+| `getBooleanValue(key, default, context?)` | `boolean` |
+| `getStringValue(key, default, context?)` | `string` |
+| `getNumberValue(key, default, context?)` | `number` — **number**, not integer. `Decision.value` is `jsonValue` |
+| `getObjectValue(key, default, context?)` | JSON |
+| `getBooleanDetails(key, default, context?)` | `Decision` |
+| `getStringDetails(key, default, context?)` | `Decision` |
+| `getNumberDetails(key, default, context?)` | `Decision` |
+| `getObjectDetails(key, default, context?)` | `Decision` |
+| `evaluate(key, type, default, context?, options?)` | `Decision` — the general form the eight delegate to |
 
-<Warning>
-  Go has **no** `controlPoints` namespace (`Flags()` only). Java has **no** `controlPoints` / `flags` facade. Do not copy Node method names onto those clients.
-</Warning>
+`*Value` returns `Decision.value`. `*Details` returns the whole Decision. Both take the same arguments, so you upgrade from one to the other without restructuring the call.
 
-## API
+Naming follows each language's idiom (`get_boolean_value`, `GetBooleanValue`) but the method set and its semantics do not vary.
 
-Evaluation **never throws**. Failures become a Decision (or a typed getter that returns your default) with `reason: ERROR`. If a flag getter raised, that is a bug.
+Python still accepts `get_integer_value` as a deprecated alias of `get_number_value`. It logs one `DeprecationWarning` per process the first time you call it.
 
-### Parameters (all languages)
+### Sync vs async
 
-| Parameter | Role |
-|-----------|------|
-| `flagKey` | Control-point key. Required. Same name on the wire (`flagKeys`). |
-| Expected type | Declared type for this call. Mismatch → default + `TypeMismatch`. |
-| Default value | Returned on every failure and when the point is unknown or disabled (adapter-dependent). |
-| Context | At least `targetingKey` for backend targeting. Optional attributes / groups. |
-| Options | `includePayload` / `include_payload` (attach payload metadata). `sendExposure` / `send_exposure` / `SendExposure` — default **false**. |
+| Language | Read |
+|----------|------|
+| Node | `async` — getters return a `Promise` |
+| Web, Swift | **Synchronous** — a cache read. Safe inside a render / UI path |
+| Python, Go, Java, Rust | Blocking / synchronous |
 
-Web `evaluateSync` does not take per-call `sendExposure`. Emission is a **runtime config** flag (`sendExposure`, default false).
+Web and Swift prefetch during `initFireweave` / `identify`. A hung prefetch does not block boot. The runtime enters `STALE` and serves your default with reason `STALE`. See [Lifecycle](/production/lifecycle).
 
-### Return value
+## Return discipline
 
-- Typed getters return the resolved value or your default.
-- `evaluate` / `get_details` / `Flags().Evaluate` return a **Decision**: `flagKey`, `value` (or your default), optional `variant`, `reason`, and error fields on failure.
+A control-point read **never throws**. Every failure resolves to your `default` with a Decision naming the reason.
 
-### Failure behavior
+| Situation | `value` | `reason` | `error.kind` |
+| --- | --- | --- | --- |
+| Decision served | resolved | `TARGETING_MATCH` \| `SPLIT` \| `STATIC` \| `CACHED` | — |
+| Key unknown (remote) | `default` | `ERROR` | `FlagNotFound` |
+| Key unknown (local) | `default` | `DEFAULT` | — |
+| Resolved value is the wrong type | `default` | `ERROR` | `TypeMismatch` |
+| `default` does not match `type` | `default` | `ERROR` | `TypeMismatch` |
+| Context fails validation | `default` | `ERROR` | `InvalidContext` |
+| Runtime not initialised | `default` | `ERROR` | `NotReady` |
+| Runtime closed | `default` | `ERROR` | `AlreadyClosed` |
+| Backend unreachable / slow | `default` | `ERROR` | `Network` \| `Timeout` \| `BackendUnavailable` |
+| Prefetch ceiling lost the race (web / Swift) | `default` | `STALE` | — |
 
-| Condition | What you get |
-|-----------|----------------|
-| Not initialized | Default + `NotReady` |
-| Unknown key | Default + `FlagNotFound` |
-| Wrong type | Default + `TypeMismatch` |
-| Bad / missing context | Default + `InvalidContext` (`TARGETING_KEY_MISSING` when the key is required and absent) |
-| Network / timeout / 5xx | Default + the matching kind (`Network`, `Timeout`, `BackendUnavailable`, …) |
-| After shutdown | Default + `AlreadyClosed` |
+`STALE` is a reason, not an error. The runtime is serving a usable-but-not-fresh cache.
 
-Full taxonomy: [Errors](/production/errors).
+Init is the exception: bad configuration **fails loudly at boot**. See [Configuration](/production/configuration).
+
+A v1 read is side-effect free. No read emits telemetry as a consequence of being called.
+
+## Validation, before any I/O
+
+Implementations validate in this order and stop at the first failure:
+
+1. **key** — non-empty, ≤256 characters, no control characters
+2. **default vs type** — `getBooleanValue` with a non-boolean default is `TypeMismatch`
+3. **context** — depth, key count, value size, reserved keys
+4. **lifecycle** — not `NotReady`, not `AlreadyClosed`
 
 ## The Decision
-
-Every native evaluate produces a canonical Decision:
 
 | Field | Meaning |
 |-------|---------|
@@ -95,19 +104,7 @@ Every native evaluate produces a canonical Decision:
 | `value` | Resolved value, or your default on failure |
 | `variant` | Multivariate variant name, when present |
 | `reason` | Why this value was chosen |
-| Error fields | Kind / OpenFeature code / safe message — on error Decisions |
-
-Reasons you will see from this SDK:
-
-| Reason | When |
-|--------|------|
-| `TARGETING_MATCH` | Resolved and targeting/conditions matched |
-| `SPLIT` | Backend reported percentage-rollout bucketing |
-| `DISABLED` | The point exists but is off — you get the off-value/default |
-| `STALE` | Last-good / cache / browser prefetch lost its 5s ceiling |
-| `ERROR` | Failure path — inspect the error kind |
-| `STATIC` | Local/dev adapter hit in `devFlags` |
-| `DEFAULT` | Local provider miss rewritten from `FLAG_NOT_FOUND` |
+| Error fields | Kind / code / safe message — on error Decisions |
 
 `SPLIT` is a Decision reason, not a ramp controller. The SDK does not advance percentages.
 
@@ -115,95 +112,128 @@ Reasons you will see from this SDK:
 
 <Tabs>
   <Tab title="Node">
-    Namespace: `client.controlPoints` (alias `client.flags` — same object). Async.
-
     ```ts
-    const on = await client.controlPoints.getBooleanValue(
+    import { initFireweave } from '@fireweaveai/server-sdk';
+
+    const fireweave = await initFireweave({
+      mode: 'remote',
+      apiUrl: process.env.FW_API_URL!,
+      apiKey: process.env.FW_PROJECT_API_KEY!,
+    });
+
+    const on = await fireweave.controlPoints.getBooleanValue(
       'new-checkout',
       false,
       { targetingKey: 'user_42' },
     );
 
-    const decision = await client.controlPoints.evaluate(
+    const decision = await fireweave.controlPoints.getBooleanDetails(
       'new-checkout',
-      'boolean',
       false,
       { targetingKey: 'user_42' },
-      { sendExposure: false },
     );
     // decision.value, decision.reason — never throws
     ```
   </Tab>
-  <Tab title="Python">
-    Namespace: `client.control_points` (alias `client.flags`). Sync. Async wrappers live on `AsyncFireweaveClient`.
+  <Tab title="Web">
+    Reads are **synchronous**.
 
+    ```ts
+    import { initFireweave } from '@fireweaveai/web-sdk';
+
+    const fireweave = await initFireweave({
+      mode: 'remote',
+      apiKey: PUBLIC_FW_PROJECT_API_KEY,
+      apiUrl: PUBLIC_FW_API_URL,
+      context: { targetingKey: 'anonymous' },
+    });
+
+    const on = fireweave.controlPoints.getBooleanValue('new-checkout', false);
+    ```
+  </Tab>
+  <Tab title="Python">
     ```python
-    from fireweave import EvaluationContext, FlagType
+    from fireweave import EvaluationContext, init_fireweave
+
+    client = init_fireweave(
+        mode="remote",
+        api_key="project-api-key_...",
+        api_url="https://app-server.fireweave.ai",
+    )
 
     on = client.control_points.get_boolean_value(
         "new-checkout", False, EvaluationContext("user_42")
     )
-
-    decision = client.control_points.evaluate(
-        "new-checkout",
-        FlagType.BOOLEAN,
-        False,
-        EvaluationContext("user_42"),
-        send_exposure=False,
+    decision = client.control_points.get_boolean_details(
+        "new-checkout", False, EvaluationContext("user_42")
     )
     ```
   </Tab>
   <Tab title="Go">
-    `Flags().Evaluate` only. Every call takes `context.Context`. Never returns `error` — failures are Decisions.
-
     ```go
-    d := client.Flags().Evaluate(
-        ctx,
-        "new-checkout",
-        fireweave.FlagTypeBoolean,
-        false,
-        fireweave.EvaluationContext{TargetingKey: "user_42"},
-        fireweave.EvaluateOptions{}, // SendExposure nil → adapter default (false)
-    )
+    client, err := fireweave.Init(fireweave.Options{
+        Mode:   fireweave.ModeRemote,
+        APIKey: "project-api-key_…",
+        APIURL: "https://app-server.fireweave.ai",
+    })
+    // handle err — Init fails loudly
+
+    evalCtx := fireweave.NewEvaluationContext("user_42", nil)
+    on := client.ControlPoints().GetBooleanValue("new-checkout", false, &evalCtx)
+    decision := client.ControlPoints().GetBooleanDetails("new-checkout", false, &evalCtx)
     ```
+
+    The nine methods do **not** take a `context.Context`. Internally they use `context.Background()`. The remote adapter's request timeout bounds the HTTP call.
   </Tab>
   <Tab title="Java">
-    No `controlPoints` facade. Boolean and string helpers; other types via `evaluate`.
-
     ```java
-    boolean on = client.getBooleanValue(
+    FireweaveClient client = Fireweave.init(InitOptions.remote(
+        System.getenv("FW_PROJECT_API_KEY"),
+        System.getenv("FW_API_URL")));
+
+    boolean on = client.controlPoints().getBooleanValue(
         "new-checkout",
         false,
-        EvaluationContext.builder().targetingKey("user_42").build()
-    );
+        EvaluationContext.builder().targetingKey("user_42").build());
+    ```
 
-    Decision d = client.evaluate(
-        "new-checkout",
-        FlagType.BOOLEAN,
-        JsonValue.of(false),
-        EvaluationContext.builder().targetingKey("user_42").build(),
-        null
-    );
+    Classes live under `ai.fireweave.sdk.{domain,application,infrastructure.adapters}`. There is no facade re-export package.
+  </Tab>
+  <Tab title="Rust">
+    ```rust
+    use fireweave::{init_fireweave, EvaluationContext, InitOptions};
+
+    let client = init_fireweave(InitOptions::remote(
+        "project-api-key_...",
+        "https://app-server.fireweave.ai",
+    )).unwrap();
+
+    let ctx = EvaluationContext::new().with_targeting_key("user_42");
+    let enabled = client.control_points.get_boolean_value("new-checkout", false, Some(&ctx));
     ```
   </Tab>
-  <Tab title="Web">
-    `client.controlPoints` — **synchronous**. Prefetch first; reads while `STALE` return defaults with reason `STALE`.
+  <Tab title="Swift">
+    Reads are **synchronous**, same shape as the web SDK.
 
-    ```ts
-    const on = client.controlPoints.getBooleanValue(
-      'new-checkout',
-      false,
-      { targetingKey: 'user_42' },
-    );
+    ```swift
+    import Fireweave
+
+    let client = try await initFireweave(.local(InitFireweaveLocalOptions(
+        controlPoints: ["new-checkout": true]
+    )))
+    let on = client.controlPoints.getBooleanValue("new-checkout", default: false)
+    await client.shutdown()
     ```
   </Tab>
 </Tabs>
 
-OpenFeature providers exist in all five packages and use the same `flagKey`. See [OpenFeature](/openfeature).
+<Note>
+  Call-site defaults stay `false` (or the safe production fallback). Do not write `getBooleanValue(key, true)` to dogfood locally — that same `true` is the production fallback when a control point is absent.
+</Note>
 
 ## Related
 
 - [Targeting](/concepts/targeting) — identity on every evaluate
-- [Exposures](/concepts/exposures) — opt-in proof of assignment
 - [Adapters](/concepts/adapters) — who resolves the value
-- [Node](/sdks/node), [Python](/sdks/python), [Go](/sdks/go), [Java](/sdks/java), [Web](/sdks/web)
+- [Errors](/production/errors) — the 15-kind taxonomy
+- [Node](/sdks/node), [Python](/sdks/python), [Go](/sdks/go), [Java](/sdks/java), [Web](/sdks/web), [Rust](/sdks/rust)

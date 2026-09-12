@@ -1,39 +1,40 @@
 ---
 title: "Troubleshooting"
-description: "Problem, cause, diagnosis, and fix for FireWeave SDK install, auth, targeting, defaults, exposures, signals, network, and OpenFeature."
+description: "Problem, cause, diagnosis, and fix for Fireweave SDK install, mode, auth, targeting, defaults, and STALE."
 ---
 
-Always read **evaluation details** first: `reason`, `errorCode`, `errorMessage`, and `flagMetadata['fireweave.errorKind']`. See [Errors](/production/errors).
+Always read **evaluation details** first: `reason`, `errorKind`, and `metadata['fireweave.errorKind']`. See [Errors](/production/errors).
 
 ```ts
-const d = await client.getBooleanDetails('new-checkout', false, ctx);
-console.log(d.reason, d.errorCode, d.errorMessage, d.flagMetadata);
+const d = await fireweave.controlPoints.getBooleanDetails('new-checkout', false, ctx);
+console.log(d.reason, d.errorKind, d.errorCode, d.metadata);
 ```
 
-Also record: language + SDK version, runtime (Node / Bun / Deno + version), adapter (in-memory / FireWeave remote / vendor extra), and `runtime.getState()` / `runtime.state()` / `runtime.State()`.
+Also record: language + SDK version, runtime (Node / Bun / Deno + version), adapter (in-memory / local / remote), and `runtime.getState()` / `runtime.state()` / `client.Runtime().State()`.
 
 <AccordionGroup>
-  <Accordion title="Install fails or the API I copied is missing">
-    **Problem.** `Cannot find module '@fireweaveai/sdk/posthog'`, missing `controlPoints`, or registry 404s for Go / Java.
+  <Accordion title="Cannot find module '@fireweaveai/sdk' or FireweaveProvider">
+    **Problem.** `Cannot find module '@fireweaveai/sdk'`, `Cannot find module '@fireweaveai/sdk/posthog'`, or `FireweaveProvider` / `makeFireweaveLocalProvider` is not exported.
 
-    **Cause.** Version pin or an unpublished language, not a broken machine:
+    **Cause.** You are on the 2.1 package name or a removed API:
 
-    - As of 2026-08-17, npm `latest` for `@fireweaveai/sdk` is **2.1.0** (CHANGELOG/docs previously described 2.1.0 as unpublished and `latest` as 2.0.0). **2.1.0 removed** `./posthog` and `PostHogAdapter`. **2.0.0** still has them — pin `2.0.0` only if you need that adapter; otherwise follow [Migrate Node 2.0 to 2.1](/migration/node-2).
-    - `@fireweaveai/web-sdk` is on npm at **2.1.0**. `fireweave` is on PyPI at **0.1.0**. The Go module and `ai.fireweave:*` remain **unpublished**.
+    - The server package was renamed `@fireweaveai/sdk` → `@fireweaveai/server-sdk`.
+    - v1 removed `FireweaveProvider`, `FireweaveWebProvider`, `makeFireweaveLocalProvider`, and the `releases` / `exposures` / `signals` / `capabilities` / `guardrails` namespaces.
+    - 2.1 already removed `./posthog` and `PostHogAdapter`.
 
-    **Diagnosis.** Check `package.json` / lockfile version. `npm view @fireweaveai/sdk version` should show what `latest` actually is.
+    **Diagnosis.** Check `package.json`. Search for `FireweaveProvider`, `@fireweaveai/sdk`, and `client.releases`.
 
-    **Solution.** `npm install @fireweaveai/sdk` resolves to **2.1.0**. `pip install 'fireweave[openfeature]'` and `npm install @fireweaveai/web-sdk` are valid. Install Go and Java from a [checkout](/quickstart) — do not run `go get` latest or Maven Central as if they were published. Node is ESM (`type: module`) with peer `@openfeature/server-sdk`.
+    **Solution.** Follow [Migrate 2.1 to 2.3](/migration/v1). Install `@fireweaveai/server-sdk` (or `@fireweaveai/web-sdk` in the browser). Call `initFireweave` and `controlPoints.*`. If you still need the 2.0 PostHog adapter, that cut happened earlier — see [Migrate Node 2.0 to 2.1](/migration/node-2).
   </Accordion>
 
-  <Accordion title="Authentication or configuration fatal">
-    **Problem.** Init is `FATAL` / `PROVIDER_FATAL`, or evaluations show `GENERAL` with `fireweave.errorKind: Authentication` or `Authorization`.
+  <Accordion title="Init throws Configuration">
+    **Problem.** Boot fails with kind `Configuration` / `PROVIDER_FATAL`.
 
-    **Cause.** Missing or wrong `FW_PROJECT_API_KEY`, wrong project, revoked key, host not on the allowlist, non-https off-loopback, or (web) a `phc_` / `phs_` / `phx_` key rejected at construction.
+    **Cause.** `mode` is missing or unrecognised; `mode: 'remote'` is missing `apiKey` or `apiUrl`; `apiUrl` fails the host allowlist or is non-https off-loopback; or `mode: 'local'` was given credentials. The SDK does **not** read `FW_API_URL` / `FW_PROJECT_API_KEY` for you.
 
-    **Diagnosis.** Messages are redacted by design — compare key **prefixes** (`project-api-key_…` vs `phc_`) and the configured URL. Java: confirm you passed `FireweaveConfig` (no getenv). Web: confirm constructor `apiUrl` / `apiKey`. Deno: `--allow-env` if you rely on env vars.
+    **Diagnosis.** Messages are redacted by design — compare key **prefixes** (`project-api-key_…` vs `fw_public_…` vs `phc_`) and the URL you passed in. Web: confirm constructor `apiUrl` / `apiKey`. A `phc_` / `phs_` / `phx_` key is rejected at construction.
 
-    **Solution.** Set `FW_API_URL` and `FW_PROJECT_API_KEY` where those names are actually read ([Configuration](/production/configuration)). Add custom hosts to `allowedHosts`. Never send vendor keys on the FireWeave remote path.
+    **Solution.** Pass `mode` and credentials as explicit options ([Configuration](/production/configuration)). Add custom hosts to `allowedHosts`. Never send vendor keys on the Fireweave remote path. Use `fw_public_…` in the browser.
   </Accordion>
 
   <Accordion title="I always get the default value">
@@ -43,88 +44,79 @@ Also record: language + SDK version, runtime (Node / Bun / Deno + version), adap
 
     | Signature | Cause | Solution |
     | --- | --- | --- |
-    | `PROVIDER_NOT_READY` + `NotReady` | Evaluated before init finished. Node default `lazyReady: true` returns immediately | `setProviderAndWait` with `lazyReady: false`, or wait for READY ([Lifecycle](/production/lifecycle)) |
-    | `PROVIDER_NOT_READY` + `AlreadyClosed` | Evaluated after shutdown | Construct a new runtime. Shutdown is terminal |
-    | `FLAG_NOT_FOUND` | Unknown key, wrong project, missing InMemory fixture, or test-server’s own fixtures | Verify `flagKey` + project. Against the stub, replace fixtures — do not expect your app keys to exist |
-    | `FLAG_NOT_FOUND` + `fireweave.quotaLimited: true` | Backend quota-empty snapshot (HTTP 200, no decisions) | Address quota on the FireWeave project. Not treated as an outage |
-    | `TYPE_MISMATCH` | Getter type ≠ stored type. Java: integer outside 32-bit `int` | Use the matching getter. Java large integers → `getDoubleValue` or object |
+    | `NotReady` | Evaluated before init finished, or you constructed a runtime and never called `initialize` | Use `initFireweave` / `Init` / `Fireweave.init`, or `await runtime.initialize()` |
+    | `AlreadyClosed` | Evaluated after shutdown | Construct a new client. Shutdown is terminal |
+    | `FlagNotFound` | Unknown key on **remote**, wrong project, missing InMemory fixture, or the test-server’s own fixtures | Verify `flagKey` + project. Against the stub, replace fixtures |
+    | `DEFAULT` (no error) | Unknown key on **local** | Expected — seed the key or accept the caller default |
+    | `FlagNotFound` + `fireweave.quotaLimited: true` | Backend quota-empty snapshot | Address quota on the Fireweave project |
+    | `TypeMismatch` | Getter type ≠ stored type | Use the matching getter (`getNumberValue`, not a removed integer-only helper) |
     | `TARGETING_KEY_MISSING` | No `targetingKey` when required | Pass a stable `targetingKey` ([Targeting](/concepts/targeting)) |
-    | `INVALID_CONTEXT` | Bounds (128 attrs / 256 B keys / 4 KiB values / depth 6 / 64 KiB) or reserved-key misuse | Slim context; rename `fireweave.*` / `kind` collisions |
-    | `GENERAL` + `Timeout` / `Network` / `BackendUnavailable` | Transport on the evaluate path | Check URL, egress, allowlist, and the 3 s request timeout |
-    | `PROVIDER_FATAL` / `Configuration` | Invalid URL, host not allowed, missing key | Fix config. Not retried |
-    | No error, `reason: DISABLED` | Control point exists and is off | Expected |
-    | No error, value “wrong” | Targeting did not match | Compare attributes to rules; keep `targetingKey` stable |
-    | Web, `reason: STALE` | Prefetch lost the 5 s ceiling | Not a successful all-off rollout. Check network; `setContext` / re-init to prefetch again |
+    | `InvalidContext` | Bounds (128 attrs / 256 B keys / 4 KiB values / depth 6 / 64 KiB) or reserved-key misuse | Slim context; rename `fireweave.*` / `kind` collisions |
+    | `Timeout` / `Network` / `BackendUnavailable` | Transport on the evaluate path | Check URL, egress, allowlist, and the 3 s request timeout |
+    | `Configuration` | Invalid URL, host not allowed, missing key or `mode` | Fix config. Not retried |
+    | `DISABLED` | Control point exists and is off | Expected |
+    | Value “wrong”, no error | Targeting did not match | Compare attributes to rules; keep `targetingKey` stable; check `registerTarget` returned `ok` |
+    | Web / Swift, `reason: STALE` | Prefetch lost the 5 s ceiling | Not a successful all-off rollout. Check network; `identify` / re-init to prefetch again |
   </Accordion>
 
-  <Accordion title="Targeting does not match (including Go and Java)">
+  <Accordion title="Targeting does not match">
     **Problem.** Rules that should match a user do not.
 
-    **Cause.** The SDK forwards `targetingKey` and attributes. It does not invent an identity. **Go and Java have no `registerTarget`** on `master`. InMemory and the test-server stub do **not** persist registration.
+    **Cause.** The SDK forwards `targetingKey` and attributes. It does not invent an identity. InMemory and the test-server stub do **not** persist registration. Local mode records in-process only — nothing reaches fw-server.
 
-    **Diagnosis.** Confirm you pass the same `targetingKey` on every evaluate. On Node/Python/Web, `registerTarget` / `identify` returns `{ ok, error? }` and never throws — check `ok`. If you only registered and then evaluated against InMemory, registration was a no-op.
+    **Diagnosis.** Confirm you pass the same `targetingKey` on every evaluate. `registerTarget` / `identify` returns `{ ok }` and never throws — check `ok`. If you only registered and then evaluated against InMemory, registration was a no-op.
 
-    **Solution.** Node/Python/Web: register durable properties where the API exists, and still send `targetingKey` (and per-request attributes) on evaluate. Go/Java: put properties on each evaluate context until a registration API exists. Do not expect the test stub to store targets.
+    **Solution.** Register durable properties once per login (`registerTarget` in all seven languages; `identify` on Web and Swift). Still send `targetingKey` (and per-request attributes) on evaluate. Do not expect the test stub to store targets.
   </Accordion>
 
-  <Accordion title="Exposures never appear">
-    **Problem.** No assignment events in capture or the console.
+  <Accordion title="A feature never ramps and the boot log is green">
+    **Problem.** Production looks healthy. Every control point serves its default. Nothing raises.
 
-    **Cause.** `sendExposure` / `send_exposure` / `SendExposure` defaults to **false** in every language. OpenFeature evaluate is side-effect-free. Queued records sit in-process until `flush`. Identical tuples are **deduplicated** (`deduped: true`, not re-sent). Java `close()` and Go `runtime.Shutdown` do **not** drain the client exposure queue.
+    **Cause.** This is the failure mode required `mode` exists to prevent. If you still see it, the process booted in `local` on purpose (or you are reading a stale 2.1 binary that inferred local when credentials were missing).
 
-    **Diagnosis.** Check `capabilities.get().runtime.features.exposureEmission`. Log `exposures.record` results. Confirm you called `flush` (and, on Java/Go, that you flushed **before** shutdown).
+    **Diagnosis.** Search logs for `[fireweave:local]`. That line on a production host means local mode. Confirm `mode: 'remote'` and that `apiKey` / `apiUrl` are the values you think they are.
 
-    **Solution.** Opt in per call (`sendExposure: true`) or call `exposures.record` then `flush`. Web also flushes on `visibilitychange → hidden` and `pagehide`. See [Exposures](/concepts/exposures) and [Lifecycle](/production/lifecycle).
-  </Accordion>
-
-  <Accordion title="Signals or outcomes never appear">
-    **Problem.** `recordHealth` / `recordError` / `recordMetric` / `recordOutcome` seem to vanish.
-
-    **Cause.** Signals queue and go out on the same `/v1/capture` flush path as exposures. Attributes pass an **allowlist** (Node default includes `name`, `kind`, `status`, `value`, `unit`, `rolloutId`, `changeId`, `stampId`, `errorKind`, `message`, `flagKey`, `variant`, `environment`, `service`). Delivery to fw-server vs in-process record is a [known skew](/production/configuration#reliability-verified-only) on some Node/Python paths.
-
-    **Diagnosis.** Flush. Confirm the adapter is `READY` and not `AlreadyClosed`. Do not invent extra kinds or assume console Log/Alert/Block mapping.
-
-    **Solution.** Call `flush` / shutdown paths that flush. Do not claim the server received a signal unless you verified capture (for example `GET /_test/events` against the stub’s `{ fwEvents }`).
+    **Solution.** Set `mode: 'remote'` with explicit credentials. Do not infer mode from whether env vars are present — the SDK does not read them.
   </Accordion>
 
   <Accordion title="Network, timeouts, or hangs on shutdown">
-    **Problem.** Evaluate times out (`Timeout` / `GENERAL`), or the process will not exit.
+    **Problem.** Evaluate times out (`Timeout`), or the process will not exit.
 
-    **Cause.** Default request timeout is **3 s**. Shutdown is deadline-bounded (**10 s**). A hang longer than that means shutdown was never called, or something **outside** FireWeave holds the event loop. Evaluate/capture are **not retried** by `FireweaveRemoteAdapter`. `registerTarget` retries **once** only when the kind is retryable.
+    **Cause.** Default request timeout is **3 s**. Shutdown is deadline-bounded (**10 s**). A hang longer than that means shutdown was never called, or something **outside** Fireweave holds the event loop. Evaluate is **not retried**. `registerTarget` retries **once** only when the kind is retryable.
 
-    **Diagnosis.** Check `FW_API_URL`, allowlist, https vs loopback http, and that Java/Web actually received a URL (no env auto-read). Go: pass a deadline (`ShutdownWithContext`, `CloseTimeout`).
+    **Diagnosis.** Check the `apiUrl` you passed (not an env var the SDK never read), allowlist, and https vs loopback http. Go: pass a deadline to `Runtime().Shutdown(ctx)`.
 
-    **Solution.** Fix egress and config. Call shutdown on SIGTERM. Close injected vendor clients yourself. Reproduce faults on the [test server](/testing) (`401`, `429`, `500`, `delay`, `invalid_json`, `quota_limited`).
+    **Solution.** Fix egress and config. Call shutdown on SIGTERM. Reproduce faults on the [test server](/testing) (`401`, `429`, `500`, `delay`, `invalid_json`, `quota_limited`).
   </Accordion>
 
-  <Accordion title="OpenFeature-specific">
-    **Problem.** Provider looks ready but values are defaults; or you expected `track`.
+  <Accordion title="releases / exposures / signals / guardrails / capabilities are missing">
+    **Problem.** `client.releases` (or `exposures`, `signals`, `guardrails`, `capabilities`) does not exist.
 
-    **Cause.** Node `lazyReady: true` (default). Web resolvers are **sync** reads of a prefetch cache — a lost prefetch is `STALE`, not a throw. **Tracking (spec §6) is not implemented.** Python OpenFeature is pre-1.0 (`>=0.10,<0.11`). Java pin is **1.15.1**, not 1.21.0. Java `getIntegerValue` is 32-bit.
+    **Cause.** Those namespaces were removed in v1. The guardrails stub is gone entirely — you will not get `UnsupportedCapability` from it. Guardrails are platform-managed in the console; the SDK has no guardrails API.
 
-    **Diagnosis.** Read `*Details` and `fireweave.errorKind`. On web, check runtime state for `STALE` and provider `Stale` events.
+    **Diagnosis.** This is a compile/import error, not a runtime degrade.
 
-    **Solution.** `lazyReady: false` when you need `setProviderAndWait` to wait. Use `record` / `recordOutcome` instead of `track`. See [OpenFeature](/openfeature).
+    **Solution.** Delete those calls. Evaluate and `registerTarget` are the v1 surface. See [Migrate 2.1 to 2.3](/migration/v1) and the concept pages for [releases](/concepts/releases), [exposures](/concepts/exposures), [signals](/concepts/signals), and [capabilities](/concepts/capabilities).
   </Accordion>
 
-  <Accordion title="UnsupportedCapability">
-    **Problem.** Guardrails or Java PostHog construction fails with `UnsupportedCapability`.
+  <Accordion title="I expected an OpenFeature provider">
+    **Problem.** There is no `FireweaveProvider` to pass to `OpenFeature.setProviderAndWait`.
 
-    **Cause.** Guardrails are a typed stub in every language (`guardrails: false`). Java `PostHogAdapter.create(config)` is `UnsupportedCapability` until a Java server SDK exists (inject `PostHogClientApi`).
+    **Cause.** ADR-0010 unbundled OpenFeature from the core SDK. Compatibility is not forbidden; the bridge no longer ships inside the package.
 
-    **Diagnosis.** `capabilities.get()`.
-
-    **Solution.** Do not call guardrails as if they work. For Java PostHog, use the injection seam or stay on `FireweaveRemoteAdapter`.
+    **Solution.** Call `controlPoints.*` directly. See [OpenFeature](/openfeature) and [Migrate 2.1 to 2.3](/migration/v1).
   </Accordion>
 </AccordionGroup>
 
-## Language notes (verified)
+## Language notes
 
-- **Node:** ESM, zero runtime deps, peer `@openfeature/server-sdk`. Integers beyond ±(2^53−1) are not lossless. `@fireweaveai/sdk/posthog` gone in 2.1 — see [migration](/migration/node-2).
-- **Python:** OpenFeature needs `fireweave[openfeature]`; PostHog adapter needs `fireweave[posthog]`. After `FATAL`, the provider still returns default-valued decisions so you keep the taxonomy.
-- **Go:** Extension APIs take `context.Context` and return `error`. No `registerTarget`, no `controlPoints` namespace (`Flags()` only).
-- **Java:** No env auto-read. Native helpers are boolean + string; other types via `evaluate` or OpenFeature. SLF4J “no providers” warnings from the OpenFeature SDK are cosmetic.
-- **Web:** No env. Sync reads. `identify` then `setContext`. Secret key shapes refused at construction.
+- **Node:** ESM, zero runtime deps, package `@fireweaveai/server-sdk`. Integers beyond ±(2^53−1) are not lossless. `@fireweaveai/sdk` is the old name.
+- **Python:** Package `fireweave`. `get_integer_value` is a deprecated alias of `get_number_value` (one `DeprecationWarning` per process).
+- **Go:** Module `…/sdks/go/v2`. The nine methods do not take `context.Context`. Shutdown is `client.Runtime().Shutdown(ctx)`.
+- **Java:** No env auto-read. `Fireweave.init(InitOptions.remote(apiKey, apiUrl))`. Unpublished (`0.1.0-SNAPSHOT`).
+- **Web:** No env. Sync reads. `identify` then cache refresh. `fw_public_…` keys. Secret key shapes refused at construction.
+- **Rust:** Crate `fireweave`. Blocking. `init_fireweave` returns `Result`.
+- **Swift:** Package `Fireweave`. Sync reads, web-shaped prefetch.
 
 ## Next
 

@@ -1,0 +1,132 @@
+---
+title: "fw CLI"
+description: "Install and upgrade the Fireweave CLI (`fw`), and see what it covers — auth, repo binding, sync, agent tooling, and verify. Rollout control is not a CLI command."
+---
+
+`fw` is the Fireweave command-line tool. You use it to authenticate, bind a git repo to a Fireweave project, install coding-agent plugins, pull server-owned repo state, and run local checks.
+
+It is a static binary. Latest production release: **2.5.2** (tag `fw-cli/v2.5.2-production`, 2026-09-08).
+
+<Warning>
+  **Rollouts and feature flags are not CLI commands.** There is no `fw rollout` and no `fw flag`. You register and inspect rollouts in the Fireweave console and through coding-agent skills / MCP tools. The one CLI exception is [`fw pr check`](/cli/commands#fw-pr-check) — a pre-merge readiness gate, not rollout control — and it is [not generally available](/cli/commands#not-generally-available).
+</Warning>
+
+## What you use it for
+
+| You use `fw` for | You do **not** use `fw` for |
+| --- | --- |
+| Sign in and manage login profiles | Evaluate control points at runtime (that is the [SDK](/quickstart)) |
+| Bind this repo to an org and project | Create or ramp a rollout |
+| Install Fireweave plugins and MCP config for your coding agent | Toggle feature flags |
+| `fw sync` — rebuild `.fireweave/.cache/` from the server | Drive the promotion pipeline |
+| Read and move a feature's rollout-ready contract (`fw manifest`) | Call the [runtime HTTP plane](/reference/http-api#runtime-plane) |
+| `fw verify` and `fw doctor` | |
+
+Typical first session:
+
+```bash
+fw login
+fw init
+fw status
+```
+
+In CI, after the repo is bound, you authenticate with an org API key and run `fw sync`. See [Authentication](/cli/authentication#ci-credentials).
+
+## Install
+
+The installer downloads a platform binary from S3, verifies its checksum, installs it to `~/.fireweave/bin`, and wires that directory into your shell so new terminals — and shells a coding agent spawns — can find `fw`.
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    curl -fsSL https://assets-fireweave-ai.s3.us-east-2.amazonaws.com/cli/latest/install.sh | bash
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```powershell
+    iwr https://assets-fireweave-ai.s3.us-east-2.amazonaws.com/cli/latest/install.ps1 -UseBasicParsing | iex
+    ```
+  </Tab>
+</Tabs>
+
+Supported targets: Linux x64 and arm64, macOS x64 and arm64, Windows x64.
+
+<Note>
+  The installer downloads from the `us-east-2` bucket by default. Set `FW_INSTALL_BASE` to override the base URL if you were given a different tree.
+</Note>
+
+The installer writes one managed file, `~/.fireweave/env`, and sources it from a marked block in `~/.bashrc`, `~/.profile`, `~/.zshenv`, or fish `conf.d`. On Windows it updates the user `Path`. Re-running the installer does not add a second block.
+
+| Variable | Effect |
+| --- | --- |
+| `FW_NO_MODIFY_PATH=1` | Skip PATH wiring. Prints export advice instead. |
+| `FW_MODIFY_PATH=1` | Wire PATH without prompting. |
+
+`fw self-update` replaces the binary only. It does not re-run the installer. If `fw` is missing from PATH after an upgrade, run `fw doctor --fix`.
+
+## Version and channel
+
+`fw --version` prints the embedded version and the distribution channel that produced the binary:
+
+```text
+2.5.2 (stable)
+```
+
+A staging-channel build prints `(staging)`. Channel matters: it changes where `fw self-update` pulls from, and it changes the default cloud `fw login` targets.
+
+## Upgrade
+
+```bash
+fw self-update
+```
+
+`fw` fetches `latest/manifest.json` from the channel tree, compares `(version, channel)` against the running binary, downloads the matching artifact, verifies SHA-256, and atomically swaps `~/.fireweave/bin/fw`.
+
+| Flag | Effect |
+| --- | --- |
+| `--force` | Reinstall even when the version already matches. |
+| `--channel <stable\|staging>` | Pull from that channel tree. Use this to move a binary across channels. |
+
+A version-only comparison is not enough. Both channels publish the same clean semver, so switching channel is a reason to install even when the version string is unchanged.
+
+There is no background auto-update. You run `fw self-update` yourself.
+
+## Staging
+
+Install or switch to the staging channel when you were asked to dogfood a pre-production CLI:
+
+```bash
+# Switch an existing install
+fw self-update --channel staging
+
+# Fresh install from the staging tree
+curl -fsSL https://assets-fireweave-ai.s3.us-east-2.amazonaws.com/cli/install.sh \
+  | FW_INSTALL_BASE=https://assets-fireweave-ai.s3.us-east-2.amazonaws.com/cli/staging bash
+```
+
+A staging binary defaults `fw login` to the staging cloud. Pass `--cloud` to log into production from a staging build, or `--staging` to log into staging from a stable build. See [Authentication](/cli/authentication).
+
+## Scope
+
+`fw` is a thin client over Fireweave's management plane. It stores login profiles under `~/.fireweave/` and a per-repo binding under `.fireweave/`.
+
+| Path | Role |
+| --- | --- |
+| `~/.fireweave/bin/fw` | Installed binary |
+| `~/.fireweave/profiles/` | Named login profiles (tokens in the system keyring when available) |
+| `.fireweave/project.json` | Committed org + project + server binding |
+| `.fireweave/local.json` | Gitignored personal profile pin and env override |
+| `.fireweave/.cache/` | Gitignored projection rebuilt by `fw sync` |
+
+After `fw init`, use `/fireweave:safe-rollout` in your coding agent to register a rollout. Use the Fireweave console to inspect or abort one.
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Authentication" href="/cli/authentication" icon="key">
+    Interactive `fw login` and CI `FW_ORG_API_KEY`.
+  </Card>
+  <Card title="Command reference" href="/cli/commands" icon="terminal">
+    Flags and exit codes for every visible command.
+  </Card>
+</Columns>

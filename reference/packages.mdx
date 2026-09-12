@@ -1,97 +1,102 @@
 ---
 title: "Package and API index"
-description: "FireWeave package names, versions, publish state, env vars, OpenFeature pins, and runtime compatibility. Links out to per-SDK pages."
+description: "Fireweave package names, versions, publish state, env vars, and runtime compatibility. Links out to per-SDK pages."
 ---
 
-Developer index. Full call surfaces live on the [SDK pages](/sdks/node). Do not treat registry install commands as working unless the publish row says so.
-
-<Warning>
-  Pre-release. License MIT; do not redistribute packages built from the SDK repository until the license is ratified and publication is authorized.
-</Warning>
+Developer index. Full call surfaces live on the [SDK pages](/sdks/node). All six registries below published **2.3.0** on 2026-09-09.
 
 ## Packages
 
-| Surface | Package | Version in tree | Published? | Runtime (manifests + CI) |
-| --- | --- | --- | --- | --- |
-| [Node / Bun / Deno](/sdks/node) | `@fireweaveai/sdk` | `2.1.0` | **Published.** npm **2.1.0**; dist-tag **latest = 2.1.0** (as of 2026-08-17). CHANGELOG/docs previously described 2.1.0 as unpublished and `latest` as 2.0.0. | Node `>=20.20`; CI Node 20 + 24, Bun 1.2.0 + latest, Deno `v2.x` + canary |
-| [Python](/sdks/python) | `fireweave` | `0.1.0` | **Published.** PyPI **0.1.0** — `pip install 'fireweave[openfeature]'` is valid | Python `>=3.10`; CI 3.10 + 3.14 |
-| [Go](/sdks/go) | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go` | `0.1.0` (matrix); `go.mod` is `go 1.25.12` | **Unpublished** as a tagged module | Go 1.25; CI `1.25.x` + `stable` |
-| [Java](/sdks/java) | `ai.fireweave:fireweave-{sdk,openfeature,adapter-posthog,testing}` | `0.1.0-SNAPSHOT` | **Unpublished.** Parent POM: “DO NOT PUBLISH.” `groupId ai.fireweave` is a working assumption | Java 11+; CI JDK 11 + 25 |
-| [Browser](/sdks/web) | `@fireweaveai/web-sdk` | `2.1.0` | **Published.** npm **2.1.0** (as of 2026-08-17) | Browser. CI: Bun + happy-dom. **Not** a Node/Deno target |
+| Surface | Package | Published | Runtime |
+| --- | --- | --- | --- |
+| [Node / Bun / Deno](/sdks/node) | `@fireweaveai/server-sdk` | npm **2.3.0** (`latest`) | Node `>=20.20`; Bun `>=1.2`; Deno `>=2.0` |
+| [Python](/sdks/python) | `fireweave` | PyPI **2.3.0** | Python `>=3.10` |
+| [Go](/sdks/go) | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2` | module proxy **v2.3.0** | `go 1.25.13` |
+| [Java](/sdks/java) | `ai.fireweave:fireweave-sdk` | Maven Central **2.3.0** | Java 11+ |
+| [Browser](/sdks/web) | `@fireweaveai/web-sdk` | npm **2.3.0** | Browser. Not a Node/Deno target |
+| [Rust](/sdks/rust) | `fireweave` | crates.io **2.3.0** | rust-version **1.75**; deps `ureq`, `serde`, `serde_json` |
 
-Zero runtime dependencies on Node, Python core, and Web. OpenFeature is a **peer** (Node/Web) or an **extra** (Python). Go requires the OpenFeature and PostHog modules listed on the Go page.
+`@fireweaveai/sdk` is frozen at **2.1.0**. Do not present it as the Node install target. Use `@fireweaveai/server-sdk`.
+
+### Java artifact skew
+
+`fireweave-sdk` is **2.3.0**. These leftover artifacts remain at **0.1.0** and are not the 2.3.0 SDK:
+
+- `ai.fireweave:fireweave-openfeature` **0.1.0**
+- `ai.fireweave:fireweave-adapter-posthog` **0.1.0**
+- `ai.fireweave:fireweave-testing` **0.1.0**
+
+Do not imply a uniform 2.3.0 line across every `ai.fireweave:*` coordinate.
+
+### Swift
+
+A Swift package exists in-tree at `sdks/swift/Package.swift` (iOS 16+, macOS 13+, zero dependencies, tag `swift/v2.2.0`). `Package.swift` is not at the repository root, so SwiftPM cannot resolve it from the repository URL. It is **not installable**. There is no Swift SDK page.
+
+Node, Python core, Web, Go, and Java `fireweave-sdk` have zero runtime dependencies. Rust has exactly three: `ureq`, `serde`, `serde_json`.
 
 See [Compatibility](/sdks/compatibility) for the adapter and type matrix.
 
-## OpenFeature pins
-
-| Binding | Provider | Pin | Notes |
-| --- | --- | --- | --- |
-| Node | `FireweaveProvider` | `@openfeature/server-sdk` `^1.22.0` | `lazyReady` default **true**. Deno OF provider import is Node/Bun-gated in CI |
-| Python | `fireweave.openfeature.FireweaveProvider` | `openfeature-sdk>=0.10.0,<0.11` | Extra `fireweave[openfeature]`; pre-1.0 |
-| Go | `openfeature.NewProvider` | `go-sdk` `v1.17.2` | Wraps `*fireweave.Client` |
-| Java | `ai.fireweave.openfeature.FireweaveProvider` | `dev.openfeature:sdk` **1.15.1** | Not 1.21.0 |
-| Web | `FireweaveWebProvider` | `@openfeature/web-sdk` `^1.9.0` | **Sync** resolvers; `runsOn = 'client'`; name `fireweave-web` |
-
-Tracking (spec §6): **not implemented**. Details: [OpenFeature](/openfeature).
-
 ## Env vars and config
+
+**No SDK reads environment variables.** Credentials are explicit init options in every language.
 
 | Name | Who reads it |
 | --- | --- |
-| `FW_API_URL` | Node, Python, Go **remote** adapters |
-| `FW_PROJECT_API_KEY` | Node, Python, Go **remote** adapters |
-| `FW_DEPRECATION_WARNINGS` | Node, Python (`=1` → one `client.flags` notice) |
-
-Java: constructor / `FireweaveConfig` only. Web: constructor only.
+| `FW_API_URL` | **Nobody in the SDK.** Your app may read it and pass `apiUrl` / `api_url` / `APIURL`. |
+| `FW_PROJECT_API_KEY` | **Nobody in the SDK.** Your app may read it and pass `apiKey` / `api_key` / `APIKey`. |
+| `FW_DEPRECATION_WARNINGS` | **Nothing.** Removed. The `flags` alias is silent at runtime (Python emits one `DeprecationWarning` on first access). |
 
 Timeouts: request **3000 ms**, shutdown **10000 ms**. Host allowlists and https rules: [Configuration](/production/configuration).
 
-Example-only (not SDK core): `FIREWEAVE_POSTHOG_KEY`, `FIREWEAVE_POSTHOG_HOST`, `FW_POSTHOG_HOST`, `FW_SECRET_KEY`.
-
 ## Adapters (quick map)
 
-| Adapter | Node 2.1 | Python | Go | Java | Web |
-| --- | --- | --- | --- | --- | --- |
-| `FireweaveRemoteAdapter` | yes | yes | yes | yes | `FireweaveRemoteWebAdapter` |
-| `InMemoryAdapter` | yes | yes | yes | `fireweave-testing` | `InMemoryWebAdapter` |
-| Local / dev | `FireweaveLocalAdapter` | `FireweaveLocalAdapter` | **absent** | **absent** | `FireweaveLocalWebAdapter` |
-| PostHog | **removed** | `fireweave[posthog]` | `adapters/posthog` | seam only (`create(config)` → `UnsupportedCapability`) | **none** |
+| Adapter | Node | Python | Go | Java | Web | Rust |
+| --- | --- | --- | --- | --- | --- | --- |
+| Remote | `FireweaveRemoteAdapter` | `FireweaveRemoteAdapter` | `infrastructure/adapters/remote` | `FireweaveRemoteAdapter` | `FireweaveRemoteWebAdapter` | `FireweaveRemoteAdapter` |
+| Local / dev | `FireweaveLocalAdapter` | `FireweaveLocalAdapter` | `infrastructure/adapters/local` | `FireweaveLocalAdapter` | `FireweaveLocalWebAdapter` | `FireweaveLocalAdapter` |
+| In-memory | `InMemoryAdapter` | `InMemoryAdapter` | `infrastructure/adapters/inmemory` | `InMemoryAdapter` (testing leftover) | `InMemoryWebAdapter` | `InMemoryAdapter` |
+| PostHog / OpenFeature | **absent** | **absent** | **absent** | leftover 0.1.0 artifacts only | **absent** | **absent** |
+
+`initFireweave` / `init_fireweave` / `Fireweave.init` / `fireweave.Init` selects remote or local from the required `mode` option.
 
 ## Errors
 
-15 kinds, evaluation never throws. Full table: [Errors](/production/errors).
+15 kinds. Evaluation never throws. Full table: [Errors](/production/errors).
 
-Node/Web: `FireweaveError`. Python: per-kind classes + `ErrorKind`. Go: `fireweave.Error`. Java: `ErrorKind` + `FireweaveException`.
+Node/Web: `FireweaveError`. Python: per-kind classes + `ErrorKind`. Go: `fireweave.Error`. Java: `ErrorKind` + `FireweaveException`. Rust: `FireweaveError`.
 
-## Language gates (do not paper over)
+## Language gates
 
-| API | Node | Python | Go | Java | Web |
-| --- | --- | --- | --- | --- | --- |
-| Product namespace | `controlPoints` (`flags` alias) | `control_points` (`flags` alias) | `Flags()` only | no facade | `controlPoints` (sync) |
-| Register target | `runtime.registerTarget` | `runtime.register_target` | **absent** | **absent** | `client.identify` |
-| Native typed getters | boolean / string / number / object | boolean / string / int / float / object | `Evaluate` only | boolean + string; others via `evaluate` or OF | boolean / string / number / object (sync) |
-| Shutdown flushes client exposures | yes | yes | **no** — `Exposures().Flush` first | **no** — `exposures().flush()` first | yes (+ unload) |
-| Env config | yes | yes | remote adapter | **no** | **no** |
+| API | Node | Python | Go | Java | Web | Rust |
+| --- | --- | --- | --- | --- | --- | --- |
+| Entry point | `initFireweave` | `init_fireweave` | `fireweave.Init` | `Fireweave.init` | `initFireweave` | `init_fireweave` |
+| Product namespace | `controlPoints` | `control_points` | `ControlPoints()` | `controlPoints()` | `controlPoints` (sync) | `control_points` |
+| Deprecated alias | `flags` (silent) | `flags` (one warning) | `Flags()` (silent) | `flags()` (silent) | `flags` (silent) | `flags()` (silent) |
+| Register target | `client.registerTarget` | `client.register_target` | `client.RegisterTarget` | `client.registerTarget` | `registerTarget` + `identify` | `client.register_target` |
+| Typed getters | boolean / string / number / object | boolean / string / number / object | same, `Get*Value` | same, including `getNumberValue` / `getObjectValue` | same (sync) | same, `get_*_value` |
+| Env auto-read | **no** | **no** | **no** | **no** | **no** | **no** |
+
+The `flags` alias shares identity with `controlPoints` and is not the documented name.
 
 ## Wire paths
 
 | Method | Path | Who implements the client |
 | --- | --- | --- |
-| `POST` | `/v1/flags/evaluate` | All five remote adapters |
-| `POST` | `/v1/capture` | All five remote adapters |
-| `POST` | `/v1/targets/register` | Node, Python, Web only |
+| `POST` | `/v1/flags/evaluate` | All seven remote adapters |
+| `POST` | `/v1/targets/register` | All seven remote adapters |
+| `POST` | `/v1/capture` | Still a protocol path. v1 public surface does not expose exposures or signals. Node and Web remote adapters still define the constant. |
 
 Auth: `Authorization: Bearer <key>`.
 
-The [test server](/testing) implements evaluate, capture, and `/health` — **not** `/v1/targets/register`.
+See [HTTP API](/reference/http-api). The [test server](/testing) implements evaluate and `/health` — **not** `/v1/targets/register`.
 
 ## Runtime compatibility notes
 
-- **Node 2.1** is ESM, portable across Node / Bun / Deno (`readEnv`, no `Buffer` / bare `process.env` in `src/`). OpenFeature provider smoke on Deno is **not** asserted by CI.
+- **Node** is ESM, portable across Node / Bun / Deno. Deno import: `npm:@fireweaveai/server-sdk`.
 - **Web** targets browsers only. Suite runs on Bun + happy-dom. No server entry point.
-- CI “latest” / “stable” / “canary” cells **float**. Document minimums from manifests, not floating CI cells as support guarantees.
-- No mobile, iOS, Android, Rust, .NET, PHP, or Ruby packages under `sdks/`.
+- **Go** import and `go get` must include `/v2`.
+- CI “latest” / “stable” / “canary” cells **float**. Document minimums from manifests.
+- Swift is in-tree and not distributable. There is no Android, .NET, PHP, or Ruby package under `sdks/`.
 
 ## Next
 
@@ -101,5 +106,6 @@ The [test server](/testing) implements evaluate, capture, and `/health` — **no
   <Card title="Go" href="/sdks/go" icon="golang" />
   <Card title="Java" href="/sdks/java" icon="java" />
   <Card title="Web" href="/sdks/web" icon="window" />
+  <Card title="Rust" href="/sdks/rust" icon="gear" />
   <Card title="Compatibility" href="/sdks/compatibility" icon="table" />
 </Columns>

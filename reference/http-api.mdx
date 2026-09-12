@@ -1,0 +1,391 @@
+---
+title: "HTTP API"
+description: "Management-plane HTTP API for Fireweave: whoami, projects, environments, and control-point reads. Authenticated with an org API key — not a project runtime key."
+---
+
+Fireweave exposes **two HTTP planes**. They take different keys and they do different work. Mixing them up is the most common integration error.
+
+## Two planes
+
+### Runtime plane
+
+Your application SDKs call these three paths with a **project runtime key** (`project-api-key_…`) or a browser-safe `fw_public_…` key:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/v1/flags/evaluate` | Evaluate control points |
+| `POST` | `/v1/capture` | Exposures and signals |
+| `POST` | `/v1/targets/register` | Durable target properties (all seven SDKs) |
+
+These paths are **not** in the management OpenAPI spec. They are served on a separate runtime-proxy path. This page does not re-document them. See [Configuration](/production/configuration), [Adapters](/concepts/adapters), and the [SDK pages](/sdks/node).
+
+### Management plane
+
+This page. Authenticated with an **org API key** (`fw_org_…`) or a CLI user session. Use it to list and manage projects and environments, and to read merge-registered control points.
+
+Default base URL: `https://app-server.fireweave.ai` (same host `fw login --cloud` uses). Staging: `https://staging-app-server.fireweave.ai`.
+
+```http
+Authorization: Bearer fw_org_…
+```
+
+<Warning>
+  An org key is not a project runtime key. Do not put `fw_org_…` in an SDK adapter, and do not send `FW_PROJECT_API_KEY` here. Terraform reads the same org-key family as `FIREWEAVE_API_KEY` — see [Terraform authentication](/infrastructure/terraform/authentication).
+</Warning>
+
+`org:management` can call every route on this page. `org:ci-read` cannot — that scope exists for [`fw sync`](/cli/commands#fw-sync) only. Mint the matching scope when you create the key.
+
+Missing or invalid `Authorization` returns **401**. Cross-org probes return **404** (or an empty list on control-point reads), not 403.
+
+<Note>
+  The request and response shapes below are documented from the server's route handlers. Fireweave's published OpenAPI description currently lists paths and summaries only, so treat these pages as the more complete reference until it emits full schemas.
+</Note>
+
+## `GET /v1/whoami`
+
+Return the session implied by the bearer token.
+
+```http
+GET /v1/whoami
+Authorization: Bearer fw_org_…
+```
+
+```json
+{
+  "userId": "u_…",
+  "orgId": "org_…",
+  "scope": "org:management"
+}
+```
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `userId` | string | Human user id for a CLI session. Service principal for an org key. |
+| `orgId` | string | Organisation the token belongs to. All later routes take org from here, never from the path. |
+| `scope` | string | Session or key scope (`cli`, `org:management`, `org:ci-read`, …). |
+
+## Projects
+
+Org id is always taken from the verified session.
+
+### `GET /v1/projects`
+
+List projects the organisation owns.
+
+```json
+{
+  "projects": [
+    {
+      "projectId": "proj_…",
+      "name": "Payments Service",
+      "slug": "payments",
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+List items do **not** include `description` or `status`. Use `GET /v1/projects/{projectId}` for the full row.
+
+### `POST /v1/projects`
+
+Create a project. **201** on success.
+
+```json
+{
+  "name": "Payments Service",
+  "slug": "payments",
+  "description": "Checkout and billing"
+}
+```
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | Yes | Human-readable name. |
+| `slug` | string | Yes | Unique within the organisation. |
+| `description` | string | No | |
+
+**201** body:
+
+```json
+{
+  "project": {
+    "projectId": "proj_…",
+    "name": "Payments Service",
+    "slug": "payments",
+    "description": "Checkout and billing",
+    "status": "active",
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  }
+}
+```
+
+**409** `{ "error": { "code": "CONFLICT", "message": "A project with this slug already exists" } }` when the slug is taken.
+
+### `GET /v1/projects/{projectId}`
+
+Return one project. **404** `{ "error": { "code": "NOT_FOUND", "message": "Project not found" } }` if the id is missing or belongs to another org.
+
+The `project` object matches the create response: `projectId`, `name`, `slug`, `description`, `status` (`active` \| `archived`), `createdAt`, `updatedAt`.
+
+### `PATCH /v1/projects/{projectId}`
+
+Update name, description, and/or status. Slug is not writable here.
+
+```json
+{
+  "name": "Payments",
+  "description": "Updated",
+  "status": "archived"
+}
+```
+
+All body fields are optional. Returns `{ "project": { … } }`.
+
+### `DELETE /v1/projects/{projectId}`
+
+```json
+{ "deleted": true, "projectId": "proj_…" }
+```
+
+## Environments
+
+A project environment is a named stage in the promotion pipeline (`dev`, `stage`, `prod`, …).
+
+Ref-rule object used by `branchRules` and `tagRules`:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `kind` | `exact` \| `prefix` \| `glob` | Yes | How `value` matches a git ref. |
+| `value` | string | Yes | Pattern. |
+| `repo` | string | No | Limit the rule to a repository full name. |
+
+### `GET /v1/projects/{projectId}/environments`
+
+List environments, favourites first, then by recency / promotion rank. When the registry is empty, the server returns a single synthesised `production` placeholder.
+
+```json
+{
+  "defaultEnvironment": "production",
+  "environments": [
+    {
+      "environmentName": "production",
+      "slug": "production",
+      "displayName": "Production",
+      "promotionRank": 0,
+      "isDefault": true,
+      "isFavourite": false,
+      "synthesised": true,
+      "branchRules": [],
+      "tagRules": [],
+      "readiness": { "bound": 0, "total": 0 },
+      "firstSeenAt": null,
+      "lastSeenAt": null,
+      "lastDeployedSha": null
+    }
+  ]
+}
+```
+
+This list shape is **not** the same as the create/get/update row. It has no `envId` and no `webhookAliases`. It does include `readiness`, `synthesised`, and last-seen deploy fields.
+
+### `POST /v1/projects/{projectId}/environments`
+
+Create an environment. **201** on success. Slug is trimmed and lowercased. The first environment in an empty project defaults `isDefault` to `true` unless you pass the field.
+
+```json
+{
+  "slug": "stage",
+  "displayName": "Stage",
+  "isDefault": true,
+  "branchRules": [{ "kind": "exact", "value": "main" }],
+  "tagRules": [{ "kind": "prefix", "value": "stage-" }],
+  "webhookAliases": ["staging", "stg"]
+}
+```
+
+| Field | Type | Required |
+| --- | --- | --- |
+| `slug` | string | Yes |
+| `displayName` | string | Yes |
+| `isDefault` | boolean | No |
+| `branchRules` | ref-rule[] | No |
+| `tagRules` | ref-rule[] | No |
+| `webhookAliases` | string[] | No |
+
+**201** body `{ "environment": { … } }` uses the management row:
+
+| Field | Type |
+| --- | --- |
+| `envId` | string |
+| `projectId` | string |
+| `environmentName` | string |
+| `slug` | string |
+| `displayName` | string |
+| `promotionRank` | number |
+| `isDefault` | boolean |
+| `branchRules` | ref-rule[] |
+| `tagRules` | ref-rule[] |
+| `webhookAliases` | string[] |
+| `createdAt` | string (ISO) |
+| `updatedAt` | string (ISO) |
+
+**409** if the slug already exists. **404** if the project is missing or cross-org.
+
+### `GET /v1/projects/{projectId}/environments/{envId}`
+
+Return one environment as `{ "environment": { … } }`. **404** for a missing project, missing env, or cross-org id.
+
+### `PATCH /v1/projects/{projectId}/environments/{envId}`
+
+Updatable fields: `displayName`, `branchRules`, `tagRules`, `webhookAliases`, `isDefault`. Slug is not writable.
+
+Returns `{ "environment": { … } }`.
+
+### `DELETE /v1/projects/{projectId}/environments/{envId}`
+
+```json
+{ "deleted": true, "envId": "env_…" }
+```
+
+## Control points
+
+These reads return every control point the project's **merges** have registered. They are not the SDK evaluate API. Ramps do **not** read the graph edges — the graph is informational.
+
+Org is taken from the session. A project in another organisation reads as **empty**, not 404.
+
+Response envelope: `{ "success": true, "data": { … } }`. `orgId` is stripped from each row on the wire.
+
+### `GET /v1/projects/{projectId}/control-points`
+
+One row per anchor key, with the merge that introduced it and the latest merge that still anchors it.
+
+```json
+{
+  "success": true,
+  "data": {
+    "controlPoints": [
+      {
+        "controlPointId": "cp_…",
+        "projectId": "proj_…",
+        "key": "checkout.new-flow",
+        "repoResourceIdentifier": "github:acme/app",
+        "kind": "boolean",
+        "defaultValue": false,
+        "surfaceId": null,
+        "description": null,
+        "status": "active",
+        "firstSeenSha": "abc123…",
+        "lastSeenSha": "def456…"
+      }
+    ]
+  }
+}
+```
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `controlPointId` | string | Server id. |
+| `projectId` | string | |
+| `key` | string | Control-point / flag key. |
+| `repoResourceIdentifier` | string | Repo the row was registered from. |
+| `kind` | `boolean` \| `string` \| `number` \| `json` | |
+| `defaultValue` | unknown | Safe default declared at the anchor. |
+| `surfaceId` | string \| null | |
+| `description` | string \| null | |
+| `status` | `active` \| `retired` | |
+| `firstSeenSha` | string | Merge that introduced the key. |
+| `lastSeenSha` | string | Latest merge that still anchors it. |
+
+Rows exist only after a merge has registered them. An empty list is normal for a project that has never gone through that path.
+
+### `GET /v1/projects/{projectId}/control-points/graph`
+
+Nodes plus every recorded dependency edge.
+
+```json
+{
+  "success": true,
+  "data": {
+    "nodes": [ { "controlPointId": "cp_1", "key": "checkout.new-flow" } ],
+    "edges": [
+      {
+        "edgeId": "e_…",
+        "fromControlPointId": "cp_1",
+        "toControlPointId": "cp_2",
+        "edgeKind": "declared",
+        "source": "deterministic",
+        "confidence": 1,
+        "evidence": {},
+        "detectedAtSha": "def456…"
+      }
+    ]
+  }
+}
+```
+
+`nodes` use the same row shape as the list endpoint. `edges`:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `edgeId` | string | |
+| `fromControlPointId` | string | `from` depends on `to`. |
+| `toControlPointId` | string | |
+| `edgeKind` | `lexical-nesting` \| `call-graph` \| `co-occurrence` \| `declared` | What relation was seen. |
+| `source` | `deterministic` \| `inferred` | Who saw it. |
+| `confidence` | number | `0`–`1`. |
+| `evidence` | object | File/line for a syntactic edge; free-form for an inferred one. |
+| `detectedAtSha` | string | |
+
+<Note>
+  Nothing that ramps a release reads these edges. Treat the graph as history for later decisions, not as a live dependency lock.
+</Note>
+
+## Errors
+
+Management writes use a small envelope:
+
+```json
+{ "error": { "code": "NOT_FOUND", "message": "Project not found" } }
+```
+
+| Status | When |
+| --- | --- |
+| `401` | Missing or invalid bearer. |
+| `404` | Unknown id, or the id belongs to another org. |
+| `409` | Duplicate project slug or environment slug. |
+
+## What this page does not cover
+
+These surfaces exist on the server and are **deliberately omitted** here:
+
+| Surface | Why |
+| --- | --- |
+| `POST /v1/flags/evaluate`, `/v1/capture`, `/v1/targets/register` | Runtime plane — see [Configuration](/production/configuration). |
+| `/v1/rollouts/*` | Rollout lifecycle is console / skills / MCP, not a public management contract on this page. |
+| `/v1/repo-state/*`, `/v1/repo-manifests/*`, `/v1/change-stamps` | Backing routes for [`fw sync`](/cli/commands#fw-sync) and [`fw manifest`](/cli/commands#fw-manifest). Use the CLI. |
+| `/v1/sandboxes/*`, `/v1/feedback/sessions/*` | Internal automation. |
+| `/v1/orgs/pr-check-run-settings` | Gated pre-merge pipeline. Not generally available. |
+| `/v1/projects/{projectId}/harness-migration` | Skill-reported migration status, not a general integration API. |
+| `/api/*` | Session-authenticated console routes (including org API key minting). See [Terraform authentication](/infrastructure/terraform/authentication) to create a key. |
+
+If you need a route that is not listed above, it is not part of the documented external contract.
+
+## Next
+
+<Columns cols={2}>
+  <Card title="CLI authentication" href="/cli/authentication" icon="key">
+    `fw login` and `FW_ORG_API_KEY`.
+  </Card>
+  <Card title="Terraform" href="/infrastructure/terraform/overview" icon="cloud">
+    Manage projects and environments as code with the same org key.
+  </Card>
+  <Card title="SDK configuration" href="/production/configuration" icon="code">
+    Runtime keys for evaluate, capture, and register.
+  </Card>
+  <Card title="Control points" href="/concepts/control-points" icon="flag">
+    What a control point is in application code.
+  </Card>
+</Columns>

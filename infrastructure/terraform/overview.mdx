@@ -1,0 +1,118 @@
+---
+title: "Terraform provider"
+description: "Manage Fireweave projects and environments as code with the published FireWeave-HQ/fireweave provider."
+---
+
+The [Fireweave Terraform provider](https://registry.terraform.io/providers/FireWeave-HQ/fireweave/latest) manages Fireweave **org infrastructure** as code: projects, environments, and (once unblocked) org member roles.
+
+It is complementary to the [SDK](/quickstart). Terraform creates the org containers. Your application still evaluates **control points**, registers **targets**, and records **exposures** and **signals** through an SDK.
+
+<Warning>
+  This is an early **0.x** provider. It first published in July 2026. The latest version is **0.1.3** (2026-09-11). Pin `~> 0.1` and expect that a future 0.x minor may break. Fireweave uses it internally for real projects and environments, pinned `>= 0.1.2, < 0.2.0`.
+</Warning>
+
+## What Terraform manages
+
+| You manage with Terraform | You do **not** manage with Terraform |
+| --- | --- |
+| Projects (`fireweave_project`) | Control points |
+| Environments and git ref rules (`fireweave_environment`) | Targeting rules |
+| Org member roles (`fireweave_org_member`) — [blocked](/infrastructure/terraform/org-members) | Releases, exposures, and signals |
+
+There are **no** published Terraform modules. Compose the resources below in your own root module.
+
+Full generated schema lives on the [Terraform Registry](https://registry.terraform.io/providers/FireWeave-HQ/fireweave/latest/docs). These pages are curated guides.
+
+## Install
+
+The provider is on the Terraform Registry as [`FireWeave-HQ/fireweave`](https://registry.terraform.io/providers/FireWeave-HQ/fireweave/latest). Requires Terraform **>= 1.5**.
+
+```hcl
+terraform {
+  required_providers {
+    fireweave = {
+      source  = "FireWeave-HQ/fireweave"
+      version = "~> 0.1"
+    }
+  }
+}
+```
+
+Do not use `fireweave/fireweave` or `fireweaveai/fireweave`. Those namespaces do not exist.
+
+## Authenticate
+
+The provider needs an **org-scoped** API key (`fw_org_…`), passed as `FIREWEAVE_API_KEY` or `api_key`. That is a different key and a different environment-variable prefix from the SDK's `FW_*` project-key variables.
+
+See [Authentication](/infrastructure/terraform/authentication).
+
+## Resources and data sources
+
+| Type | Name | Guide |
+| --- | --- | --- |
+| Resource | `fireweave_project` | [Projects](/infrastructure/terraform/projects) |
+| Resource | `fireweave_environment` | [Environments](/infrastructure/terraform/environments) |
+| Resource | `fireweave_org_member` | [Org members](/infrastructure/terraform/org-members) |
+| Data source | `fireweave_project` | [Data sources](/infrastructure/terraform/data-sources) |
+| Data source | `fireweave_projects` | [Data sources](/infrastructure/terraform/data-sources) |
+| Data source | `fireweave_environments` | [Data sources](/infrastructure/terraform/data-sources) |
+
+## Example
+
+```hcl
+terraform {
+  required_providers {
+    fireweave = {
+      source  = "FireWeave-HQ/fireweave"
+      version = "~> 0.1"
+    }
+  }
+}
+
+provider "fireweave" {
+  # Prefer FIREWEAVE_API_KEY in the environment over hardcoding.
+}
+
+resource "fireweave_project" "app" {
+  name        = "My App"
+  slug        = "my-app"
+  description = "Managed by Terraform"
+}
+
+resource "fireweave_environment" "stage" {
+  project_id   = fireweave_project.app.id
+  slug         = "stage"
+  display_name = "Stage"
+  is_default   = true
+
+  branch_rules = [
+    {
+      kind  = "exact"
+      value = "main"
+    },
+  ]
+}
+```
+
+```bash
+export FIREWEAVE_API_KEY="fw_org_…"
+terraform init
+terraform apply
+```
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Quickstart" href="/infrastructure/terraform/quickstart" icon="rocket">
+    Install the provider and apply a project plus stage and prod environments.
+  </Card>
+  <Card title="Authentication" href="/infrastructure/terraform/authentication" icon="key">
+    Org API keys, `FIREWEAVE_*` vs `FW_*`, and the default endpoint.
+  </Card>
+  <Card title="Projects" href="/infrastructure/terraform/projects" icon="folder">
+    `fireweave_project` arguments, status, and import.
+  </Card>
+  <Card title="Environments" href="/infrastructure/terraform/environments" icon="layer-group">
+    Promotion stages, branch and tag rules, and webhook aliases.
+  </Card>
+</Columns>

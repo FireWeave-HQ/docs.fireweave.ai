@@ -1,34 +1,123 @@
 ---
 title: "Testing"
-description: "Deterministic FireWeave tests with InMemoryAdapter, the local/dev adapter, and the protocol test server. The stub does not implement /v1/targets/register."
+description: "Deterministic Fireweave tests with InMemoryAdapter and local mode. The stub implements evaluate, capture, and /health — not /v1/targets/register."
 ---
 
-Two FireWeave-provided tools mean unit and most integration tests never need a backend account:
+Two Fireweave-provided tools mean unit and most integration tests never need a backend account:
 
-1. **`InMemoryAdapter`** — fixture-driven `BackendAdapter` in every language. Bind the real runtime (and, if you want, the real OpenFeature client) to it.
-2. **The protocol test server** (`test-server/`) — zero-dependency Node HTTP stub with scriptable faults. Use it when you need the real HTTP path of `FireweaveRemoteAdapter`.
+1. **`mode: 'local'`** — seeded boolean map, no network, no credentials. `registerTarget` records in-process and traces.
+2. **`InMemoryAdapter`** — fixture-driven adapter in every language. Use it when you need attribute match conditions, faults, or live mutation.
 
-A third option on **Node, Python, and Web only**: **`FireweaveLocalAdapter`** (web: `FireweaveLocalWebAdapter`) for a boolean `devFlags` map.
+A third option when you need the real HTTP path: the **protocol test server** (`test-server/`).
 
 <Warning>
-  The test server does **not** implement `POST /v1/targets/register`. The SDK’s own `docs/testing.md` claims it does; that is wrong relative to `test-server/implementation/server.mjs`. Register-target tests in the SDK use mocks or injected `fetch`, not this stub. `InMemoryAdapter` also does not persist registration (`UnsupportedCapability`).
+  The test server does **not** implement `POST /v1/targets/register`. `InMemoryAdapter` also does not persist registration (`UnsupportedCapability`). Use local mode when the test must assert registration.
 </Warning>
 
-## InMemoryAdapter
+There is no `FireweaveProvider` and no `makeFireweaveLocalProvider`. Bind `FireweaveClient` (or `initFireweave`) to an adapter.
 
-Same conceptual fixture in every language: `type`, `enabled`, `value`, optional `variant`, `payload`, `metadata`, and optional match conditions that gate on context attributes (no match → your default).
+## Local mode
 
-Java: artifact `ai.fireweave:fireweave-testing` (`<scope>test</scope>`). Web: `InMemoryWebAdapter`.
+Present in all seven languages.
+
+| Key | Result |
+| --- | --- |
+| Present in the seeded map | Mapped **boolean**, reason `STATIC` |
+| Absent | Caller default, reason `DEFAULT` |
+
+Reading a seeded key as a string or number is `TypeMismatch`. The map is boolean-only.
 
 <Tabs>
   <Tab title="Node">
-    Adapted from the SDK testing doc (OpenFeature + `lazyReady: false`):
+    ```ts
+    import { initFireweave } from '@fireweaveai/server-sdk';
 
+    const fireweave = await initFireweave({
+      mode: 'local',
+      local: { controlPoints: { 'new-checkout': true } },
+    });
+
+    const on = await fireweave.controlPoints.getBooleanValue('new-checkout', false, {
+      targetingKey: 'u1',
+    });
+    // → true
+
+    await fireweave.registerTarget('user_42'); // recorded + traced; nothing sent
+    await fireweave.shutdown();
+    ```
+  </Tab>
+  <Tab title="Web">
+    ```ts
+    import { initFireweave } from '@fireweaveai/web-sdk';
+
+    const fireweave = await initFireweave({
+      mode: 'local',
+      local: { controlPoints: { 'new-checkout': true } },
+    });
+
+    const on = fireweave.controlPoints.getBooleanValue('new-checkout', false);
+    await fireweave.shutdown();
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    from fireweave import init_fireweave
+
+    client = init_fireweave(mode="local", local={"control_points": {"new-checkout": True}})
+    client.control_points.get_boolean_value("new-checkout", False)  # -> True
+    client.register_target("user_42")  # recorded in-process + traced
+    client.shutdown()
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```go
+    client, err := fireweave.Init(fireweave.Options{
+        Mode:  fireweave.ModeLocal,
+        Local: &fireweave.LocalOptions{ControlPoints: map[string]bool{"new-checkout": true}},
+    })
+    on := client.ControlPoints().GetBooleanValue("new-checkout", false, nil)
+    _ = on
+    ```
+  </Tab>
+  <Tab title="Java">
+    ```java
+    FireweaveClient client = Fireweave.init(InitOptions.local(Map.of("new-checkout", true)));
+    boolean on = client.controlPoints().getBooleanValue(
+        "new-checkout", false, EvaluationContext.empty());
+    client.close();
+    ```
+  </Tab>
+  <Tab title="Rust">
+    ```rust
+    use fireweave::{init_fireweave, InitOptions};
+    use std::collections::HashMap;
+
+    let mut control_points = HashMap::new();
+    control_points.insert("new-checkout".to_string(), true);
+    let client = init_fireweave(InitOptions::local_with_control_points(control_points)).unwrap();
+    assert!(client.control_points.get_boolean_value("new-checkout", false, None));
+    client.register_target("user_42", None);
+    client.shutdown();
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  Call-site defaults stay `false`. Do not write `getBooleanValue(key, true)` to dogfood locally — that same `true` is the production fallback when a control point is absent.
+</Note>
+
+## InMemoryAdapter
+
+Same conceptual fixture in every language: `type`, `enabled`, `value`, optional `variant`, and optional match conditions that gate on context attributes (no match → your default).
+
+Java: artifact `ai.fireweave:fireweave-testing` (never published; `maven.deploy.skip=true`). Web: `InMemoryWebAdapter`.
+
+<Tabs>
+  <Tab title="Node">
     ```ts
     import { strict as assert } from 'node:assert';
     import { test } from 'node:test';
-    import { OpenFeature } from '@openfeature/server-sdk';
-    import { FireweaveProvider, FireweaveRuntime, InMemoryAdapter } from '@fireweaveai/sdk';
+    import { FireweaveClient, FireweaveRuntime, InMemoryAdapter } from '@fireweaveai/server-sdk';
 
     test('beta cohort gets the new checkout', async () => {
       const adapter = new InMemoryAdapter({
@@ -43,28 +132,25 @@ Java: artifact `ai.fireweave:fireweave-testing` (`<scope>test</scope>`). Web: `I
         },
       });
       const runtime = new FireweaveRuntime(adapter);
-      await OpenFeature.setProviderAndWait(
-        't',
-        new FireweaveProvider(runtime, { lazyReady: false }),
-      );
-      const client = OpenFeature.getClient('t');
+      await runtime.initialize();
+      const client = new FireweaveClient(runtime);
 
       assert.equal(
-        await client.getBooleanValue('new-checkout', false, {
+        await client.controlPoints.getBooleanValue('new-checkout', false, {
           targetingKey: 'u1',
           cohort: 'beta',
         }),
         true,
       );
       assert.equal(
-        await client.getBooleanValue('new-checkout', false, { targetingKey: 'u2' }),
+        await client.controlPoints.getBooleanValue('new-checkout', false, { targetingKey: 'u2' }),
         false,
       );
-      await OpenFeature.close();
+      await client.shutdown();
     });
     ```
 
-    Node extras: `fault: { kind: 'Timeout' }` fails every resolve with that kind; `initError: 'Configuration'` fails `initialize()` (runtime → `FATAL`); `initGate` holds init open; `setFlags()` / `setFault()` mutate live.
+    Node extras: `fault: { kind: 'Timeout' }` fails every resolve with that kind; `initError: 'Configuration'` fails `initialize()` (runtime → `FATAL`).
   </Tab>
   <Tab title="Python">
     ```python
@@ -87,91 +173,79 @@ Java: artifact `ai.fireweave:fireweave-testing` (`<scope>test</scope>`). Web: `I
         })
         runtime = FireweaveRuntime(adapter)
         runtime.initialize()
-        with FireweaveClient(runtime) as client:
-            assert client.control_points.get_boolean_value(
-                "new-checkout", False, EvaluationContext("u1", {"cohort": "beta"})
-            ) is True
-            assert client.control_points.get_boolean_value(
-                "new-checkout", False, EvaluationContext("u2", {})
-            ) is False
+        client = FireweaveClient(runtime)
+        assert client.control_points.get_boolean_value(
+            "new-checkout", False, EvaluationContext("u1", {"cohort": "beta"})
+        ) is True
+        assert client.control_points.get_boolean_value(
+            "new-checkout", False, EvaluationContext("u2", {})
+        ) is False
+        client.shutdown()
     ```
-
-    `adapter.set_flags({...})` swaps definitions live. `fireweave.aio.AsyncFireweaveClient` plus the FastAPI example (`examples/python/fastapi_app.py`) shows injecting the runtime into an async app.
   </Tab>
   <Tab title="Go">
     ```go
-    func TestBetaCohortGetsNewCheckout(t *testing.T) {
-        adapter := inmemory.New(inmemory.WithFlags(map[string]inmemory.Flag{
-            "new-checkout": {
-                Type:            fireweave.FlagTypeBoolean,
-                Enabled:         true,
-                Value:           true,
-                Variant:         "on",
-                MatchAttributes: map[string]any{"cohort": "beta"},
-            },
-        }))
-        runtime := fireweave.NewRuntime(adapter, fireweave.Config{})
-        if err := openfeature.SetProviderAndWait(
-            fwprovider.NewProvider(fireweave.NewClient(runtime)),
-        ); err != nil {
-            t.Fatal(err)
-        }
-        client := openfeature.NewClient("t")
-        if !client.Boolean(context.Background(), "new-checkout", false,
-            openfeature.NewEvaluationContext("u1", map[string]any{"cohort": "beta"})) {
-            t.Fatal("expected true for beta cohort")
-        }
+    adapter := inmemory.New(inmemory.WithFlags(map[string]inmemory.Flag{
+        "new-checkout": {
+            Type:            fireweave.FlagTypeBoolean,
+            Enabled:         true,
+            Value:           true,
+            Variant:         "on",
+            MatchAttributes: map[string]any{"cohort": "beta"},
+        },
+    }))
+    runtime := fireweave.NewRuntime(adapter, fireweave.Config{})
+    if err := runtime.Initialize(context.Background()); err != nil {
+        t.Fatal(err)
+    }
+    client := fireweave.NewClient(runtime)
+    evalCtx := fireweave.NewEvaluationContext("u1", map[string]any{"cohort": "beta"})
+    if !client.ControlPoints().GetBooleanValue("new-checkout", false, &evalCtx) {
+        t.Fatal("expected true for beta cohort")
     }
     ```
 
-    `inmemory.WithInitError(err)` simulates init failure. The adapter implements `fireweave.TelemetrySink`, so flushed exposures and signals are capturable.
+    Import `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2/infrastructure/adapters/inmemory`.
   </Tab>
   <Tab title="Java">
     ```java
-    Map<String, FlagDefinition> flags = Map.of("new-checkout",
-        FlagDefinition.fromJson(mapper.readTree(
-            "{\"type\":\"boolean\",\"enabled\":true,\"variant\":\"on\",\"value\":true}")));
-    InMemoryAdapter adapter = new InMemoryAdapter(flags);
+    InMemoryAdapter.FlagDefinition def = new InMemoryAdapter.FlagDefinition();
+    def.type = FlagType.BOOLEAN;
+    def.enabled = true;
+    def.variant = "on";
+    def.value = JsonValue.of(true);
+
+    InMemoryAdapter adapter = new InMemoryAdapter(Map.of("new-checkout", def));
     FireweaveRuntime runtime = new FireweaveRuntime(FireweaveConfig.builder().build(), adapter);
-    OpenFeatureAPI.getInstance().setProviderAndWait("t", new FireweaveProvider(runtime));
+    runtime.initialize();
+    FireweaveClient client = new FireweaveClient(runtime);
 
-    boolean enabled = OpenFeatureAPI.getInstance().getClient("t")
-        .getBooleanValue("new-checkout", false, new MutableContext("u1"));
+    boolean enabled = client.controlPoints().getBooleanValue(
+        "new-checkout", false, EvaluationContext.builder().targetingKey("u1").build());
     ```
+  </Tab>
+  <Tab title="Rust">
+    ```rust
+    use fireweave::{FireweaveClient, FireweaveRuntime, InMemoryAdapter, RuntimeConfig};
+    use std::sync::Arc;
 
-    Faults: `new InMemoryAdapter(flags, FaultConfig...)` simulates HTTP-status faults, invalid JSON, network errors, offline, quota-limiting, and delays (delay compares against the configured timeout — nothing sleeps). Helpers: `evaluateCallCount()`, `lastContext()`, `deliveredExposures()`, `setStale(true)`.
+    let adapter = InMemoryAdapter::new(
+        serde_json::json!({
+            "new-checkout": { "type": "boolean", "enabled": true, "variant": "on", "value": true }
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+    );
+    let runtime = Arc::new(FireweaveRuntime::new(Box::new(adapter), RuntimeConfig::default()));
+    runtime.initialize().unwrap();
+    let client = FireweaveClient::new(runtime);
+    assert!(client.control_points.get_boolean_value("new-checkout", false, None));
+    ```
   </Tab>
 </Tabs>
 
 `cohort: 'beta'` in these snippets is an **example attribute name**, not an SDK type. See [Targeting](/concepts/targeting).
-
-## Local / dev adapter
-
-Node, Python, and Web only. Go and Java have **no** local adapter on `master`.
-
-Resolution:
-
-| Key | Result |
-| --- | --- |
-| Present in `devFlags` | Mapped **boolean**, reason `STATIC` |
-| Absent | Caller default, reason `DEFAULT` (`FLAG_NOT_FOUND` rewritten to `DEFAULT` on this path only) |
-
-Reading a `devFlags` key as a string or number is `TYPE_MISMATCH`. `devFlags` is `Record<string, boolean>`.
-
-```ts
-import { makeFireweaveLocalProvider, getFwLocalCaptures, resetFwLocalCaptures } from '@fireweaveai/sdk';
-
-const provider = makeFireweaveLocalProvider({
-  echo: true,
-  devFlags: { 'new-checkout': true },
-});
-```
-
-Python: `make_fireweave_local_provider()`, `get_fw_local_captures()`, `reset_fw_local_captures()`. Web: `FireweaveLocalWebAdapter` behind `FireweaveWebRuntime`.
-
-<Note>
-  Call-site defaults stay `false`. Do not write `getBooleanValue(key, true)` to dogfood locally — that same `true` is the production fallback when a control point is absent.
-</Note>
 
 ## Protocol test server
 
@@ -184,43 +258,29 @@ node test-server/implementation/server.mjs --port 4000
 
 ### Routes that exist
 
-FireWeave-native (`test-server/implementation/server.mjs` and `PATHS.md`):
-
 | Method | Path | Role |
 | --- | --- | --- |
 | `POST` | `/v1/flags/evaluate` | Evaluate |
-| `POST` | `/v1/capture` | Exposures / signals batch |
+| `POST` | `/v1/capture` | Capture batch |
 | `GET` | `/health` | `{ "ok": true }` |
-
-Vendor (PostHog) routes, for languages that still ship a vendor adapter:
-
-| Method | Path |
-| --- | --- |
-| `POST` | `/flags?v=2` |
-| `GET` | `/api/feature_flag/local_evaluation?token=…` |
-| `POST` | `/batch/` |
 
 **Not implemented:** `POST /v1/targets/register`.
 
-Auth on FireWeave routes: `Authorization: Bearer <key>`. Any non-empty key is accepted unless you configure one. Use obviously fake keys (`project-api-key_dev`).
+The stub also still serves legacy vendor routes (`POST /flags?v=2`, definitions poll, `/batch/`) for historical harnesses. No shipped SDK talks those paths.
 
-The stub serves **its own** fixture keys (`fw-bool-on`, and others from `test-server/fixtures/flags-v2-success.json`). Keys your app expects resolve `FLAG_NOT_FOUND` → default unless you replace fixtures.
+Auth on Fireweave routes: `Authorization: Bearer <key>`. Any non-empty key is accepted unless you configure one. Use obviously fake keys (`project-api-key_dev`).
 
-```bash
-FW_API_URL=http://127.0.0.1:3901 FW_PROJECT_API_KEY=project-api-key_dev \
-  node examples/node/index.mjs --remote
-```
+The stub serves **its own** fixture keys (`fw-bool-on`, and others from `test-server/fixtures/flags-v2-success.json`). Keys your app expects resolve `FlagNotFound` → default unless you replace fixtures.
 
-Go harness env: `FIREWEAVE_TEST_SERVER_URL` or `FW_TEST_SERVER_URL`.
+Point `initFireweave({ mode: 'remote', apiUrl, apiKey })` at `http://127.0.0.1:3901`. Your application reads `FW_API_URL` if you want; the SDK does not.
 
 ### Faults and assertions
 
 | Call | Effect |
 | --- | --- |
-| `POST /_test/fault` | Inject `delay`, `401`, `429`, `500`, `invalid_json`, `truncated`, `quota_limited`. `applyTo`: `evaluate` / `capture` (FireWeave) or `flags` / `definitions` / `batch` (vendor) or `all` |
-| `POST /_test/flags` | Replace the `/flags?v=2` success body |
+| `POST /_test/fault` | Inject `delay`, `401`, `429`, `500`, `invalid_json`, `truncated`, `quota_limited` |
 | `POST /_test/reset` | Restore fixtures, clear faults/events |
-| `GET /_test/events` | `{ events }` from legacy batch, `{ fwEvents }` from `POST /v1/capture` |
+| `GET /_test/events` | `{ fwEvents }` from `POST /v1/capture` |
 | `GET /_test/requests` | Which routes the adapter called |
 
 Per-request: header `X-Fw-Test-Fault: <mode>` or query `?fault=<mode>`.
@@ -228,22 +288,23 @@ Per-request: header `X-Fw-Test-Fault: <mode>` or query `?fault=<mode>`.
 ## What to assert
 
 - On / off / no-match → value, variant, `reason`.
-- Missing key → default + `FLAG_NOT_FOUND` (never a throw).
-- Type mismatch → default + `TYPE_MISMATCH`.
+- Missing key on remote → default + `FlagNotFound` (never a throw).
+- Missing key on local → default + `DEFAULT` (never an error).
+- Type mismatch → default + `TypeMismatch`.
 - Missing `targetingKey` with `requireTargetingKey` → default + `TARGETING_KEY_MISSING`.
-- Before init / after shutdown → default + `PROVIDER_NOT_READY` (`NotReady` vs `AlreadyClosed` in `fireweave.errorKind`).
-- Exposures: `sendExposure` default false; explicit `record` + `flush`; dedup on `(targetingKey, flagKey, variant, value)`.
+- Before init / after shutdown → default + `NotReady` / `AlreadyClosed`.
+- Local `registerTarget` → `{ ok: true }` and a readable recorded set.
 - Do **not** assert target registration against InMemory or the test-server stub.
 
 ## CI
 
-Cross-language fixtures live in `contracts/` (65 shared; web has 10 in `contracts/web/`). Runners per language; CI job `differential` compares reports. That suite is for SDK contributors — application tests should use `InMemoryAdapter` (or the stub for HTTP).
+Cross-language fixtures live in `contracts/`. Surface parity is `conformance/surface/control-points.surface.json`. That suite is for SDK contributors — application tests should use local mode or `InMemoryAdapter` (or the stub for HTTP).
 
 ## Next
 
 <Columns cols={2}>
   <Card title="Adapters" href="/concepts/adapters" icon="plug">
-    InMemory vs remote vs local vs PostHog extras
+    InMemory vs remote vs local
   </Card>
   <Card title="Troubleshooting" href="/troubleshooting" icon="wrench">
     Defaults, fixtures, and install mismatches

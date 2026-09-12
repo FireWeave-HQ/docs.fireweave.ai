@@ -1,17 +1,17 @@
 ---
 title: "Targeting and targets"
-description: "Targeting selects a Decision with targetingKey plus attributes or registered properties. Registration exists on Node, Python, and Web only."
+description: "Targeting selects a Decision with targetingKey plus attributes or registered properties. registerTarget exists in all seven languages."
 ---
 
-**Targeting** is how FireWeave decides which value a [control point](/concepts/control-points) returns for a given identity. A **target** is that identity — a user or device keyed by `targetingKey` — optionally carrying durable properties stored by fw-server.
+**Targeting** is how Fireweave decides which value a [control point](/concepts/control-points) returns for a given identity. A **target** is that identity — a user or device keyed by `targetingKey` — optionally carrying durable properties stored by fw-server.
 
 You own the ID. The SDK never auto-generates one.
 
-OpenFeature and the wire still say `flagKey` for the control point. Identity on that call is always `targetingKey`.
+The wire still says `flagKey` for the control point. Identity on that call is always `targetingKey`.
 
 ## Why it exists
 
-Percentage assignment hashes `(flag, targetingKey)`. If the key changes every request, users flip variants and the backend fills with junk persons. Registration exists so durable facts (plan, region, device model) do not have to ride on every evaluate.
+Percentage assignment hashes on `targetingKey`. If the key changes every request, users flip variants. Registration exists so durable facts (plan, region, device model) do not have to ride on every evaluate.
 
 ## When to use it
 
@@ -22,10 +22,12 @@ Percentage assignment hashes `(flag, targetingKey)`. If the key changes every re
 | Anonymous visitor | An ID **you** generate once, persist (cookie / session), and reuse |
 | Batch / worker | A stable job- or tenant-scoped ID, not a per-run UUID |
 
-`user`, `org`, `plan`, and `region` are **not** reserved SDK fields. `kind` on register is only `'user' | 'device'`. `plan` and `region` appear in SDK identity docs as example **property** names you may send — you choose the keys.
+`user`, `org`, `plan`, and `region` are **not** reserved SDK fields. `kind` on register is `'user'` or `'device'`. `plan` and `region` appear in examples as property names you may send — you choose the keys.
 
 <Warning>
-  Anti-patterns: a fresh UUID per request, request IDs, timestamps, or a `targetingKey` you would not send as an analytics person identifier. Prefer opaque IDs over email addresses. The SDK forwards the key verbatim and does not hash or rotate it.
+  Do not mint a fresh UUID per request. Do not use request IDs or timestamps. Prefer opaque IDs over email addresses. The SDK forwards the key verbatim and does not hash or rotate it.
+
+  A constant targeting key hashes every caller into one bucket. That makes a percentage ramp meaningless while looking healthy — so it must be your decision, visibly.
 </Warning>
 
 ## How it relates
@@ -33,15 +35,13 @@ Percentage assignment hashes `(flag, targetingKey)`. If the key changes every re
 | Concept | Relation |
 |---------|----------|
 | [Control points](/concepts/control-points) | Same `targetingKey` on evaluate selects the Decision |
-| [Exposures](/concepts/exposures) | Dedup and join use `targetingKey` + `flagKey` |
-| [Adapters](/concepts/adapters) | Only the remote adapter implements `POST /v1/targets/register`. InMemory reports `UnsupportedCapability` |
+| [Adapters](/concepts/adapters) | Remote posts `POST /v1/targets/register`. Local records in-process and traces. InMemory does not persist registration |
 | Cohort | Not an SDK type. “Cohort key” in the console **is** `targetingKey` |
 
 ## Identity rules
 
-1. **Never auto-generated.** No `targetingKey` means no invented anonymous ID.
-2. **Missing key fails safe** on backend evaluation: your default + `TARGETING_KEY_MISSING` (`InvalidContext`).
-3. **`requireTargetingKey` defaults to false** in the four server SDKs. Set it `true` if you want keyless calls rejected even in tests.
+1. **Never auto-generated.** A missing targeting key is `InvalidContext` where the evaluation needs it, never a generated anonymous id.
+2. **`requireTargetingKey` defaults to false** on the runtime config where the language exposes it. Set it `true` if you want keyless calls rejected even in tests.
 
 <Tabs>
   <Tab title="Node">
@@ -51,12 +51,12 @@ Percentage assignment hashes `(flag, targetingKey)`. If the key changes every re
   </Tab>
   <Tab title="Python">
     ```python
-    FireweaveConfig(require_targeting_key=True)
+    FireweaveRuntime(adapter, require_targeting_key=True)
     ```
   </Tab>
   <Tab title="Go">
     ```go
-    fireweave.Config{RequireTargetingKey: true}
+    fireweave.NewRuntime(adapter, fireweave.Config{RequireTargetingKey: true})
     ```
   </Tab>
   <Tab title="Java">
@@ -72,108 +72,117 @@ In-memory evaluation of unconditional fixtures may succeed without a key unless 
 
 These compose; they do not compete.
 
-1. **`registerTarget` / `identify`** — durable properties stored by fw-server (`POST /v1/targets/register`). Call once per login or device provisioning.
-2. **Per-evaluate `attributes`** — win for that call. Use for request-only facts.
+1. **`registerTarget`** — durable properties stored by fw-server (`POST /v1/targets/register`). Call once per login or device provisioning.
+2. **Per-evaluate attributes** — win for that call. Use for request-only facts.
+
+There is no merge step in the SDK. fw-server resolves them: evaluate attributes win; stored target properties fill in everything not sent.
+
+A rule that targets a property the app never registers **and** never sends matches nobody, silently.
 
 `$`-prefixed attributes are backend system directives, not person properties. `fw_`-prefixed **target property** keys are reserved and stripped server-side.
 
-<Note>
-  Whether fw-server persists properties in production, and which **predicates** it evaluates, is platform-side and **NEEDS VERIFICATION**. The SDK forwards `targetingKey`, `attributes`, `groups`, and `groupProperties`.
-</Note>
+## Registration in every language
 
-## Registration lifecycle
+`registerTarget` exists on all seven SDKs. It **never throws** — it runs in sign-in paths, where a targeting concern must not break authentication. Check `ok`. A silently unregistered target is how targeting rules end up matching nobody.
 
-Registration is idempotent: re-register updates properties. It **never throws** — login paths must not break. Adapters without the capability (InMemory, local/dev) return `ok: false` with `UnsupportedCapability`.
+| Mode | What happens |
+|------|----------------|
+| `remote` | `POST /v1/targets/register`. One retry when the error kind is retryable (network / timeout / backend). Auth and invalid-payload failures are not retried |
+| `local` | Recorded in-process and traced. Returns `{ ok: true }`. Nothing is sent. The log line is `[fireweave:local]` — seeing that in a production log means something booted in local mode by mistake |
+| In-memory | Does **not** persist registration. Degrades with `UnsupportedCapability` |
 
-| Binding | API | Options | Result |
-|---------|-----|---------|--------|
-| Node | `runtime.registerTarget(targetingKey, options?)` | `kind?: 'user' \| 'device'` (default `user`), `properties?`, `environment?`, `signal?` | `{ ok, error? }` |
-| Python | `runtime.register_target(targeting_key, options?)` | `kind`, `properties`, `environment` | `RegisterTargetResult` |
-| Web | `client.identify(targetingKey, options?)` | Same job as register, then `setContext({ targetingKey })` | Promise of the register result |
-| Go | **Absent** on `master` | — | Pass attributes on each evaluate |
-| Java | **Absent** on `master` | — | Pass attributes on each evaluate |
+The recorded local set is readable (`getRegisteredTargets` / language equivalent) so tests can assert registration without capturing stdout. The log sink is injectable.
 
-<Warning>
-  Do not document Go or Java registration. A local Java parity branch is not `master`. The protocol spec line that says “Node only” is stale — Python and Web implement it.
-</Warning>
+The protocol test server implements evaluate, capture, and `/health`. It does **not** implement `POST /v1/targets/register`. Register tests use local mode, mocks, or an injected fetch.
 
-The test-server stub does **not** implement `POST /v1/targets/register`. Register tests use mocks or an injected fetch, not that stub.
+Web and Swift also expose **`identify`**: register the target, then re-prefetch under that id so percentage ramps bucket on a stable key.
 
 ## What it looks like
 
 <Tabs>
   <Tab title="Node">
     ```ts
-    const result = await runtime.registerTarget('user_42', {
+    const result = await fireweave.registerTarget('user_42', {
       kind: 'user',
-      properties: { plan: 'enterprise', region: 'eu' },
+      properties: { plan: 'pro', region: 'eu-west' },
     });
     if (!result.ok) {
       // Log it — a silent miss means targeting rules match nobody
     }
 
-    const on = await client.controlPoints.getBooleanValue(
+    const on = await fireweave.controlPoints.getBooleanValue(
       'new-checkout',
       false,
       { targetingKey: 'user_42' },
     );
     ```
   </Tab>
+  <Tab title="Web">
+    ```ts
+    await fireweave.identify('user_42', {
+      kind: 'user',
+      properties: { plan: 'pro' },
+    });
+
+    const on = fireweave.controlPoints.getBooleanValue('new-checkout', false);
+    ```
+  </Tab>
   <Tab title="Python">
     ```python
     from fireweave import EvaluationContext, RegisterTargetOptions
 
-    result = runtime.register_target(
-        "user_42",
-        RegisterTargetOptions(kind="user", properties={"plan": "enterprise", "region": "eu"}),
+    client.register_target(
+        "user_42", RegisterTargetOptions(kind="user", properties={"plan": "pro"})
     )
 
     on = client.control_points.get_boolean_value(
-        "new-checkout",
-        False,
-        EvaluationContext("user_42", {"plan": "enterprise"}),
+        "new-checkout", False, EvaluationContext("user_42")
     )
-    ```
-  </Tab>
-  <Tab title="Web">
-    ```ts
-    await client.identify('user_42', {
-      kind: 'user',
-      properties: { plan: 'enterprise', region: 'eu' },
-    });
-
-    const on = client.controlPoints.getBooleanValue('new-checkout', false, {
-      targetingKey: 'user_42',
-    });
     ```
   </Tab>
   <Tab title="Go">
-    No `RegisterTarget`. Send facts on the evaluate context.
-
     ```go
-    d := client.Flags().Evaluate(
-        ctx,
-        "new-checkout",
-        fireweave.FlagTypeBoolean,
-        false,
-        fireweave.EvaluationContext{
-            TargetingKey: "user_42",
-            Attributes:   map[string]any{"plan": "enterprise", "region": "eu"},
-        },
-        fireweave.EvaluateOptions{},
-    )
+    result := client.RegisterTarget("user_42", &fireweave.RegisterTargetOptions{
+        Kind:       fireweave.TargetKindUser,
+        Properties: map[string]any{"plan": "pro"},
+    })
+    _ = result.OK
+
+    evalCtx := fireweave.NewEvaluationContext("user_42", map[string]any{"plan": "pro"})
+    on := client.ControlPoints().GetBooleanValue("new-checkout", false, &evalCtx)
     ```
   </Tab>
   <Tab title="Java">
-    No `registerTarget`. Send facts on the evaluate context.
-
     ```java
-    EvaluationContext ctx = EvaluationContext.builder()
-        .targetingKey("user_42")
-        .attribute("plan", "enterprise")
-        .attribute("region", "eu")
-        .build();
-    boolean on = client.getBooleanValue("new-checkout", false, ctx);
+    client.registerTarget("user_42", RegisterTargetOptions.builder()
+        .kind(TargetKind.USER)
+        .property("plan", JsonValue.of("pro"))
+        .build()); // never throws; check result.ok()
+
+    boolean on = client.controlPoints().getBooleanValue(
+        "new-checkout",
+        false,
+        EvaluationContext.builder().targetingKey("user_42").build());
+    ```
+  </Tab>
+  <Tab title="Rust">
+    ```rust
+    use fireweave::RegisterTargetOptions;
+
+    let properties = serde_json::json!({ "plan": "pro" }).as_object().unwrap().clone();
+    client.register_target(
+        "user_42",
+        Some(&RegisterTargetOptions { properties: Some(properties), ..Default::default() }),
+    );
+
+    let ctx = EvaluationContext::new().with_targeting_key("user_42");
+    let enabled = client.control_points.get_boolean_value("new-checkout", false, Some(&ctx));
+    ```
+  </Tab>
+  <Tab title="Swift">
+    ```swift
+    let result = await client.identify("user_42")
+    let on = client.controlPoints.getBooleanValue("new-checkout", default: false)
     ```
   </Tab>
 </Tabs>
@@ -185,32 +194,22 @@ Group membership and group properties travel on the evaluation context. Canonica
 Any other `fireweave.*` context key is rejected with `InvalidContext`. `targetingKey` and `kind` are also reserved in the evaluation context.
 
 ```ts
-await client.controlPoints.getBooleanValue('org-flag', false, {
+await fireweave.controlPoints.getBooleanValue('org-flag', false, {
   targetingKey: 'user_42',
   'fireweave.groups': { company: 'org_123' },
   'fireweave.groupProperties': { company: { plan: 'enterprise' } },
 });
 ```
 
-Java also has builder helpers `.group(...)` / `.groupProperty(...)`.
+## Privacy
 
-Group **identify** (creating group profiles) is not a FireWeave extension. Do that with your analytics SDK if you need it.
-
-## Privacy (what the SDK actually does)
-
-Evidenced in the SDK privacy review — not a console policy:
-
-- The SDK adds no person properties of its own. Whatever you put on the context is forwarded to fw-server (or a vendor adapter where one still exists).
+- The SDK adds no person properties of its own. Whatever you put on the context is forwarded to fw-server.
 - Prefer derived attributes (`email_domain`) over raw PII if you must target on identity-adjacent facts.
 - Error messages are secret-redacted and must not echo attribute values.
-- Signal attributes pass an [allowlist](/concepts/signals#attribute-allowlist). Evaluation context is not that allowlist — evaluate forwards what you send (minus reserved keys).
 - Nothing is persisted to disk by the SDK.
-
-Which targeting predicates fw-server runs is **NEEDS VERIFICATION**.
 
 ## Related
 
 - [Control points](/concepts/control-points) — evaluate with this identity
-- [Exposures](/concepts/exposures) — same `targetingKey` join
-- [Quickstart](/quickstart) — language-gated register step
-- [Testing](/testing) — InMemory does not persist registration
+- [Adapters](/concepts/adapters) — remote vs local vs in-memory registration
+- [Testing](/testing) — InMemory does not persist registration; local mode does

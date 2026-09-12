@@ -1,0 +1,309 @@
+---
+title: "Migrate 2.1 to 2.3"
+description: "Move from the 2.1 OpenFeature-and-extensions surface to v1: @fireweaveai/server-sdk, required mode, and two capabilities."
+---
+
+This is the migration most 2.1 consumers face. [ADR-0010](https://github.com/FireWeave-HQ/fireweave-sdk/blob/master/docs/adr/0010-control-points-only-v1.md) (accepted 2026-08-20) ships as a new package name and a smaller public surface.
+
+v1 exposes **exactly two capabilities**: [control-point](/concepts/control-points) reads and [target registration](/concepts/targeting).
+
+If you are still on Node **2.0.0** and import `@fireweaveai/sdk/posthog`, do [2.0 → 2.1](/migration/node-2) first, then this page.
+
+<Warning>
+  `@fireweaveai/sdk` 2.1.0 is deprecated pointing at `@fireweaveai/server-sdk`. An unpinned `npm install @fireweaveai/sdk` is the old surface. Install the new package name.
+</Warning>
+
+## What breaks
+
+| 2.1 | 2.3 / v1 |
+| --- | --- |
+| Package `@fireweaveai/sdk` | Package `@fireweaveai/server-sdk` |
+| `FireweaveProvider` / `FireweaveWebProvider` | Removed. Call `controlPoints.*` |
+| `makeFireweaveLocalProvider`, `getFwLocalCaptures`, `resetFwLocalCaptures` | Removed. Use `mode: 'local'` |
+| `releases`, `exposures`, `signals`, `capabilities` namespaces | Removed |
+| `guardrails` stub (`UnsupportedCapability`) | Gone. No SDK guardrails API |
+| SDK reads `FW_API_URL` / `FW_PROJECT_API_KEY` | SDK reads **no** environment. Pass options |
+| `mode` inferred from credentials | `mode` is **required**. Remote without credentials is a boot error |
+| `FW_DEPRECATION_WARNINGS=1` | Does not exist. `flags` is silent except Python (one `DeprecationWarning` per process) |
+| PostHog extras still on Python / Go / Java | Removed |
+
+**Unchanged on purpose**
+
+- `flagKey` at the wire, Decision envelopes, conformance fixtures, and `capabilities.features.flags`
+- The nine-method control-point shape (now including `*Details` on every language)
+- `registerTarget` — and it now exists in **all seven** languages
+- The 15-kind error taxonomy and never-throw-on-evaluate
+- The three wire paths: `/v1/flags/evaluate`, `/v1/capture`, `/v1/targets/register`
+
+## 1. Rename the Node package
+
+```bash
+# before
+npm install @fireweaveai/sdk
+
+# after
+npm install @fireweaveai/server-sdk
+```
+
+```ts
+// before
+import { FireweaveClient, FireweaveRemoteAdapter, FireweaveRuntime } from '@fireweaveai/sdk';
+
+// after
+import { initFireweave } from '@fireweaveai/server-sdk';
+```
+
+Deno: `npm:@fireweaveai/server-sdk`.
+
+## 2. Replace the OpenFeature provider
+
+The provider was a thin delegation layer, not a second evaluation path. The peer dependency was mandatory by accident. Seven languages made a mature OpenFeature SDK per language untenable.
+
+OpenFeature compatibility is **unbundled, not forbidden**. A future optional bridge package is left open. Do not treat this as "OpenFeature is unsupported forever."
+
+```ts
+// before — Node 2.1
+import { OpenFeature } from '@openfeature/server-sdk';
+import { FireweaveProvider, FireweaveRuntime, InMemoryAdapter } from '@fireweaveai/sdk';
+
+const runtime = new FireweaveRuntime(new InMemoryAdapter({ flags: {} }));
+await OpenFeature.setProviderAndWait(
+  new FireweaveProvider(runtime, { lazyReady: false }),
+);
+const client = OpenFeature.getClient();
+const on = await client.getBooleanValue('new-checkout', false, {
+  targetingKey: 'user_42',
+});
+
+// after — v1
+import { initFireweave } from '@fireweaveai/server-sdk';
+
+const fireweave = await initFireweave({
+  mode: 'local',
+  local: { controlPoints: { 'new-checkout': true } },
+});
+const on = await fireweave.controlPoints.getBooleanValue('new-checkout', false, {
+  targetingKey: 'user_42',
+});
+```
+
+```ts
+// before — Web 2.1
+import { OpenFeature } from '@openfeature/web-sdk';
+import { FireweaveWebProvider, FireweaveWebRuntime, InMemoryWebAdapter } from '@fireweaveai/web-sdk';
+
+const runtime = new FireweaveWebRuntime(new InMemoryWebAdapter({ flags: {} }));
+await OpenFeature.setProviderAndWait(new FireweaveWebProvider(runtime));
+const on = OpenFeature.getClient().getBooleanValue('new-checkout', false);
+
+// after — v1
+import { initFireweave } from '@fireweaveai/web-sdk';
+
+const fireweave = await initFireweave({
+  mode: 'local',
+  local: { controlPoints: { 'new-checkout': true } },
+});
+const on = fireweave.controlPoints.getBooleanValue('new-checkout', false);
+```
+
+Remove `@openfeature/server-sdk` / `@openfeature/web-sdk` / `fireweave[openfeature]` unless you use OpenFeature for something else.
+
+Local-provider helpers are gone:
+
+```ts
+// before
+import { makeFireweaveLocalProvider } from '@fireweaveai/sdk';
+const provider = makeFireweaveLocalProvider({
+  echo: true,
+  devFlags: { 'new-checkout': true },
+});
+
+// after
+import { initFireweave } from '@fireweaveai/server-sdk';
+const fireweave = await initFireweave({
+  mode: 'local',
+  local: { controlPoints: { 'new-checkout': true } },
+});
+```
+
+## 3. Require `mode` and pass credentials
+
+```ts
+// before — 2.1 remote adapter could read FW_* when options were omitted
+const adapter = new FireweaveRemoteAdapter();
+
+// after — mode required; credentials explicit
+const fireweave = await initFireweave({
+  mode: 'remote',
+  apiUrl: process.env.FW_API_URL!,
+  apiKey: process.env.FW_PROJECT_API_KEY!,
+});
+```
+
+Your application may still read `FW_API_URL` / `FW_PROJECT_API_KEY`. The SDK will not.
+
+Remote without credentials throws `Configuration` at boot. That is the point: a mistyped production key must not silently become local evaluation, serving every default with a green boot log.
+
+`mode: 'local'` with credentials supplied is also `Configuration`.
+
+## 4. Delete the cut namespaces
+
+```ts
+// before — these are gone. Delete the calls.
+client.releases.setContext({ rolloutId, stampIds });
+client.releases.start();
+client.exposures.record({ targetingKey, flagKey, value });
+await client.exposures.flush();
+client.signals.recordOutcome({ name: 'checkout', status: 'completed' });
+client.capabilities.get();
+client.guardrails.evaluate('ramp-gate');
+
+// after — evaluate and register only
+await fireweave.registerTarget('user_42', {
+  kind: 'user',
+  properties: { plan: 'pro' },
+});
+const on = await fireweave.controlPoints.getBooleanValue('new-checkout', false, {
+  targetingKey: 'user_42',
+});
+```
+
+Guardrails remain a real **platform** feature in the Fireweave console. The SDK does not evaluate them. The typed stub is gone, so you get a compile error, not `UnsupportedCapability`.
+
+Releases, exposures, and signals remain platform concepts. See those pages for what the words still mean.
+
+## 5. Per-language package moves
+
+| Language | 2.1 | v1 |
+| --- | --- | --- |
+| Node / Bun / Deno | `@fireweaveai/sdk` 2.1.0 | `@fireweaveai/server-sdk` |
+| Web | `@fireweaveai/web-sdk` 2.1.0 + `FireweaveWebProvider` | `@fireweaveai/web-sdk` + `initFireweave` |
+| Python | `fireweave` + extras `fireweave[openfeature]`, `fireweave[posthog]` | `fireweave` — `init_fireweave(mode=..., api_key=..., api_url=...)` |
+| Go | `…/sdks/go` + `openfeature` / `adapters/posthog` packages | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2` — `fireweave.Init` |
+| Java | `ai.fireweave:fireweave-sdk` + `fireweave-openfeature` + `fireweave-adapter-posthog` | `ai.fireweave:fireweave-sdk` only — `Fireweave.init(InitOptions.remote(apiKey, apiUrl))`. Still unpublished (`0.1.0-SNAPSHOT`) |
+| Rust | — | Crate `fireweave` — `init_fireweave(InitOptions::remote(...))` |
+| Swift | — | Package `Fireweave` — `initFireweave(.remote(...))` |
+
+### After snippets (from the SDK repo)
+
+<Tabs>
+  <Tab title="Python">
+    ```python
+    from fireweave import RegisterTargetOptions, init_fireweave, EvaluationContext
+
+    client = init_fireweave(
+        mode="remote",
+        api_key="project-api-key_...",
+        api_url="https://app-server.fireweave.ai",
+    )
+    client.register_target(
+        "user_42", RegisterTargetOptions(kind="user", properties={"plan": "pro"})
+    )
+    enabled = client.control_points.get_boolean_value(
+        "new-checkout", False, EvaluationContext("user_42")
+    )
+    client.shutdown()
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```go
+    client, err := fireweave.Init(fireweave.Options{
+        Mode:   fireweave.ModeRemote,
+        APIKey: "project-api-key_…",
+        APIURL: "https://app-server.fireweave.ai",
+    })
+    client.RegisterTarget("user_42", &fireweave.RegisterTargetOptions{
+        Kind:       fireweave.TargetKindUser,
+        Properties: map[string]any{"plan": "pro"},
+    })
+    evalCtx := fireweave.NewEvaluationContext("user_42", nil)
+    enabled := client.ControlPoints().GetBooleanValue("new-checkout", false, &evalCtx)
+    _ = client.Runtime().Shutdown(context.Background())
+    ```
+  </Tab>
+  <Tab title="Java">
+    ```java
+    FireweaveClient client = Fireweave.init(InitOptions.remote(
+        System.getenv("FW_PROJECT_API_KEY"),
+        System.getenv("FW_API_URL")));
+
+    client.registerTarget("user_42", RegisterTargetOptions.builder()
+        .kind(TargetKind.USER)
+        .property("plan", JsonValue.of("pro"))
+        .build());
+
+    boolean enabled = client.controlPoints().getBooleanValue(
+        "new-checkout",
+        false,
+        EvaluationContext.builder().targetingKey("user_42").build());
+    client.close();
+    ```
+  </Tab>
+  <Tab title="Rust">
+    ```rust
+    let client = init_fireweave(InitOptions::remote(
+        "project-api-key_...",
+        "https://app-server.fireweave.ai",
+    )).unwrap();
+    let ctx = EvaluationContext::new().with_targeting_key("user_42");
+    let enabled = client.control_points.get_boolean_value("new-checkout", false, Some(&ctx));
+    client.shutdown();
+    ```
+  </Tab>
+  <Tab title="Web">
+    ```ts
+    const fireweave = await initFireweave({
+      mode: 'remote',
+      apiKey: PUBLIC_FW_PROJECT_API_KEY, // fw_public_…
+      apiUrl: PUBLIC_FW_API_URL,
+      context: { targetingKey: 'anonymous' },
+    });
+    await fireweave.identify('user_42', { kind: 'user', properties: { plan: 'pro' } });
+    const enabled = fireweave.controlPoints.getBooleanValue('new-checkout', false);
+    await fireweave.shutdown();
+    ```
+  </Tab>
+</Tabs>
+
+Go and Java **gained** `registerTarget` in v1. 2.1 docs that said those APIs were absent are stale.
+
+## 6. What you do not have to rename
+
+`client.flags` / `Flags()` / `flags()` is still the same object as `controlPoints`. Silent at runtime except in Python (one `DeprecationWarning` per process). Use `controlPoints` in new code.
+
+Do **not** rename `flagKey`, `flagMetadata`, `InMemoryAdapter({ flags })`, or `features.flags`. Those four `flag` boundaries stay.
+
+Do not run a repo-wide `flags` → `controlPoints` replace.
+
+## 7. Browser keys
+
+Web 2.1 documented a pending `fw_public_…` family. That family has shipped. Scoped to `flags:evaluate` + `events:write`. The attest plane rejects it. See [Configuration](/production/configuration#browser-keys).
+
+## Verify
+
+```bash
+# Node — expect no hits
+rg -n "FireweaveProvider|makeFireweaveLocalProvider|@fireweaveai/sdk/posthog|@fireweaveai/sdk['\"]" 
+rg -n "client\\.(releases|exposures|signals|capabilities|guardrails)"
+
+npx tsc --noEmit
+```
+
+A known-on control point should resolve `true` with reason `TARGETING_MATCH` / `SPLIT` / `STATIC`. If it resolves the default with `ERROR`, the remote adapter was never wired — check `mode`, `apiUrl`, and `apiKey`.
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Control points" href="/concepts/control-points" icon="toggle-on">
+    The nine-method surface
+  </Card>
+  <Card title="OpenFeature" href="/openfeature" icon="flag">
+    Why the provider was unbundled
+  </Card>
+  <Card title="Node 2.0 → 2.1" href="/migration/node-2" icon="clock-rotate-left">
+    PostHog adapter removal only
+  </Card>
+  <Card title="Configuration" href="/production/configuration" icon="key">
+    Required mode and explicit credentials
+  </Card>
+</Columns>
