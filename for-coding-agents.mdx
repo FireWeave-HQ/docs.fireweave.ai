@@ -1,0 +1,58 @@
+---
+title: "For coding agents"
+description: "Rules to follow when a coding agent integrates Fireweave so it uses the v1 SDK surface and does not invent APIs."
+---
+
+Use this page when a coding agent is writing Fireweave integration code. The same rules live in [`llms.txt`](https://docs.fireweave.ai/llms.txt). Product setup — account, CLI, and plugin skills — is in [Onboarding](/onboarding).
+
+Fireweave ([fireweave.ai](https://fireweave.ai)) is an AI release engineer. These docs cover the v1 SDKs: evaluate control points and register targets.
+
+## Brand and vocabulary
+
+- In prose the product name is **Fireweave**. `FireWeave-HQ` appears only inside GitHub URLs and the Terraform registry address. Do not rewrite those identifiers.
+- The product noun is **control point**. The wire protocol, Decision envelopes, conformance fixtures, and `capabilities.features.flags` still use `flagKey`. Do not invent `controlPointKey`.
+
+## v1 SDK surface
+
+SDK v1 ([ADR-0010](https://github.com/FireWeave-HQ/fireweave-sdk/blob/master/docs/adr/0010-control-points-only-v1.md)) exposes exactly two capabilities: control-point reads and target registration.
+
+Do not document these as available APIs — they were removed:
+
+- OpenFeature providers (`FireweaveProvider`, `FireweaveWebProvider`)
+- `makeFireweaveLocalProvider`
+- `releases`, `exposures`, `signals`, `capabilities`, and `guardrails` namespaces
+
+Guardrails are evaluated by fw-server and the Fireweave console during rollouts. The SDK has no guardrails API.
+
+## Packages and init
+
+- The Node package is `@fireweaveai/server-sdk`. `@fireweaveai/sdk` is frozen at 2.1.0 — do not present it as the install target.
+- `mode` is a required init option and is never inferred — `remote` or `local`. Remote without credentials is a boot error.
+- No SDK reads environment variables. Pass credentials as explicit init options in every language. `FW_DEPRECATION_WARNINGS` no longer exists.
+- `registerTarget` exists on all seven SDKs, including Go and Java. Go exposes `ControlPoints()`; Java exposes `controlPoints()`, `getNumberValue`, and `getObjectValue`.
+- The `flags` alias shares identity with `controlPoints`. It is silent at runtime in every language except Python, which logs one deprecation notice per process.
+
+## Wire, Terraform, and what not to invent
+
+- All seven remote adapters implement `/v1/flags/evaluate` and `/v1/targets/register`. Only the Node and Web adapters implement `/v1/capture`.
+- Terraform uses `FIREWEAVE_API_KEY` and `FIREWEAVE_ENDPOINT` — not the SDK's `FW_` variables. There are no reusable Fireweave Terraform modules.
+- Do not invent APIs, packages, env vars, endpoints, or CLI commands.
+- Never present an unpublished artifact as installable. The Swift SDK exists in-tree but is not distributable.
+- Do not document `rollout-ci` as generally available, or console-only features such as guardrails and ramp controls as if they were SDK methods.
+
+## Where to go next
+
+<Columns cols={2}>
+  <Card title="Onboarding" icon="list-check" href="/onboarding">
+    Account, CLI, coding-agent plugin, then the first change.
+  </Card>
+  <Card title="SDK quickstart" icon="rocket" href="/quickstart">
+    Install, set `mode`, evaluate a control point, register a target.
+  </Card>
+  <Card title="Package index" icon="cubes" href="/reference/packages">
+    Registry names, versions, and what is actually installable.
+  </Card>
+  <Card title="Migrate to v1" icon="code-compare" href="/migration/v1">
+    Package rename and the retired OpenFeature / extension surface.
+  </Card>
+</Columns>
