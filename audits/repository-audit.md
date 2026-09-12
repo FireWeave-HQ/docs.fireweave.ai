@@ -6,11 +6,11 @@
 **GitHub:** https://github.com/FireWeave-HQ/docs.fireweave.ai  
 **Intended Mintlify host:** https://docs.fireweave.ai  
 
-This audit records what exists in the repository today. It does not invent FireWeave APIs, product behavior, or Mintlify configuration beyond what is already on disk.
+This audit records what exists in the repository today. It does not invent Fireweave APIs, product behavior, or Mintlify configuration beyond what is already on disk.
 
 ## Verdict
 
-The repository is **nearly empty of FireWeave documentation**, but it is **not an empty git repo**. It is a stock **Mintlify Starter Kit** (single commit `b5f2616`, message `Initial commit`) with placeholder pages, Mintlify branding, and starter config.
+The repository is **nearly empty of Fireweave documentation**, but it is **not an empty git repo**. It is a stock **Mintlify Starter Kit** (single commit `b5f2616`, message `Initial commit`) with placeholder pages, Mintlify branding, and starter config.
 
 Treat the starter as a scaffold to customize, not as content to keep verbatim. Do not delete the Mintlify config shape (`docs.json`, MDX + frontmatter, `logo/` + `favicon.svg` paths, `.mintignore`, `AGENTS.md` conventions) without a replacement.
 
@@ -66,7 +66,7 @@ Tracked files at `HEAD` (10 files). No `audits/` directory existed before this a
 | CI config (GitHub Actions, Circle, etc.) | missing |
 | `.editorconfig`, `.nvmrc`, `.node-version`, `Makefile` | missing |
 | `images/`, `snippets/`, `api-reference/`, `essentials/`, `drafts/` | missing |
-| FireWeave product docs, SDK pages, terminology | missing |
+| Fireweave product docs, SDK pages, terminology | missing |
 | Custom CSS / fonts | missing |
 
 ## Existing configuration
@@ -78,8 +78,8 @@ Present. Schema: `https://mintlify.com/docs.json`. This is the current Mintlify 
 | Key | Current value | Notes |
 |-----|---------------|-------|
 | `theme` | `mint` | Starter default |
-| `name` | `Mintlify Starter Kit` | Must become FireWeave later (task 006) |
-| `colors.primary` | `#16A34A` | Mintlify green, not FireWeave |
+| `name` | `Mintlify Starter Kit` | Must become Fireweave later (task 006) |
+| `colors.primary` | `#16A34A` | Mintlify green, not Fireweave |
 | `colors.light` | `#07C983` | |
 | `colors.dark` | `#15803D` | |
 | `favicon` | `/favicon.svg` | Points at starter Mintlify mark |
@@ -116,7 +116,7 @@ No `.github/workflows`. Publishing is described in the starter README as: instal
 
 ## Existing documentation
 
-All page content is **Mintlify starter placeholder**. There is no FireWeave product documentation in this repository.
+All page content is **Mintlify starter placeholder**. There is no Fireweave product documentation in this repository.
 
 ### `index.mdx`
 
@@ -132,11 +132,11 @@ All page content is **Mintlify starter placeholder**. There is no FireWeave prod
 - `<Steps>` / `<Step>` with invented example commands (`npm install your-package`, `your-cli init`, `your-cli start`)
 - Support tip with `support@yourcompany.com`
 
-**Do not treat these pages as source of truth for FireWeave.** They are templates. Tasks 007 and 008 should replace the copy, not invent APIs to fill the placeholders.
+**Do not treat these pages as source of truth for Fireweave.** They are templates. Tasks 007 and 008 should replace the copy, not invent APIs to fill the placeholders.
 
 ## README
 
-`README.md` is the **Mintlify Starter Kit** GitHub/Mintlify placeholder. It is not FireWeave documentation.
+`README.md` is the **Mintlify Starter Kit** GitHub/Mintlify placeholder. It is not Fireweave documentation.
 
 Summary of contents:
 
@@ -166,15 +166,15 @@ Worth preserving as a convention file:
 
 `LICENSE` is **MIT**, copyright **(c) 2026 Mintlify**.
 
-GitHub reports license key `mit`. Replacing copyright with FireWeave is a later legal/product decision — do not silently overwrite. The file is relevant to keep until that decision.
+GitHub reports license key `mit`. Replacing copyright with Fireweave is a later legal/product decision — do not silently overwrite. The file is relevant to keep until that decision.
 
 ## Assets
 
 | Path | What it is | Keep? |
 |------|------------|--------|
 | `favicon.svg` | Mintlify “M” mark (greens `#18E299`, `#0C8C5E`) | Path convention yes; artwork replace at branding time |
-| `logo/light.svg` | Mintlify wordmark + “Starter Kit” label, dark text | Replace with FireWeave logos in task 006 |
-| `logo/dark.svg` | Same wordmark, white text, “Starter Kit” label | Replace with FireWeave logos in task 006 |
+| `logo/light.svg` | Mintlify wordmark + “Starter Kit” label, dark text | Replace with Fireweave logos in task 006 |
+| `logo/dark.svg` | Same wordmark, white text, “Starter Kit” label | Replace with Fireweave logos in task 006 |
 
 No other images, icons, screenshots, or fonts.
 

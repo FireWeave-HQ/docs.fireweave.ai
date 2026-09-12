@@ -76,7 +76,7 @@ Sources: `audits/sdk-audit.md` (003), `audits/existing-docs.md` (002), `audits/t
 | In-app wrap-then-ramp vs marketing “promote, not wrap” | 002 §5 | No wrap guide in v1 (005) |
 | In-app guardrail auto-rollback vs SDK stub | 002 §2.4; 003 | Do not resolve by inventing; omit console rollback as fact |
 | `/alerts` anchor text vs runtime “Audit Logs” | 002 §4 | Do not link that UI from official docs until named correctly |
-| Official docs repo **now has** FireWeave product pages matching the IA sitemap | Checkpoint 3–5 pages + 028–030 validation | Not a content gap. Custom domain / Mintlify dashboard still **NEEDS VERIFICATION** — do not claim `docs.fireweave.ai` is live |
+| Official docs repo **now has** Fireweave product pages matching the IA sitemap | Checkpoint 3–5 pages + 028–030 validation | Not a content gap. Custom domain / Mintlify dashboard still **NEEDS VERIFICATION** — do not claim `docs.fireweave.ai` is live |
 
 ### Official-site coverage (filled 2026-08-17)
 

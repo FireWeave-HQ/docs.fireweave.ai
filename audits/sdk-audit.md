@@ -1,4 +1,4 @@
-# TASK-003 — FireWeave SDK source audit
+# TASK-003 — Fireweave SDK source audit
 
 **Audit date:** 2026-08-17  
 **Source of truth:** [FireWeave-HQ/fireweave-sdk](https://github.com/FireWeave-HQ/fireweave-sdk)  
@@ -15,10 +15,10 @@ This document is an implementation audit for official docs. It does **not** inve
 
 - Official repo cloned to `/tmp/fireweave-sdk` at `master`.
 - A local checkout also exists at `/Users/niketh/Coding/fireweave-sdk/Untitled` on branch `java/sdk-parity-aug2026` (`192a4f4`), **ahead of master** with unmerged Java parity work. **This audit is of `master` only.** The feature branch is noted under §7, not treated as released API.
-- Existing FireWeave docs site (`docs.fireweave.ai`) is a Mintlify starter (`index.mdx`, `quickstart.mdx` placeholders). It is **not** a source of SDK truth.
+- Existing Fireweave docs site (`docs.fireweave.ai`) is a Mintlify starter (`index.mdx`, `quickstart.mdx` placeholders). It is **not** a source of SDK truth.
 - `TASKS.md` does not exist in the docs repo. This file is the TASK-003 deliverable; no `TASKS.md` was created (another agent owns that file).
 
-**Source priority applied:** implementation → tests → spec/contracts → examples → SDK `docs/` → existing FireWeave docs.
+**Source priority applied:** implementation → tests → spec/contracts → examples → SDK `docs/` → existing Fireweave docs.
 
 ---
 
@@ -695,7 +695,7 @@ Known limitations (CHANGELOG, quoted):
 15. **Go module version.** Quickstart uses `v0.0.0` + replace. Compatibility matrix says package version `0.1.0`. No git tag was inspected beyond `master` HEAD. **NEEDS VERIFICATION** of any existing tags.
 16. **Java OF pin 1.15.1 vs brief 1.21.0** — document the actual pin (1.15.1), not the brief.
 17. **CI “latest” / “stable” / “canary” cells** — exact Bun/Deno/Go versions float. Document minimums from manifests, not floating CI cells as support guarantees.
-18. **Existing FireWeave product docs** (this repo) are placeholders. They must not be used as API evidence.
+18. **Existing Fireweave product docs** (this repo) are placeholders. They must not be used as API evidence.
 19. **Unmerged local SDK branch** at `/Users/niketh/Coding/fireweave-sdk/Untitled` (`java/sdk-parity-aug2026`) — do not treat as source of truth until merged.
 
 ---
