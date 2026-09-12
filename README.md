@@ -1,6 +1,6 @@
-# FireWeave docs
+# Fireweave docs
 
-Source repository for FireWeave SDK documentation. Pages are MDX. Site config is `docs.json`. Mintlify builds and hosts the site.
+Source repository for Fireweave SDK documentation. Pages are MDX. Site config is `docs.json`. Mintlify builds and hosts the site.
 
 The intended public hostname is `docs.fireweave.ai`. That hostname is **not** claimed live from this repo — custom domain setup is a Mintlify dashboard + DNS step. See `audits/mintlify-foundation-notes.md`.
 

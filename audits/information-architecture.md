@@ -29,7 +29,7 @@ Page IDs are Mintlify paths (no `.mdx`). Every INCLUDE row is tied to a verified
 
 | Path | Title | Audience | Why it exists (verified capability) | Source evidence |
 |------|-------|----------|-------------------------------------|-----------------|
-| `index` | FireWeave | New developers | Homepage: what the SDK does, five languages, path into quickstart. Replaces starter Introduction | SDK README opening; 003 §1; starter path must stay (001) |
+| `index` | Fireweave | New developers | Homepage: what the SDK does, five languages, path into quickstart. Replaces starter Introduction | SDK README opening; 003 §1; starter path must stay (001) |
 | `introduction/how-it-works` | How it works | New developers | Evaluate + extensions flow without claiming console ramp/wrap | Architecture layers + remote protocol; 003 §3 |
 | `introduction/architecture` | Architecture | Developers integrating | Provider + Client → Runtime → Adapter; wire paths that exist | `/tmp/fireweave-sdk/docs/architecture.md`; `spec/remote-protocol.md` |
 | `quickstart` | Quickstart | First-hour developers | Zero-to-evaluate using **real** APIs; publish caveats | SDK `docs/quickstart.md`; 003 install tables; starter path (001) |
@@ -136,7 +136,7 @@ Reference
 
 **Global anchors (replace Mintlify marketing links in task 006):** GitHub SDK repo, app console **only if** a stable logged-in URL is confirmed. Do not keep Mintlify docs/blog anchors.
 
-**Navbar primary:** FireWeave app or GitHub — **NEEDS VERIFICATION** of the customer-facing URL (`docs.fireweave.ai` DNS did not resolve; `app.fireweave.ai` is the in-app host).
+**Navbar primary:** Fireweave app or GitHub — **NEEDS VERIFICATION** of the customer-facing URL (`docs.fireweave.ai` DNS did not resolve; `app.fireweave.ai` is the in-app host).
 
 Optional later: Mintlify **tabs** (Guides | SDKs | Reference) if the site grows. Not required for this sitemap.
 
@@ -208,7 +208,7 @@ When 006/027 add redirects, use Mintlify `docs.json` `redirects` (308 default) a
 
 Replace starter “Welcome to your project.” No invented APIs. No `fw.isOn`.
 
-1. **Title / one paragraph** — FireWeave SDKs evaluate **control points**, optionally register **targets**, drive a **release** lifecycle, and record **exposures** and **signals**. Auth is a FireWeave project key to **fw-server**.
+1. **Title / one paragraph** — Fireweave SDKs evaluate **control points**, optionally register **targets**, drive a **release** lifecycle, and record **exposures** and **signals**. Auth is a Fireweave project key to **fw-server**.
 2. **Status callout** — Pre-release. `@fireweaveai/sdk` npm `latest` is **2.0.0**; tree docs describe **2.1.0**. Python, Go, Java, and `@fireweaveai/web-sdk` are **unpublished** — install from checkout (link quickstart).
 3. **What you can do (verified only)** — Evaluate boolean/string/numeric/object decisions; OpenFeature providers; releases; exposures (opt-in); signals (health/error/metric/outcome); capabilities discovery.
 4. **What this site will not pretend** — Working client guardrails; OpenFeature tracking; Go/Java target registration; wrap/`fw.isOn`.

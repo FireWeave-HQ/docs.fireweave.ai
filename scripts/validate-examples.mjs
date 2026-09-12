@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Extract fenced code blocks from MDX and statically check FireWeave
+ * Extract fenced code blocks from MDX and statically check Fireweave
  * package names / imports against the current SDK surfaces.
  * Does not require live API keys. Optional compile if local toolchains exist.
  *

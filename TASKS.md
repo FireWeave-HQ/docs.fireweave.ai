@@ -1,4 +1,4 @@
-# FireWeave documentation platform — task tracker
+# Fireweave documentation platform — task tracker
 
 Official docs site for [docs.fireweave.ai](https://docs.fireweave.ai), served by Mintlify from this repository.
 
@@ -33,7 +33,7 @@ Deliverables exist and were cross-checked before marking 002 / 003 / 032 / 004 /
 | Checkpoint | Scope | Exit criteria |
 |------------|-------|---------------|
 | **CHECKPOINT 1 — Repository + audits** | 001, 002, 003, 004, 032 | **Met.** Repo inventory written; existing-docs, SDK, terminology, and Mintlify research audits exist |
-| **CHECKPOINT 2 — Architecture + platform** | 005, 006 | **Met.** IA agreed; `docs.json` is FireWeave-named (`navigation.groups`) |
+| **CHECKPOINT 2 — Architecture + platform** | 005, 006 | **Met.** IA agreed; `docs.json` is Fireweave-named (`navigation.groups`) |
 | **CHECKPOINT 3 — Core pages** | 007–012, **033** | **Met.** Homepage, quickstart, and five language docs exist and were re-validated (links + publish state) |
 | **CHECKPOINT 4 — Concepts + product** | 013–022 | **Met.** Concept, OpenFeature, testing, and production pages exist and were re-validated |
 | **CHECKPOINT 5 — Cross-cutting** | 023–027 | **Met.** Troubleshooting, migration, reference, SEO frontmatter, navigation |
@@ -50,7 +50,7 @@ Deliverables exist and were cross-checked before marking 002 / 003 / 032 / 004 /
 | 003 | SDK source audit | DONE | — | `audits/sdk-audit.md` | Deliverable exists; no invented APIs; `master` only | Sibling audit complete. Trust this file + implementation over summaries. Web SDK verified. |
 | 004 | Product/concept audit | DONE | 002, 003 | `audits/terminology.md` | Terminology matches audited docs + SDK; collisions explicit; no invented concepts | Canonical names: control point, target, release, exposure, signal, outcome (kind). `flagKey` stays at OF/wire. |
 | 005 | Information architecture | DONE | 001, 002, 003, 004 | `audits/information-architecture.md` | IA covers validated topics only; omitted list has reasons; no fictional pages | Sitemap + nav groups proposed. **Do not apply to `docs.json` yet.** Added Web as 033. |
-| 006 | Mintlify setup | DONE | 001, 005, 032 | `docs.json`, `.mintignore` | `mint validate` + `mint broken-links` passed on Node 20.19.4. Name is FireWeave. | Logos still starter assets (no FireWeave brand files). `mint preview` not run. Never add `mint.json`. |
+| 006 | Mintlify setup | DONE | 001, 005, 032 | `docs.json`, `.mintignore` | `mint validate` + `mint broken-links` passed on Node 20.19.4. Name is Fireweave. | Logos still starter assets (no Fireweave brand files). `mint preview` not run. Never add `mint.json`. |
 | 007 | Homepage | DONE | 005, 006 | `index.mdx`, `introduction/how-it-works.mdx`, `introduction/architecture.mdx` | Page exists; internal links + publish state re-checked 2026-08-17 | Leads with npm 2.1.0 / PyPI 0.1.0 / web-sdk 2.1.0; Go/Java unpublished. |
 | 008 | Quickstart | DONE | 003, 005, 006 | `quickstart.mdx` | Page exists; install leads with published registries | Register step gated to Node/Python/Web. |
 | 009 | Node.js documentation | DONE | 003, 005, 006 | `sdks/node.mdx` | Page exists; 2.1.0 APIs; `latest` = 2.1.0 | Pin 2.1.0; 2.0.0 still has `./posthog`. |

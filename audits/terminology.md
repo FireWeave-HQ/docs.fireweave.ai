@@ -7,7 +7,7 @@
 
 This file is the vocabulary contract for official docs. It does **not** invent product nouns. Definitions are taken from implementation, then tests/specs, then SDK docs/ADRs, then in-app copy. In-app and marketing terms that the SDK does not implement are recorded as **collisions** or **console-only**, not as canonical SDK API.
 
-**Do not redefine FireWeave terminology in user-facing pages without updating this file and citing evidence.**
+**Do not redefine Fireweave terminology in user-facing pages without updating this file and citing evidence.**
 
 ---
 
@@ -21,7 +21,7 @@ This file is the vocabulary contract for official docs. It does **not** invent p
 | **NEEDS VERIFICATION** | Sources disagree, or behavior is platform-side and not proven from the SDK repo |
 | **ABSENT** | Searched; not present as an API on `master` |
 
-Source priority (same as TASK-003): implementation → tests → spec/contracts → examples → SDK `docs/` → existing FireWeave docs → assumptions (never for API claims).
+Source priority (same as TASK-003): implementation → tests → spec/contracts → examples → SDK `docs/` → existing Fireweave docs → assumptions (never for API claims).
 
 ---
 
@@ -29,9 +29,9 @@ Source priority (same as TASK-003): implementation → tests → spec/contracts 
 
 | Form | Where it appears | Use in official docs |
 |------|------------------|----------------------|
-| **FireWeave** | GitHub org `FireWeave-HQ`, this repo, user-facing site name | **Preferred product name** on docs.fireweave.ai |
-| **Fireweave** | SDK README, ADRs, Java/Go package prose, `FireweaveClient` / `FireweaveRuntime` type names | Keep in **code identifiers**. In prose, prefer FireWeave except when quoting SDK docs |
-| **Fireweave-HQ** | Go module path `github.com/FireWeave-HQ/fireweave-sdk/sdks/go` | Code/module only |
+| **Fireweave** | This repo, user-facing site name, SDK README, ADRs, package prose | **Preferred product name** on docs.fireweave.ai |
+| **FireweaveClient** / **FireweaveRuntime** | SDK type names | Keep in **code identifiers** |
+| **FireWeave-HQ** | GitHub org and Go module path `github.com/FireWeave-HQ/fireweave-sdk/sdks/go` | URLs and org paths only — do not rewrite |
 | **fw-server** | SDK remote protocol, adapters | The evaluation/capture backend the SDKs call. Do not rename |
 | **fw** | In-app CLI name; implied JS helper in wrap example | CLI: **NEEDS VERIFICATION** (install host did not resolve). JS helper `fw.isOn`: **ABSENT** from SDK `master` |
 
@@ -48,7 +48,7 @@ These are the collisions that will produce wrong docs if writers mix corpora.
 | **`client.flags` vs `client.controlPoints`** | Node/Python: same object; `flags` is a deprecated alias. Go: `Flags()` only. Java: no `controlPoints` namespace. Web: `controlPoints` (sync) | Do not document `controlPoints` on Go/Java. Do not say `flags` is removed in 2.x |
 | **`targetingKey` vs in-app “cohort key”** | SDK: OpenFeature `targetingKey` **is** the cohort key ([`docs/identity.md`](/tmp/fireweave-sdk/docs/identity.md)). In-app: “cohort key” only | Explain the alias once; use `targetingKey` in all code samples |
 | **`identify` vs `registerTarget`** | Same job, different names: Node `runtime.registerTarget`, Python `runtime.register_target`, Web `client.identify()` → `registerTarget`. **Go/Java: no API on `master`** | Do not document Go/Java registration. Do not treat Web `identify` as OpenFeature identify |
-| **Exposure vs OpenFeature tracking** | FireWeave exposures are `exposures.record` / `flush` and opt-in `sendExposure` (default **false**). OpenFeature Tracking (spec §6) is **not implemented** | Do not document `provider.track` / OF tracking |
+| **Exposure vs OpenFeature tracking** | Fireweave exposures are `exposures.record` / `flush` and opt-in `sendExposure` (default **false**). OpenFeature Tracking (spec §6) is **not implemented** | Do not document `provider.track` / OF tracking |
 | **Signal `outcome` vs release complete** | `signals.recordOutcome` is a telemetry kind. `releases.complete` / `fail` are release lifecycle transitions (complete also records an outcome signal on Node per SDK extensions doc) | Do not collapse them into one invented “outcome API” |
 | **Capability `guardrails` vs in-app guardrail auto-rollback** | SDK: typed stub, always `UnsupportedCapability`, `guardrails: false`. In-app: live auto-rollback / Block | Do not document working client-side guardrails |
 | **Wrap / ramp (console) vs SDK evaluate / releases** | Wrap and ramp are **in-app operator/agent workflow** terms. SDK has evaluate + `releases.*`. No `wrap` / `ramp` methods | Do not present wrap/ramp as SDK APIs |
@@ -62,15 +62,15 @@ These are the collisions that will produce wrong docs if writers mix corpora.
 
 Each term uses the requested columns. Citations are paths in the SDK clone or in this docs repo’s audits.
 
-### FireWeave
+### Fireweave
 
 | Field | Content |
 |-------|---------|
-| **Term** | FireWeave (prose) / Fireweave (SDK types) |
-| **Definition** | Server-side (plus a browser package) release-safety SDK: evaluate control points, optionally register targets, drive a release lifecycle, and report exposures / health / error / metric / outcome signals. Applications authenticate with a FireWeave project key and talk to **fw-server**. Evidence: SDK README opening paragraph; ADR-0005. |
+| **Term** | Fireweave (prose) / Fireweave (SDK types) |
+| **Definition** | Server-side (plus a browser package) release-safety SDK: evaluate control points, optionally register targets, drive a release lifecycle, and report exposures / health / error / metric / outcome signals. Applications authenticate with a Fireweave project key and talk to **fw-server**. Evidence: SDK README opening paragraph; ADR-0005. |
 | **Where it appears** | This repo; GitHub `FireWeave-HQ`; SDK README; in-app “Fireweave”; marketing `fireweave.ai` |
 | **SDK API** | Packages: `@fireweaveai/sdk`, `fireweave`, `github.com/FireWeave-HQ/fireweave-sdk/sdks/go`, `ai.fireweave:*`, `@fireweaveai/web-sdk`. Types: `FireweaveClient`, `FireweaveRuntime`, `FireweaveProvider`, web equivalents |
-| **User-facing explanation** | FireWeave is the SDK and service you use to evaluate control points and report what happened during a release. It is not a generic “feature-flag console” noun in official docs |
+| **User-facing explanation** | Fireweave is the SDK and service you use to evaluate control points and report what happened during a release. It is not a generic “feature-flag console” noun in official docs |
 | **Related** | control point, fw-server, OpenFeature, adapter |
 | **Confidence** | HIGH for SDK role. Product-console behavior **NEEDS VERIFICATION** (in-app copy recovered from JS; not SDK-proven) |
 
@@ -82,7 +82,7 @@ Each term uses the requested columns. Citations are paths in the SDK clone or in
 | **Definition** | The product noun for a point of control over a release. Evaluation still uses the parameter name `flagKey` at OpenFeature, wire, and schema boundaries. ADR-0007: “the thing an operator reasons about is a **point of control over a release**, not a boolean.” Rename is **additive** — `flag` is not removed. |
 | **Where it appears** | ADR-0007; SDK README; Node/Python/Web `controlPoints` / `control_points`; capabilities `static.features.controlPoints` (Node). **Not** a Go/Java namespace. **Not** used in the five in-app docs pages |
 | **SDK API** | Node: `client.controlPoints.evaluate` / `getBooleanValue` / `getStringValue` / `getNumberValue` / `getObjectValue`. Python: `client.control_points.get_*` / `evaluate`. Web: same as Node but **synchronous**. Go: `client.Flags().Evaluate` only. Java: `client.evaluate` / `getBooleanValue` / `getStringValue` |
-| **User-facing explanation** | A control point is the named decision your code asks FireWeave for (on/off, string, number, object). In code samples the key is still called `flagKey` |
+| **User-facing explanation** | A control point is the named decision your code asks Fireweave for (on/off, string, number, object). In code samples the key is still called `flagKey` |
 | **Related** | flag, Decision, OpenFeature, targeting |
 | **Confidence** | HIGH (ADR-0007 accepted 2026-08-08; Node/Python/Web namespaces implemented) |
 
@@ -118,7 +118,7 @@ Each term uses the requested columns. Citations are paths in the SDK clone or in
 | **Definition** | Selecting a Decision using `targetingKey` plus attributes / registered properties / groups. SDK never auto-generates an identity (ADR-0001 §8). Missing key on backend evaluation → default + `TARGETING_KEY_MISSING` (`InvalidContext`). `requireTargetingKey` defaults **false** in the four server SDKs (opt-in strictness). Percentage assignment hashes `(flag, targetingKey)` — key must be stable. |
 | **Where it appears** | `docs/identity.md`; evaluation context schema; remote evaluate body (`targetingKey`, `attributes`, `groups`, `groupProperties`) |
 | **SDK API** | Context field `targetingKey`. Canonical group keys `fireweave.groups` / `fireweave.groupProperties` (plain `groups` / `groupProperties` alias). Other `fireweave.*` keys → `InvalidContext` |
-| **User-facing explanation** | Targeting is how FireWeave decides which value a control point returns for a given identity. You own the ID; the SDK will not invent one |
+| **User-facing explanation** | Targeting is how Fireweave decides which value a control point returns for a given identity. You own the ID; the SDK will not invent one |
 | **Related** | target, targeting properties, cohort, targetingKey |
 | **Confidence** | HIGH for client rules. Which **server-side** targeting predicates fw-server supports is **NEEDS VERIFICATION** (not fully specified as a product rule engine in the SDK repo) |
 
@@ -163,7 +163,7 @@ Each term uses the requested columns. Citations are paths in the SDK clone or in
 | Field | Content |
 |-------|---------|
 | **Term** | release |
-| **Definition** | FireWeave **extension**: bind the process to a rollout identity, then report lifecycle transitions. `ReleaseContext` requires `rolloutId` (1–128 chars) and `stampIds` (`stmp_` + 26 Crockford chars, 1–64 unique). Optional `changeId` (`chg_` + 26). Deploy-attestation (“boot beacon”) semantics are `setContext` + `start`. |
+| **Definition** | Fireweave **extension**: bind the process to a rollout identity, then report lifecycle transitions. `ReleaseContext` requires `rolloutId` (1–128 chars) and `stampIds` (`stmp_` + 26 Crockford chars, 1–64 unique). Optional `changeId` (`chg_` + 26). Deploy-attestation (“boot beacon”) semantics are `setContext` + `start`. |
 | **Where it appears** | `docs/extensions.md`; `spec/release-context.schema.json`; all five language clients |
 | **SDK API** | `releases.setContext` / `start` / `complete` / `fail` (snake_case in Python; `Releases()` in Go; `releases()` in Java). Go returns `error`; others return result objects |
 | **User-facing explanation** | A release is the SDK’s record of “this process is serving this rollout.” It is not the in-app rollout state machine (Registered / Ramping / …) |
@@ -191,7 +191,7 @@ Each term uses the requested columns. Citations are paths in the SDK clone or in
 | **Definition** | Release-safety telemetry envelope. Spec kinds: `health` \| `error` \| `metric` \| `outcome` (`spec/signal.schema.json`). Messages secret-redacted; attributes pass an allowlist (Node default list includes `name`, `kind`, `status`, `value`, `unit`, `rolloutId`, `changeId`, `stampId`, `errorKind`, `message`, `flagKey`, `variant`, `environment`, `service`). |
 | **Where it appears** | All five SDKs; extensions docs; capture wire (`type: "signal"`) |
 | **SDK API** | `signals.recordHealth` / `recordError` / `recordMetric` / `recordOutcome` (snake_case in Python). Generic `record` on some languages |
-| **User-facing explanation** | Signals are how your app tells FireWeave how the release is going — health, errors, metrics, outcomes. They are not the in-app Log/Alert/Block scale |
+| **User-facing explanation** | Signals are how your app tells Fireweave how the release is going — health, errors, metrics, outcomes. They are not the in-app Log/Alert/Block scale |
 | **Related** | outcome, health/error/metric, capability, guardrails (stub) |
 | **Confidence** | HIGH for kinds + APIs. Delivery to fw-server **NEEDS VERIFICATION** per adapter (same skew as releases) |
 
@@ -240,7 +240,7 @@ Each term uses the requested columns. Citations are paths in the SDK clone or in
 | **Definition** | Shared owner of lifecycle, config, adapter, and exposure policy. Architecture: `FireweaveProvider` + `FireweaveClient` → `FireweaveRuntime` → `BackendAdapter`. Lifecycle states: `UNINITIALIZED` \| `INITIALIZING` \| `READY` \| `STALE` \| `ERROR` \| `FATAL` \| `SHUTDOWN`. Web adds a load-bearing **STALE** when prefetch loses a 5s ceiling — must not be collapsed into READY (web runtime comments). |
 | **Where it appears** | All five packages; `docs/architecture.md`; `docs/lifecycle.md` |
 | **SDK API** | `FireweaveRuntime` / `FireweaveWebRuntime` / Go `Runtime`. `initialize` / `shutdown`. Default shutdown timeout 10_000 ms |
-| **User-facing explanation** | The runtime is the engine behind both OpenFeature and the FireWeave client. Create one, share it, shut it down once |
+| **User-facing explanation** | The runtime is the engine behind both OpenFeature and the Fireweave client. Create one, share it, shut it down once |
 | **Related** | adapter, client, OpenFeature, lifecycle |
 | **Confidence** | HIGH |
 
@@ -252,7 +252,7 @@ Each term uses the requested columns. Citations are paths in the SDK clone or in
 | **Definition** | Vendor-neutral evaluate/capture/lifecycle backend. Production default: **FireweaveRemoteAdapter** (fw-server). Tests: **InMemoryAdapter**. Dev/local boolean map: **FireweaveLocalAdapter** (Node/Python/Web only). Direct PostHog: Python extra + Go package; **removed from Node 2.1**; Java seam-only (`UnsupportedCapability` from `create(config)`). |
 | **Where it appears** | Architecture; `docs/remote.md`; per-language adapters |
 | **SDK API** | See InMemoryAdapter, FireweaveRemoteAdapter below. Web: `FireweaveRemoteWebAdapter`, `InMemoryWebAdapter`, `FireweaveLocalWebAdapter` |
-| **User-facing explanation** | The adapter is how the runtime talks to a backend. Production uses FireWeave’s remote adapter, not a vendor SDK in your process (Node 2.1 / intended path) |
+| **User-facing explanation** | The adapter is how the runtime talks to a backend. Production uses Fireweave’s remote adapter, not a vendor SDK in your process (Node 2.1 / intended path) |
 | **Related** | FireweaveRemoteAdapter, InMemoryAdapter, runtime |
 | **Confidence** | HIGH |
 
@@ -276,7 +276,7 @@ Each term uses the requested columns. Citations are paths in the SDK clone or in
 | **Definition** | Production HTTP adapter to fw-server. Paths implemented in adapters: `POST /v1/flags/evaluate`, `POST /v1/capture`; Node/Python/Web also `POST /v1/targets/register`. Auth: `Authorization: Bearer <key>`. Env (Node/Python/Go remote): `FW_API_URL`, `FW_PROJECT_API_KEY`. Java: constructor/`FireweaveConfig` only — **no `System.getenv`**. Web: required ctor fields; **no env**. Host allowlists differ (Node/Web: Fireweave hosts + loopback; Python/Go/Java defaults include PostHog hosts + loopback). `https` off-loopback; `http` loopback only. |
 | **Where it appears** | `docs/remote.md`; per-language `adapters/remote` |
 | **SDK API** | `FireweaveRemoteAdapter` / Go `adapters/remote` / `FireweaveRemoteWebAdapter` |
-| **User-facing explanation** | This is the production connection: your project key and the FireWeave server URL |
+| **User-facing explanation** | This is the production connection: your project key and the Fireweave server URL |
 | **Related** | adapter, fw-server, registerTarget |
 | **Confidence** | HIGH for client behavior. Whether `app-server.fireweave.ai` is the customer-facing host **NEEDS VERIFICATION** |
 
@@ -297,10 +297,10 @@ Each term uses the requested columns. Citations are paths in the SDK clone or in
 | Field | Content |
 |-------|---------|
 | **Term** | OpenFeature |
-| **Definition** | Standard evaluation API. FireWeave ships a provider in **all five** packages. Compliance floor: OF spec **v0.8.0** (ADR-0003). OF = flags; `FireweaveClient` = extensions (releases, exposures, signals, targets, capabilities). Tracking (OF spec §6): **planned, not implemented**. FireWeave ships no product hooks except Go’s reserved-key guard hook. |
+| **Definition** | Standard evaluation API. Fireweave ships a provider in **all five** packages. Compliance floor: OF spec **v0.8.0** (ADR-0003). OF = flags; `FireweaveClient` = extensions (releases, exposures, signals, targets, capabilities). Tracking (OF spec §6): **planned, not implemented**. Fireweave ships no product hooks except Go’s reserved-key guard hook. |
 | **Where it appears** | All five SDKs; `docs/openfeature.md`; ADR-0003 |
 | **SDK API** | Node `FireweaveProvider` + `@openfeature/server-sdk` ^1.22.0. Python `fireweave.openfeature.FireweaveProvider` + `openfeature-sdk` ≥0.10,<0.11. Go `openfeature.NewProvider` + go-sdk v1.17.2. Java `ai.fireweave.openfeature.FireweaveProvider` + `dev.openfeature:sdk` **1.15.1**. Web `FireweaveWebProvider` + `@openfeature/web-sdk` ^1.9.0; **sync** resolvers; metadata name `fireweave-web`; `runsOn = 'client'` |
-| **User-facing explanation** | You can evaluate control points through the OpenFeature client so your call sites stay portable. Release/exposure/signal APIs stay on the FireWeave client |
+| **User-facing explanation** | You can evaluate control points through the OpenFeature client so your call sites stay portable. Release/exposure/signal APIs stay on the Fireweave client |
 | **Related** | flag, control point, FireweaveProvider, tracking (absent) |
 | **Confidence** | HIGH |
 
@@ -309,7 +309,7 @@ Each term uses the requested columns. Citations are paths in the SDK clone or in
 | Field | Content |
 |-------|---------|
 | **Term** | `identify` vs `registerTarget` |
-| **Definition** | Same registration job. **Web** exposes `FireweaveWebClient.identify(targetingKey, options?)` which calls `runtime.registerTarget` then `setContext({ targetingKey })` (`sdks/web/packages/sdk/src/client.ts` ~392–398). **Node/Python** expose `registerTarget` / `register_target` on the runtime (not a client `identify`). **Go/Java:** no registration API on `master`. This is **not** OpenFeature `identify` and **not** analytics `posthog.identify` as a documented FireWeave method. |
+| **Definition** | Same registration job. **Web** exposes `FireweaveWebClient.identify(targetingKey, options?)` which calls `runtime.registerTarget` then `setContext({ targetingKey })` (`sdks/web/packages/sdk/src/client.ts` ~392–398). **Node/Python** expose `registerTarget` / `register_target` on the runtime (not a client `identify`). **Go/Java:** no registration API on `master`. This is **not** OpenFeature `identify` and **not** analytics `posthog.identify` as a documented Fireweave method. |
 | **Where it appears** | Web client; Node/Python runtime; remote protocol |
 | **SDK API** | See table in Target |
 | **User-facing explanation** | Browser: call `identify`. Node/Python: call `registerTarget`. Go/Java: pass properties on each evaluate until an API exists |
@@ -401,7 +401,7 @@ From identity + release-context + remote protocol (HIGH unless noted):
 | `project-api-key_…` | Current key prefix in spec |
 | `fw_public_…` | Specified as **required platform work** before production browser keys — **NEEDS VERIFICATION** that fw-server issues them |
 | `fw_`-prefixed **target properties** | Reserved, stripped server-side |
-| `phc_` / `phs_` / `phx_` | Vendor keys — never send on the FireWeave remote path |
+| `phc_` / `phs_` / `phx_` | Vendor keys — never send on the Fireweave remote path |
 
 ---
 

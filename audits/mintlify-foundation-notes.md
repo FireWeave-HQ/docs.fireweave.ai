@@ -10,7 +10,7 @@ This file records decisions and **manual** follow-up. It is ignored from the pub
 
 ## What was applied in Git
 
-- Site name: **FireWeave**
+- Site name: **Fireweave**
 - Navigation: `navigation.groups` matching `audits/information-architecture.md` §3 (official single-product SDK pattern)
 - Mintlify marketing navbar, footer, and anchors removed
 - Verified GitHub SDK link only: `https://github.com/FireWeave-HQ/fireweave-sdk`
@@ -18,15 +18,15 @@ This file records decisions and **manual** follow-up. It is ignored from the pub
 - `llms.txt` / `llms-full.txt` / `skill.md` / public `/mcp` are **automatic** on a published Mintlify host — no extra `docs.json` keys
 - No `redirects` (IA listed no confirmed old public URLs on this host)
 - No `mint.json`
-- Logo/favicon **paths** unchanged (`/logo/light.svg`, `/logo/dark.svg`, `/favicon.svg`). Artwork is still the Mintlify starter mark — no licensed FireWeave asset exists in this repo
+- Logo/favicon **paths** unchanged (`/logo/light.svg`, `/logo/dark.svg`, `/favicon.svg`). Artwork is still the Mintlify starter mark — no licensed Fireweave asset exists in this repo
 
 ---
 
 ## NEEDS VERIFICATION
 
-1. **Brand colors.** `docs.json` still uses the starter hex values (`#16A34A`, `#07C983`, `#15803D`). These are **Mintlify leftover greens**, not documented FireWeave brand. No FireWeave palette was found in this repo or the sibling audits. Replace when a licensed brand spec exists.
-2. **Logo / favicon artwork.** Starter Mintlify wordmarks remain. Do not invent a mark. Replace only from a licensed FireWeave source.
-3. **Navbar primary / console URL.** IA asked for FireWeave app or GitHub. GitHub SDK is verified. `https://app.fireweave.ai` exists as the in-app host and is likely login-gated (`audits/existing-docs.md`). Not added as a “Dashboard” CTA until the customer-facing logged-out URL is confirmed.
+1. **Brand colors.** `docs.json` still uses the starter hex values (`#16A34A`, `#07C983`, `#15803D`). These are **Mintlify leftover greens**, not documented Fireweave brand. No Fireweave palette was found in this repo or the sibling audits. Replace when a licensed brand spec exists.
+2. **Logo / favicon artwork.** Starter Mintlify wordmarks remain. Do not invent a mark. Replace only from a licensed Fireweave source.
+3. **Navbar primary / console URL.** IA asked for Fireweave app or GitHub. GitHub SDK is verified. `https://app.fireweave.ai` exists as the in-app host and is likely login-gated (`audits/existing-docs.md`). Not added as a “Dashboard” CTA until the customer-facing logged-out URL is confirmed.
 4. **`seo.metatags.canonical`** is set to `https://docs.fireweave.ai` as the **intended** canonical (Mintlify custom-domain docs). DNS did **not** resolve at audit time. Do not treat this as proof the domain is live.
 5. **`seo.organization.url`** is `https://fireweave.ai` (marketing site listed in existing-docs). Confirm this is the legal/canonical org homepage for JSON-LD.
 6. **Mintlify plan.** Assistant, dashboard CI checks, Vale, and some contextual options are plan-gated. CLI `mint validate` / `mint broken-links` work on any plan.

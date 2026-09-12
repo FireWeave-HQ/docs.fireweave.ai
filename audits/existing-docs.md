@@ -3,7 +3,7 @@
 **Task:** 002  
 **Date:** 2026-08-17  
 **Primary target:** https://app.fireweave.ai/docs  
-**This repo:** `/Users/niketh/Coding/docs.fireweave.ai` (Mintlify starter; no FireWeave product pages yet)
+**This repo:** `/Users/niketh/Coding/docs.fireweave.ai` (Mintlify starter; no Fireweave product pages yet)
 
 This audit inventories what already exists so the new Mintlify site can **rewrite**, not copy. Claims below are taken from recovered page text, compiled app routes, or other public sources. **Do not treat this file as an API spec.** Anything that could not be checked against SDK source is marked **UNVERIFIED**.
 
@@ -25,7 +25,7 @@ This audit inventories what already exists so the new Mintlify site can **rewrit
 | Browser MCP | **Unavailable** in this session |
 | `user-fireweave-staging` MCP | **BLOCKED** — `needsAuth`; no product/docs tools used |
 | `https://docs.fireweave.ai` | **BLOCKED** — DNS does not resolve |
-| This docs repo README / `index.mdx` / `quickstart.mdx` | Mintlify starter placeholders only; no pointers to existing FireWeave docs |
+| This docs repo README / `index.mdx` / `quickstart.mdx` | Mintlify starter placeholders only; no pointers to existing Fireweave docs |
 
 **Verdict:** Five in-app docs pages exist. HTML crawlers see an empty SPA. Content in this audit comes from the compiled client bundles and the SvelteKit route dictionary, not from a logged-in browser session. In-app pages live under the `/(app)/docs` group, so the **UI is likely login-gated** even though the JS assets are public.
 
