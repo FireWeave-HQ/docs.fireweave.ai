@@ -1,11 +1,13 @@
 ---
-title: "Fireweave"
-description: "Fireweave SDK docs: evaluate control points and register targets in Node, Python, Go, Java, Rust, and the browser."
+title: "Fireweave Docs"
+description: "Developer docs for Fireweave, an AI release engineer: SDKs for Node, Python, Go, Java, Rust, and the browser, plus CLI and coding-agent onboarding."
 ---
+
+Fireweave ([fireweave.ai](https://fireweave.ai)) is an AI release engineer that takes every coding-agent change to production safely with control points, cohort rollouts, guardrails, and live stability and adoption signals. These are the developer docs: SDKs for Node, Python, Go, Java, Rust, and the browser, plus onboarding for the CLI and coding-agent plugins.
 
 Fireweave SDKs evaluate **control points** and optionally register **targets**. Your application authenticates with a Fireweave project key and talks to **fw-server**. The wire protocol and canonical envelopes still use the parameter name `flagKey`; the product name is control point.
 
-v1 exposes exactly those two capabilities. The SDKs do not ship OpenFeature providers, and they do not expose `releases`, `exposures`, `signals`, `capabilities`, or `guardrails`.
+v1 exposes exactly those two capabilities. The SDKs do not ship OpenFeature providers, and they do not expose `releases`, `exposures`, `signals`, or `capabilities`. Guardrails are evaluated by fw-server and the Fireweave console during rollouts; the SDK has no guardrails API.
 
 <Columns cols={2}>
   <Card title="Onboarding" icon="list-check" href="/onboarding">

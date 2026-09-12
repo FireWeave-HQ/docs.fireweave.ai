@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Fireweave",
-  "description": "Fireweave documentation: evaluate control points and register targets from seven language SDKs, manage projects and environments with Terraform, and drive releases from the fw CLI.",
+  "description": "Fireweave is an AI release engineer. Developer docs: SDKs for Node, Python, Go, Java, Rust, and the browser, plus onboarding for the CLI, Terraform, and coding-agent plugins.",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
@@ -161,10 +161,12 @@
       "canonical": "https://docs.fireweave.ai"
     },
     "organization": {
+      "id": "https://fireweave.ai/#organization",
       "name": "Fireweave",
       "url": "https://fireweave.ai",
       "sameAs": [
-        "https://github.com/FireWeave-HQ"
+        "https://github.com/FireWeave-HQ",
+        "https://docs.fireweave.ai"
       ]
     }
   },
