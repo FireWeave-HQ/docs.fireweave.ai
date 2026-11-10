@@ -1,0 +1,192 @@
+/* FireWeave brand for Mintlify. Values mirror packages/design-system-next tokens and fw-website's --fw-site-* tokens.
+   Mintlify selectors used here (may change upstream): .card .callout .code-block .code-group .frame .tabs .steps .mermaid. */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --fw-bg: #faf8f5;
+  --fw-surface: #ffffff;
+  --fw-ink: #161616;
+  --fw-muted: #72706d;
+  --fw-line: rgba(22, 22, 22, 0.09);
+  --fw-grid: #ebe6df;
+  --fw-brand: #f96414;
+  --fw-brand-fill: #c74905;
+  --fw-brand-text: #b8460c;
+  --fw-brand-soft: #fff3ed;
+  --fw-on-fill: #ffffff;
+  --fw-ok: #17703d;
+  --fw-ok-line: #1f9d55;
+  --fw-ok-bg: #f0fdf4;
+  --fw-warn: #7a4b00;
+  --fw-warn-bg: #fff3cd;
+  --fw-bad: #b91c1c;
+  --fw-bad-bg: #fef2f2;
+  --fw-q: #1d4ed8;
+  --fw-q-bg: #eff6ff;
+  --fw-end: #161616;
+  --fw-end-fg: #ffffff;
+  --fw-radius: 8px;
+  --fw-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+html.dark {
+  --fw-bg: #121110;
+  --fw-surface: #1b1917;
+  --fw-ink: #f3efe9;
+  --fw-muted: #a8a29b;
+  --fw-line: rgba(255, 255, 255, 0.1);
+  --fw-grid: #242120;
+  --fw-brand-text: #ff8a3d;
+  --fw-brand-soft: rgba(249, 100, 20, 0.16);
+  --fw-ok: #3fbf74;
+  --fw-ok-line: #3fbf74;
+  --fw-ok-bg: rgba(63, 191, 116, 0.12);
+  --fw-warn: #f2c35a;
+  --fw-warn-bg: rgba(242, 195, 90, 0.12);
+  --fw-bad: #f27059;
+  --fw-bad-bg: rgba(242, 112, 89, 0.12);
+  --fw-q: #93b4ff;
+  --fw-q-bg: rgba(147, 180, 255, 0.12);
+  --fw-end: #f3efe9;
+  --fw-end-fg: #121110;
+}
+
+/* ---- Built-in components: flat, hairline, 8px ---- */
+.card, .callout, .code-block, .code-group, .frame, .tabs, .accordion, .tile {
+  border-radius: var(--fw-radius) !important;
+  box-shadow: none !important;
+}
+.card, .frame, .accordion, .tile { border: 1px solid var(--fw-line) !important; }
+code, pre, kbd, .code-block, .code-group { font-family: var(--fw-mono) !important; }
+
+/* ---- Shared diagram frame ---- */
+.fw-flow, .fw-ramp, .fw-states {
+  display: grid;
+  gap: 10px;
+  margin: 1.25rem 0;
+  padding: 18px;
+  background: var(--fw-surface);
+  border: 1px solid var(--fw-line);
+  border-radius: var(--fw-radius);
+  color: var(--fw-ink);
+}
+.fw-flow-kicker {
+  justify-self: start;
+  font: 600 11px var(--fw-mono);
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--fw-brand-soft);
+  color: var(--fw-brand-text);
+}
+.fw-flow-title { margin: 0; font-weight: 600; font-size: 15px; }
+
+/* ---- Flow card: left to right, rows wrap, arrows only between neighbours ---- */
+/* A row never wraps on its own (that would orphan an arrow): steps shrink, and a narrow screen scrolls the row. */
+.fw-flow-row { display: flex; flex-wrap: nowrap; align-items: center; overflow-x: auto; padding-bottom: 2px; }
+.fw-flow-row > .fw-step { flex: 0 1 160px; min-width: 92px; }
+.fw-flow-row > .fw-start, .fw-flow-row > .fw-end, .fw-flow-row > .fw-decision, .fw-flow-row > .fw-turn { flex: none; }
+.fw-flow-item + .fw-flow-item::before {
+  content: '';
+  display: inline-block;
+  width: 22px;
+  height: 1px;
+  margin-right: 0;
+  background: var(--fw-muted);
+  position: absolute;
+  left: -22px;
+  top: 50%;
+}
+.fw-flow-item { position: relative; margin-left: 22px; }
+.fw-flow-item:first-child { margin-left: 0; }
+.fw-flow-item + .fw-flow-item::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: calc(50% - 3.5px);
+  border: 3.5px solid transparent;
+  border-left: 5px solid var(--fw-muted);
+  border-right: 0;
+}
+.fw-start, .fw-end {
+  font: 700 11px var(--fw-mono);
+  letter-spacing: 0.08em;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+.fw-start { background: var(--fw-brand); color: var(--fw-on-fill); }
+.fw-end { background: var(--fw-end); color: var(--fw-end-fg); }
+.fw-step {
+  display: grid;
+  gap: 1px;
+  max-width: 160px;
+  padding: 8px 10px;
+  background: var(--fw-surface);
+  border: 1px solid var(--fw-line);
+  border-radius: var(--fw-radius);
+}
+.fw-step-title { font-size: 13px; font-weight: 600; line-height: 1.3; }
+.fw-step-sub { font-size: 11.5px; line-height: 1.35; color: var(--fw-muted); }
+.fw-step-key { border-color: var(--fw-brand); background: var(--fw-brand-soft); }
+.fw-step-ok { border-color: var(--fw-ok-line); background: var(--fw-ok-bg); }
+.fw-step-ok .fw-step-title::before { content: '✓ '; color: var(--fw-ok); }
+.fw-decision { width: 68px; height: 68px; display: grid; place-items: center; }
+.fw-decision > span {
+  position: relative;
+  z-index: 1;
+  max-width: 54px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--fw-q);
+}
+.fw-decision > span::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -12px -2px;
+  margin: auto;
+  width: 46px;
+  height: 46px;
+  transform: rotate(45deg);
+  background: var(--fw-q-bg);
+  border: 1px solid var(--fw-q);
+  border-radius: 4px;
+}
+.fw-turn { font: 13px var(--fw-mono); color: var(--fw-muted); padding-left: 8px; }
+
+/* ---- Ramp ladder ---- */
+.fw-rung {
+  display: grid;
+  grid-template-columns: 70px 1fr minmax(0, 1.3fr);
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+}
+.fw-rung-label { font: 600 12px var(--fw-mono); color: var(--fw-muted); }
+.fw-bar { height: 10px; border-radius: 999px; background: var(--fw-grid); overflow: hidden; }
+.fw-bar > i { display: block; height: 100%; border-radius: 999px; background: var(--fw-brand); }
+.fw-rung-note { color: var(--fw-muted); min-width: 0; }
+.fw-w-0 { width: 0; } .fw-w-1 { width: 1%; } .fw-w-5 { width: 5%; } .fw-w-10 { width: 10%; }
+.fw-w-20 { width: 20%; } .fw-w-25 { width: 25%; } .fw-w-30 { width: 30%; } .fw-w-50 { width: 50%; }
+.fw-w-75 { width: 75%; } .fw-w-100 { width: 100%; }
+
+/* ---- State rail ---- */
+.fw-states-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.fw-state {
+  font: 600 12px var(--fw-mono);
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--fw-line);
+  color: var(--fw-muted);
+}
+.fw-state-on { border-color: var(--fw-brand); color: var(--fw-brand-text); background: var(--fw-brand-soft); }
+.fw-state-good { border-color: var(--fw-ok-line); color: var(--fw-ok); background: var(--fw-ok-bg); }
+.fw-state-warn { border-color: transparent; color: var(--fw-warn); background: var(--fw-warn-bg); }
+.fw-state-bad { border-color: transparent; color: var(--fw-bad); background: var(--fw-bad-bg); }
+.fw-state-sep { font-size: 12px; color: var(--fw-muted); }
+
+@media (max-width: 560px) {
+  .fw-rung { grid-template-columns: 56px 1fr; }
+  .fw-rung-note { grid-column: 1 / -1; }
+}
