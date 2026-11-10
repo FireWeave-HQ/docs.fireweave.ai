@@ -1,0 +1,33 @@
+---
+title: "Linear, Slack and Custom HTTP"
+description: "Link a Linear project, add your Slack workspace, and call your own endpoint before a rollout promotes."
+---
+
+These tools are optional. Add each account once in **Settings › Integrations**; adding one needs an Owner or Admin, or a role with **Manage integrations**.
+
+| Tool | What FireWeave does with it | Where you set it |
+| --- | --- | --- |
+| **Linear** | Shows the linked project's issues on your rollouts. | Project **Settings › Integrations** |
+| **Slack** | Connects your Slack workspace through FireWeave's Slack app. | **Settings › Integrations** |
+| **Custom HTTP** | Calls your endpoint as a promotion check before a rollout step promotes. | Project **Settings › Promotion checks** |
+
+## Linear
+
+<Steps>
+  <Step title="Add the Linear account">
+    An Owner or Admin presses **Add Linear account** and signs in to Linear.
+  </Step>
+  <Step title="Pick the project">
+    In your project's **Settings › Integrations**, pick one Linear project. Any Member can do this once the account exists.
+  </Step>
+</Steps>
+
+Linear is set for the whole project. Observability is set per environment: see [Observability](/connect/observability).
+
+## Slack
+
+Add your workspace from **Settings › Integrations › Slack**. You sign in to Slack in a new window to choose the workspace.
+
+## Custom HTTP
+
+Add a **Custom HTTP** account for your endpoint, and store any credential it needs as a named secret on that account, never in the check. How the check answers and when it runs: [Strategies and checks](/ship/strategies-and-checks).

@@ -1,193 +1,77 @@
 ---
 title: "Java"
-description: "Install and use ai.fireweave:fireweave-sdk 2.3.0 to evaluate control points and register targets. Java 11+."
+description: "Install the FireWeave Java SDK, start it in one line and read control points."
 ---
 
-The Java SDK is `ai.fireweave:fireweave-sdk` **2.3.0** on Maven Central. It evaluates **control points** through `client.controlPoints()` and registers **targets** through `client.registerTarget()`. Those are the two v1 capabilities. The wire protocol uses `flagKey`.
+The Java SDK is `ai.fireweave:fireweave-sdk` on Maven Central. Its `ai.fireweave.sdk.start.Fw` class is the [start profile](/sdks/start-profile): one call in `main`, then reads from anywhere.
 
-<Warning>
-  Artifact versions are **not** uniform. `fireweave-sdk` is **2.3.0**. `fireweave-openfeature`, `fireweave-adapter-posthog`, and `fireweave-testing` remain at **0.1.0** and are leftover pre-v1 artifacts. Do not add them as if they ship with 2.3.0.
-</Warning>
+<Steps>
+  <Step title="Install">
+    <CodeGroup>
+    ```xml Maven
+    <dependency>
+      <groupId>ai.fireweave</groupId>
+      <artifactId>fireweave-sdk</artifactId>
+      <version>3.0.0</version>
+    </dependency>
+    ```
+    ```kotlin Gradle
+    implementation("ai.fireweave:fireweave-sdk:3.0.0")
+    ```
+    </CodeGroup>
+    Pin an exact version. A version range can resolve a release candidate, which calls FireWeave's staging server.
+  </Step>
+  <Step title="Declare your control points">
+    ```java FireweaveControlPoints.java
+    // Every control point the app reads, with the value served in local mode.
+    public static final LocalControlPoints CONTROL_POINTS = Fw.defineControlPoints(Map.of(
+            "new-checkout", LocalControlPoint.local(true, "new checkout flow")));
+    ```
+  </Step>
+  <Step title="Start once in main">
+    ```java
+    Fw.start(StartOptions.builder()
+            .controlPoints(FireweaveControlPoints.CONTROL_POINTS)
+            .build());
+    ```
+  </Step>
+  <Step title="Read a control point">
+    ```java
+    // @fireweave-controlpoint new-checkout
+    if (Fw.controlPoints().getBooleanValue("new-checkout", false,
+            EvaluationContext.builder().targetingKey(user.id()).build())) {
+        // new path
+    }
+    ```
+    Reads never throw. If start failed, they return your default.
+  </Step>
+</Steps>
 
-Types live under `ai.fireweave.sdk.{domain,application,infrastructure.adapters}`. There is no facade re-export package.
+## Configuration
 
-## Supported versions
-
-| | Value |
+| Variable | Value |
 | --- | --- |
-| Artifact | `ai.fireweave:fireweave-sdk` **2.3.0** |
-| Java | **11+** (`maven.compiler.release`) |
-| Runtime dependencies | **none** |
+| `FIREWEAVE_KEY` | Your project key (`project-api-key_…`). Set it in every deployed environment. |
+| `FIREWEAVE_ENV`, then `APP_ENV` | `development`, `dev`, `local` or `test` with no key runs local. |
+| `FIREWEAVE_URL` | Optional. Overrides the default endpoint. |
 
-CI exercises JDK 11 and 25. Document 11+ from the POM.
+With no key outside a development environment, `Fw.start` throws a configuration error naming `FIREWEAVE_KEY`. It does no network I/O.
 
-## Install
+## Identify users
 
-```xml
-<dependency>
-  <groupId>ai.fireweave</groupId>
-  <artifactId>fireweave-sdk</artifactId>
-  <version>2.3.0</version>
-</dependency>
-```
-
-Do not add `fireweave-openfeature` or `fireweave-adapter-posthog`. For offline tests, use `Fireweave.init(InitOptions.local(…))` — you do not need `fireweave-testing`.
-
-## Initialize
-
-`Fireweave.init` is the single entry point. `mode` is required and never inferred. Init throws `FireweaveException` (kind `Configuration`) when mode is missing, remote credentials are blank, `apiUrl` fails the host allowlist, or local mode is combined with credentials.
+At sign-in, register the facts your targeting matches on:
 
 ```java
-import ai.fireweave.sdk.application.Fireweave;
-import ai.fireweave.sdk.application.FireweaveClient;
-import ai.fireweave.sdk.application.InitOptions;
-import ai.fireweave.sdk.domain.EvaluationContext;
-
-import java.util.Map;
-
-FireweaveClient client = Fireweave.init(InitOptions.local(Map.of("new-checkout", true)));
-
-boolean enabled = client.controlPoints()
-    .getBooleanValue("new-checkout", false,
-        EvaluationContext.builder().targetingKey("user_42").build());
-
-client.close();
+Fw.identify(user.id(), Map.of("plan", user.plan()));
 ```
 
-Production — Java does **not** call `System.getenv`. Read env in your app and pass the values in:
+`identify` never throws. In remote mode it is one blocking request, so call it off the request path when latency matters.
 
-```java
-FireweaveClient client = Fireweave.init(InitOptions.remote(apiKey, apiUrl));
-```
+## Status and shutdown
 
-`FireweaveClient` implements `AutoCloseable`.
+- `Fw.status()` reports the mode and why, the channel, endpoint and key source. It never contains the key.
+- `Fw.shutdown()` stops the client. Use it rather than `Fw.client().close()`. No JVM shutdown hook is registered for you.
 
-Lower-level construction:
-
-```java
-import ai.fireweave.sdk.application.FireweaveConfig;
-import ai.fireweave.sdk.application.FireweaveRuntime;
-import ai.fireweave.sdk.infrastructure.adapters.FireweaveLocalAdapter;
-
-FireweaveRuntime runtime = new FireweaveRuntime(
-    FireweaveConfig.builder().build(),
-    new FireweaveLocalAdapter(Map.of("new-checkout", true)));
-runtime.initialize();
-FireweaveClient client = new FireweaveClient(runtime);
-```
-
-## Configuration and authentication
-
-| Option | Mode | Description |
-| --- | --- | --- |
-| `InitOptions.remote(apiKey, apiUrl)` | `remote` | fw-server credentials (required) |
-| `allowedHosts` | `remote` | SSRF allowlist override on the builder |
-| `InitOptions.local(Map)` | `local` | Seeded boolean map |
-
-Auth: `Authorization: Bearer <key>`. Paths: `POST /v1/flags/evaluate`, `POST /v1/targets/register`.
-
-Default `FireweaveConfig.DEFAULT_ALLOWED_HOSTS` lists Fireweave hosts, loopback, and five leftover PostHog hostnames. Those PostHog entries are a pre-existing allowlist leftover — there is no PostHog adapter in this SDK. `https` is required off-loopback. Opt out with `ALLOW_ANY_HOST = "*"`.
-
-See [Configuration and auth](/production/configuration).
-
-## Targets
-
-`registerTarget` is on the client. It **never throws**.
-
-```java
-import ai.fireweave.sdk.application.RegisterTargetOptions;
-import ai.fireweave.sdk.domain.JsonValue;
-import ai.fireweave.sdk.domain.TargetKind;
-
-var result = client.registerTarget("user_42", RegisterTargetOptions.builder()
-    .kind(TargetKind.USER)
-    .property("plan", JsonValue.of("pro"))
-    .build());
-if (!result.ok()) {
-    System.out.println("registerTarget failed " + result.error());
-}
-```
-
-There is also `registerTarget(targetingKey)` with empty options. In local mode the adapter records the target in-process and traces `[fireweave:local]`. Recorded targets are readable via `FireweaveLocalAdapter#getRegisteredTargets()`.
-
-See [Targeting and targets](/concepts/targeting).
-
-## Control points
-
-`client.controlPoints()` is the documented namespace. `client.flags()` is the same object (`@Deprecated` in Javadoc only, silent at runtime).
-
-`FlagType`: `BOOLEAN`, `STRING`, `NUMBER`, `OBJECT`. There is no separate `INTEGER` / `FLOAT` in v1.
-
-```java
-import ai.fireweave.sdk.domain.EvaluationContext;
-import ai.fireweave.sdk.domain.FlagType;
-import ai.fireweave.sdk.domain.JsonValue;
-
-EvaluationContext ctx = EvaluationContext.builder().targetingKey("user_42").build();
-
-boolean on = client.controlPoints().getBooleanValue("new-checkout", false, ctx);
-String theme = client.controlPoints().getStringValue("checkout-theme", "classic", ctx);
-double ratio = client.controlPoints().getNumberValue("discount", 0.0, ctx);
-JsonValue payload = client.controlPoints().getObjectValue("config", JsonValue.ofNull(), ctx);
-
-var details = client.controlPoints().getBooleanDetails("new-checkout", false, ctx);
-var decision = client.controlPoints().evaluate(
-    "new-checkout", FlagType.BOOLEAN, JsonValue.of(false), ctx, null);
-```
-
-Nine methods: `getBooleanValue`, `getStringValue`, `getNumberValue`, `getObjectValue`, `getBooleanDetails`, `getStringDetails`, `getNumberDetails`, `getObjectDetails`, `evaluate`. Evaluation **never throws**.
-
-`getNumberValue` returns `double`. Integers beyond Java `int` range that used to go through an OpenFeature integer resolver are not a native path anymore.
-
-See [Control points](/concepts/control-points).
-
-## Adapters
-
-| Adapter | Module | Use |
-| --- | --- | --- |
-| `FireweaveRemoteAdapter` | `fireweave-sdk` | Production fw-server |
-| `FireweaveLocalAdapter` | `fireweave-sdk` | Dev boolean map |
-| `InMemoryAdapter` | `fireweave-testing` (tree / leftover **0.1.0**) | Fixture-driven tests |
-
-Prefer `Fireweave.init` for both local and remote. Do not treat `fireweave-testing@0.1.0` as part of the 2.3.0 line.
-
-See [Adapters](/concepts/adapters).
-
-## Errors
-
-`ErrorKind` enum (15 kinds) + `FireweaveException` + `FireweaveError` value type. Evaluation returns defaults; `registerTarget` returns `RegisterTargetResult`. Init throws on configuration failure.
-
-See [Errors](/production/errors).
-
-## Testing
-
-Use `InitOptions.local(…)`. The repo test-server stub does **not** implement `/v1/targets/register`.
-
-See [Testing](/testing).
-
-## Shutdown
-
-```java
-client.close(); // runtime.shutdown(); idempotent; bounded by shutdownTimeoutMs (default 10s)
-```
-
-v1 reads are side-effect free. There is no exposure queue to flush.
-
-See [Initialize, ready, shutdown](/production/lifecycle).
-
-## Not in this SDK
-
-- `FireweaveProvider` / `fireweave-openfeature` as a current 2.3.0 artifact
-- `releases()`, `exposures()`, `signals()`, `capabilities()`, `guardrails()`
-- `System.getenv` for `FW_*`
-- A live PostHog adapter
-- Implicit flush of a removed exposure queue
-
-## Next
-
-<Card title="Quickstart" href="/quickstart">
-  Offline evaluate in every language.
-</Card>
-<Card title="Compatibility" href="/sdks/compatibility">
-  Seven-language surface and the 2.3.0 / 0.1.0 Java skew.
-</Card>
+<Note>
+  `Fw.client()` returns the one `FireweaveClient` for the JVM, for dependency injection. To configure the client yourself with no environment reads, use `Fireweave.init(InitOptions…)`.
+</Note>

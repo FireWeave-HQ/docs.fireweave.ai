@@ -1,11 +1,11 @@
 ---
 title: "Terraform environments"
-description: "Manage Fireweave environments with fireweave_environment: slugs, default stage, branch and tag rules, and webhook aliases."
+description: "Manage FireWeave environments with fireweave_environment: slugs, default stage, branch and tag rules, and webhook aliases."
 ---
 
-`fireweave_environment` manages a Fireweave **environment** — a named stage in a project's promotion pipeline (for example `dev`, `stage`, or `prod`).
+`fireweave_environment` manages a FireWeave **environment** — a named stage in a project's promotion pipeline (for example `dev`, `stage`, or `prod`).
 
-Environments can declare branch and tag matching rules so Fireweave can resolve which stage a git ref belongs to.
+Environments can declare branch and tag matching rules so FireWeave can resolve which stage a git ref belongs to.
 
 Generated schema: [fireweave_environment on the Terraform Registry](https://registry.terraform.io/providers/FireWeave-HQ/fireweave/latest/docs/resources/environment).
 
@@ -69,7 +69,7 @@ Changing `project_id` or `slug` forces a new resource. `display_name`, `is_defau
 | --- | --- | --- | --- |
 | `project_id` | String | Yes | ID of the owning project. **Forces replacement.** |
 | `slug` | String | Yes | Unique within the project (for example `stage`). **Forces replacement.** |
-| `display_name` | String | Yes | Human-readable name shown in the Fireweave UI. |
+| `display_name` | String | Yes | Human-readable name shown in the FireWeave UI. |
 | `is_default` | Boolean | No | Whether this environment is the project's default. Optional + computed. Defaults to `false`. |
 | `branch_rules` | List of ref-rule objects | No | Rules that map git branches to this environment. |
 | `tag_rules` | List of ref-rule objects | No | Rules that map git tags to this environment. |
@@ -79,7 +79,7 @@ Changing `project_id` or `slug` forces a new resource. `display_name`, `is_defau
 
 | Name | Type | Notes |
 | --- | --- | --- |
-| `id` | String | Environment identifier (`envId`) assigned by Fireweave. |
+| `id` | String | Environment identifier (`envId`) assigned by FireWeave. |
 
 ## Ref rules
 

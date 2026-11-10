@@ -1,0 +1,53 @@
+---
+title: "Your first rollout"
+description: "Take one feature from your coding agent to stable: build, merge, press Start and watch it ramp."
+---
+
+import { Ramp, RampStage } from "/snippets/flow.jsx";
+
+Once [setup](/setup) is merged and your deploy key is set, every feature follows these steps.
+
+<Steps>
+  <Step title="Build a feature with your agent">
+    <Badge color="blue">Required</Badge>
+
+    Ask your coding agent for the change as usual. Following FireWeave's instructions in the repo, it wraps the change behind a control point (off by default) and records which metrics to watch. See [Build features](/agents/building-features).
+  </Step>
+  <Step title="Open a pull request">
+    <Badge color="blue">Required</Badge>
+
+    FireWeave reports readiness on the PR, and risk when PR analysis is on. See [The PR check](/ship/pr-check).
+  </Step>
+  <Step title="Merge into an environment branch">
+    <Badge color="blue">Required</Badge>
+
+    The merge registers a rollout for that environment. It waits for you.
+  </Step>
+  <Step title="Deploy, then press Start rollout">
+    <Badge color="blue">Required</Badge>
+
+    Deploy as you normally do. Then open the rollout in the [web app](https://app.fireweave.ai) and press **Start rollout**. Nothing reaches users before this.
+  </Step>
+  <Step title="Watch it ramp to stable">
+    <Badge color="blue">Required</Badge>
+
+    Exposure rises stage by stage. At each stage FireWeave checks your guardrails before moving on. After the stability soak at 100%, the control point is marked stable. In **Manual** mode you press **Mark stable now**.
+  </Step>
+  <Step title="Clean up">
+    <Badge color="gray">Optional</Badge>
+
+    Later, have your agent remove the old code path. See [Promote and clean up](/ship/promote-and-clean-up).
+  </Step>
+</Steps>
+
+<Ramp title="Default strategy">
+  <RampStage label="Stage 1" percent="10" note="hold 30m · metrics checked" />
+  <RampStage label="Stage 2" percent="50" note="hold 60m · metrics checked" />
+  <RampStage label="Stage 3" percent="100" note="stability soak, then stable" />
+</Ramp>
+
+<Note>
+In **Manual** mode you move each stage yourself. In **Automatic** mode the ramp moves on by itself when the evidence is healthy. See [Strategies and checks](/ship/strategies-and-checks).
+</Note>
+
+If a guardrail set to **Block** breaches, the ramp parks at 0% and waits for you. See [Guardrails](/ship/guardrails) and [Run a rollout](/ship/run-a-rollout).

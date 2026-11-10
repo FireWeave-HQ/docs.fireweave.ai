@@ -1,0 +1,104 @@
+---
+title: "Errors and lifecycle"
+description: "Reads never throw, what a default-valued decision tells you, and how to shut down cleanly."
+---
+
+import { StateRail, State, StateSep } from "/snippets/flow.jsx";
+
+A read never throws. When anything goes wrong, you get the default you passed, and the details form tells you why. Only a server's `start()` fails loudly, so a misconfigured deploy never starts.
+
+## Reads never throw
+
+Use the details form when a value surprises you.
+
+<CodeGroup>
+
+```ts Node
+const d = await fw.controlPoints.getBooleanDetails('new-checkout', false, { targetingKey: user.id });
+// d.value, d.reason, d.errorKind, d.errorCode
+```
+
+```python Python
+d = fw.control_points.get_boolean_details("new-checkout", False, EvaluationContext(user_id))
+# d.value, d.reason, d.error_kind, d.error_code
+```
+
+</CodeGroup>
+
+| `reason` | Meaning |
+| --- | --- |
+| `TARGETING_MATCH`, `SPLIT` | FireWeave decided for this user |
+| `DISABLED` | The control point is off: you get the off value |
+| `STATIC` | Local mode: the value from your control-points file |
+| `DEFAULT` | Local mode: the key isn't in your file |
+| `CACHED` | Served from a fresh cache (web, mobile) |
+| `STALE` | Last good decisions after a failed refresh (web, mobile) |
+| `ERROR` | Read the error kind below |
+
+## Error kinds
+
+| Kind | When | Retried |
+| --- | --- | --- |
+| `NotReady` | Read before start finished | Yes |
+| `ControlPointNotFound` | The key doesn't exist in this project | No |
+| `TypeMismatch` | Read with the wrong getter (string read as boolean) | No |
+| `InvalidContext` | Missing targeting key, or the context is too large | No |
+| `Authentication`, `Authorization` | Key wrong, revoked, or from another project | No |
+| `RateLimited`, `Timeout`, `Network`, `BackendUnavailable` | FireWeave couldn't answer in time | Yes |
+| `MalformedResponse` | The response couldn't be read | No |
+| `UnsupportedCapability` | This SDK doesn't support what you asked for | No |
+| `Configuration` | Bad key, URL or mode at start | No |
+| `AlreadyClosed` | Read after shutdown | No |
+| `Internal` | An unexpected SDK fault | No |
+
+The kind is also in the decision's metadata as `fireweave.errorKind`. Error messages never contain a key.
+
+| Language | Not-found kind |
+| --- | --- |
+| Node, Web, Java | `ControlPointNotFound` |
+| Python | `ControlPointNotFoundError` |
+| Go | `KindControlPointNotFound`, `ErrControlPointNotFound` |
+| Rust | `ErrorKind::ControlPointNotFound` |
+| Dart, Swift <Badge color="orange">Preview</Badge> | `.controlPointNotFound` |
+
+## Lifecycle
+
+<StateRail title="status().state in Node">
+  <State>unstarted</State><StateSep /><State kind="on">starting</State><StateSep /><State kind="good">ready</State><StateSep /><State>shutdown</State><StateSep label="side exit:" /><State kind="bad">failed</State>
+</StateRail>
+
+| Status | Reads |
+| --- | --- |
+| Before start settles | Your default (`NotReady`) |
+| Ready | Live decisions |
+| Failed | Your default; `status()` says why |
+| After shutdown | Your default (`AlreadyClosed`) |
+
+Web apps fetch decisions up front. If the first fetch takes longer than 5 seconds, reads serve your default with reason `STALE`, so a slow start is never mistaken for a rollout at 0%.
+
+## Shut down
+
+Shut down once, when the process exits. It flushes pending work and is safe to call twice. Node, Python, Java and Rust wait at most 10 seconds; Go uses your context's deadline.
+
+| Language | Call |
+| --- | --- |
+| Node, Web | `await fw.shutdown()` |
+| Python | `fw.shutdown()` |
+| Go | `fw.Shutdown(ctx)` |
+| Java | `Fw.shutdown()` |
+| Rust | `fireweave::start::shutdown()` |
+| Dart <Badge color="orange">Preview</Badge> | `await fw.shutdown()` |
+| Swift <Badge color="orange">Preview</Badge> | `await fw.shutdown()` |
+
+A later `start()` begins fresh. A Dart command-line tool in remote mode must call `fw.shutdown()` to exit.
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Troubleshooting" href="/troubleshooting" icon="wrench">
+    Always getting the default?
+  </Card>
+  <Card title="Local mode and testing" href="/sdks/local-mode-and-testing" icon="flask">
+    Test the fallback paths.
+  </Card>
+</Columns>

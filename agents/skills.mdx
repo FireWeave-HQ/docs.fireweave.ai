@@ -1,0 +1,49 @@
+---
+title: "Skills"
+description: "The FireWeave skills you run in your coding agent, and when to use each one."
+---
+
+The FireWeave plugin adds a few skills you run yourself. A skill that changes code leaves the change in your working tree for you to review and commit.
+
+<Columns cols={2}>
+  <Card title="initialise" icon="wrench">
+    **When:** setting up a repository on your machine instead of through cloud setup.
+
+    **Changes:** adds the SDK to each app, FireWeave's agent instructions and hooks. `--reinit` redoes setup; `--remove` takes it out.
+  </Card>
+  <Card title="add-surface" icon="plus">
+    **When:** a repository is already set up and you want FireWeave in one more app.
+
+    **Changes:** that app only. Apps already set up are left alone.
+  </Card>
+  <Card title="adopt" icon="user-plus">
+    **When:** you cloned a set-up repository and your agent's instructions or hooks are missing.
+
+    **Changes:** agent instructions and hooks only. `--check` shows what's missing without writing.
+  </Card>
+  <Card title="cleanup" icon="eraser">
+    **When:** a control point has reached stable.
+
+    **Changes:** removes the old code path for the control points you pick, and retires them on this branch.
+  </Card>
+  <Card title="migrate-harness" icon="arrow-right-left">
+    **When:** an app reads features through PostHog, or an older FireWeave setup, or isn't on SDK 3 yet.
+
+    **Changes:** moves the app's reads onto the FireWeave SDK. `--check` reports first.
+  </Card>
+  <Card title="feedback" icon="message-square">
+    **When:** FireWeave behaved wrong in this session.
+
+    **Changes:** nothing in your repository. It builds a redacted report, shows it to you, and sends it only when you confirm.
+  </Card>
+</Columns>
+
+## Run a skill
+
+| Agent | How you run it | Example |
+| --- | --- | --- |
+| Claude Code | `/fireweave:<skill>` | `/fireweave:adopt` |
+| Cursor, Cline | `fw-<skill>` | `fw-adopt` |
+| Codex | `fw_<skill>`, with `_` for `-` | `fw_add_surface` |
+
+Every skill checks that `fw` is installed and signed in first, and asks you to sign in if it isn't.

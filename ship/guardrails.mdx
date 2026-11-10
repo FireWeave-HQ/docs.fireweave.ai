@@ -1,0 +1,52 @@
+---
+title: "Guardrails"
+description: "The metrics a rollout watches, their limits, and what happens on a breach."
+---
+
+A guardrail is a metric from your observability tool, a limit, and what to do when the limit is crossed. FireWeave reads each guardrail while a stage holds, and acts on a breach.
+
+| Metric | Limit | On breach | Latest |
+| --- | --- | --- | --- |
+| `checkout_errors` | is above 5 | **Block** | Healthy |
+| `p95_latency_ms` | is above 800 | **Alert** | Healthy |
+| `checkout_started` | is below 100 | **Info** | Not reported yet |
+
+<Note>The **Guardrails** tab on each rollout shows this table. The values above are an example.</Note>
+
+## On breach
+
+| Setting | What happens |
+| --- | --- |
+| **Block** | Parks the rollout at 0% and sends a Block alert. |
+| **Alert** | Sends an alert; the ramp waits for a person. Exposure stays. |
+| **Log** (shown as **Info** in the table) | Records the reading. Never acts. |
+
+To ramp automatically, a rollout needs at least one **Block** metric, and a **Minimum events** on every **Alert** and **Block** metric.
+
+## How readings count
+
+- A breach counts only after two readings in a row cross the limit.
+- **Minimum events** sets the fewest events a reading needs before FireWeave judges the metric. A reading with fewer events never breaches.
+- On an automatic rollout, a stage moves on only after every Alert and Block metric reads healthy three times.
+- A stage where no metric reports holds the ramp and sends an alert. An outage at your observability tool is not read as a bad release.
+
+## Where guardrails come from
+
+Your coding agent records what to watch with the change, so the rollout arrives with its guardrails. Metrics are read from the observability tool connected to the environment. See [Observability](/connect/observability).
+
+## Add or change a metric
+
+Anyone with Write on the project can change metrics until the rollout ends. On the rollout's **Guardrails** tab, press **Add metric**:
+
+<Steps>
+  <Step title="Pick the metric">Search what your vendor reports, or type the exact name your app emits.</Step>
+  <Step title="Set the limit">Choose **Breaches when** (is above, is below, is at least, is at most) and a **Limit**.</Step>
+  <Step title="Choose On breach">**Block**, **Alert** or **Log**. Optionally set **Minimum events**.</Step>
+  <Step title="Save metric">It counts in the current stage within 5 minutes.</Step>
+</Steps>
+
+### Custom metrics
+
+A metric your app hasn't sent yet, such as one this change adds, isn't in the vendor's list. Type its name to add it as a custom metric. It reads **Not reported yet** and never breaches until the first reading arrives.
+
+<Tip>**Check now** reads every metric immediately without changing the rollout.</Tip>

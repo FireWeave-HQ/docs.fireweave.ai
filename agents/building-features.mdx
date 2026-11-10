@@ -1,0 +1,81 @@
+---
+title: "Building features"
+description: "Your coding agent wraps each change behind a control point and records what to watch, and a check stops it if it skips a step."
+---
+
+import { Flow, FlowRow, FlowStart, FlowStep, FlowDecision, FlowTurn, FlowEnd } from "/snippets/flow.jsx";
+
+You ask your coding agent for a feature as usual. FireWeave's instructions in your repository tell it to ship the change behind a new control point that starts off.
+
+<Flow kicker="FLOW" title="One feature, from prompt to pull request">
+  <FlowRow><FlowStart /><FlowStep title="You ask for a feature" sub="In your coding agent" /><FlowDecision label="Behaviour change?" /><FlowStep title="Record the feature" sub="Stored by FireWeave, not a file" /><FlowTurn /></FlowRow>
+  <FlowRow><FlowStep title="Wrap the change" sub="New control point, default off" kind="key" /><FlowStep title="Choose what to watch" sub="Metrics, or why none" /><FlowStep title="Run the checklist" sub="Must pass before the PR" /><FlowStep title="Open a PR" kind="ok" /><FlowEnd /></FlowRow>
+</Flow>
+
+Questions, brainstorms and infra-only work (config, docs, formatting, tests) skip this. When it isn't clear, the agent treats it as a change.
+
+## What the agent writes
+
+The agent reads a new control point in one place, defaults it to `false`, and marks that place with an `@fireweave-controlpoint` comment.
+
+<CodeGroup>
+```ts Before
+export async function checkout(user, cart) {
+  return newCheckout(cart);
+}
+```
+
+```ts After
+import { fw } from "@fireweaveai/server-sdk/start";
+
+export async function checkout(user, cart) {
+  // @fireweave-controlpoint new-checkout
+  if (await fw.controlPoints.getBooleanValue("new-checkout", false, { targetingKey: user.id })) {
+    return newCheckout(cart);
+  }
+  return legacyCheckout(cart);
+}
+```
+
+```ts src/fireweave/control-points.ts
+import { defineControlPoints } from "@fireweaveai/server-sdk/start";
+
+// Local values only: production is decided by the rollout.
+export const controlPoints = defineControlPoints({
+  "new-checkout": { local: true },
+});
+```
+</CodeGroup>
+
+To see the feature on locally, the agent seeds it in the control-points file. It never changes the default at the call site to `true`.
+
+## The rules it follows
+
+| Rule | Why |
+| --- | --- |
+| A new key for every change | A merge registers only control points the change brings. |
+| One read, one app | A change that spans an API and its UI gets two control points. |
+| Default `false` | A missing control point serves the old path. |
+| Decide signals at the control point | Reuse a metric, add one, or say why none is needed. |
+| Never register, start, ramp or promote | A person presses **Start rollout** after the deploy. |
+
+## The stop check
+
+When the agent tries to finish, a check runs. It blocks the agent from finishing when, for example:
+
+- a control point comment has no recorded feature,
+- a recorded control point has no comment in the code, or
+- a read defaults to `true`.
+
+The agent fixes the gap and tries again. On the pull request, FireWeave's readiness check also reports a control point with no recorded feature.
+
+<Note>
+FireWeave doesn't detect changes on its own. Your agent wraps them because FireWeave's instructions tell it to, and the check catches a skipped step. You can [switch the instructions off](/agents/instructions-switch) for your own clone.
+</Note>
+
+## Next
+
+<Columns cols={2}>
+  <Card title="The ship path" icon="git-merge" href="/ship/ship-path">From pull request to rollout.</Card>
+  <Card title="Working as a team" icon="users" href="/agents/team-coordination">Two branches, one feature.</Card>
+</Columns>

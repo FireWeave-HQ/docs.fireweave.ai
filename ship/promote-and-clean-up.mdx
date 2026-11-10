@@ -1,0 +1,53 @@
+---
+title: "Promote and clean up"
+description: "Finish a rollout, move the change to the next environment, then remove the old code path."
+---
+
+import { Flow, FlowRow, FlowStart, FlowStep, FlowDecision, FlowTurn, FlowEnd } from "/snippets/flow.jsx";
+
+After the last stage, a rollout holds at 100% in a stability soak, then completes. The change then moves to the next environment, and once it's stable everywhere it shipped, your agent removes the old code path.
+
+<Flow kicker="FLOW" title="From 100% to clean code">
+  <FlowRow><FlowStart /><FlowStep title="Stability soak" sub="At 100%" /><FlowStep title="Completed" sub="Control point stable" kind="ok" /><FlowDecision label="Next env?" /><FlowTurn /></FlowRow>
+  <FlowRow><FlowStep title="Promote" sub="Or merge into its branch" kind="key" /><FlowStep title="Ramp there" sub="Waits for Start" /><FlowStep title="Stable everywhere" kind="ok" /><FlowTurn /></FlowRow>
+  <FlowRow><FlowStep title="/fireweave:cleanup" sub="In your coding agent" kind="key" /><FlowStep title="Merge the cleanup" sub="Old path removed" /><FlowEnd /></FlowRow>
+</Flow>
+
+## Stability soak
+
+| Mode | How the soak ends |
+| --- | --- |
+| Automatic | After 24 hours at 100%, or when you press **Mark stable now**. |
+| Manual | It waits for you: **Ready to mark stable**. Press **Mark stable now**. |
+
+When it ends, the rollout is **Completed** and its control points are marked stable.
+
+## Promote to the next environment
+
+How a completed rollout reaches the next environment depends on that environment:
+
+| Next environment | How the change gets there |
+| --- | --- |
+| Has its own branch | Merge into that branch. The merge registers the rollout there. |
+| Has no branch of its own, or shares one with the current environment | Press **Promote to** *environment* on the completed rollout. |
+
+A promoted rollout waits for **Start rollout** in its environment, then starts at its first stage. It uses that environment's [strategy](/ship/strategies-and-checks).
+
+### Auto-promote
+
+Turn on **Auto-promote rollouts** on the project's **Environments** page to promote every completed rollout automatically. With it off, a rollout that ramped automatically still promotes; otherwise a Member, Admin or the Owner presses **Promote**.
+
+## Clean up
+
+Once a control point is stable everywhere it shipped, the old code path is dead weight. Open it on the **Control points** page: its **Clean up** section has the command to copy.
+
+<Steps>
+  <Step title="Run cleanup in your coding agent">
+    ```text
+    /fireweave:cleanup new-checkout-flow
+    ```
+    Paste it from **Copy command**, or run `/fireweave:cleanup` on its own. It lists the stable control points still in this branch.
+  </Step>
+  <Step title="Pick what to remove">Your agent removes the old code path and the control point, and retires it on this branch. Nothing is committed for you.</Step>
+  <Step title="Review, commit and merge">Open a pull request and merge it into each environment branch. The control point is retired when the cleanup reaches each one.</Step>
+</Steps>

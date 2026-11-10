@@ -1,0 +1,57 @@
+---
+title: "Team and security"
+description: "Invite your team, choose their roles, and see who is signed in and what changed."
+---
+
+Everyone in your organization has one role, and every role covers every project. Manage people in **Settings › Members** and roles in **Settings › Roles**.
+
+| Role | Projects | What it can do |
+| --- | --- | --- |
+| **Owner** | Full access | Everything, including ownership and deleting the organization. An organization has one Owner. |
+| **Admin** | Full access | Members, settings, keys, access and every project. |
+| **Member** | Write | Creates projects and works in every project. |
+| **Viewer** | Read | Reads every project and changes nothing. |
+
+## Custom roles
+
+Owners and Admins create a role with **New role**. Give it a name, a project access level (**Read** or **Write**), and any of these organization permissions:
+
+| Permission | Lets them |
+| --- | --- |
+| **Invite members** | Invite people, only to roles no wider than their own. |
+| **Manage integrations** | Add and remove accounts for tools. |
+| **Manage CI keys** | Create and revoke the organization's CI keys. |
+| **View audit log** | Read **Settings › Audit log**. |
+
+## Invite people
+
+<Steps>
+  <Step title="Invite">
+    In **Settings › Members**, press **Invite people**, paste the emails and pick a role.
+  </Step>
+  <Step title="They accept">
+    Each person opens the invite email and confirms their address with a 6-digit code.
+  </Step>
+</Steps>
+
+Invites last 7 days. Resend, copy the link or withdraw one from **Invitations**. To hand over the organization, pick **Transfer ownership** from a member's menu in **Members**. They have 7 days to accept, and you become an Admin.
+
+## Your sign-ins
+
+**Account › Security** shows where you're signed in, and lets you sign out of each:
+
+| Section | What it lists |
+| --- | --- |
+| **Sign-in methods** | Email and password, and Google. |
+| **Browsers** | Where you're signed in on the web. |
+| **CLI devices** | Where `fw` is signed in as you, in each organization. |
+| **AI apps** | AI tools you let read FireWeave for you. They can read, not change. |
+
+**Revoke everywhere** signs out every other browser, CLI device and AI app. This browser stays signed in.
+
+## For Owners and Admins
+
+| Page | What you see |
+| --- | --- |
+| **Settings › Audit log** | What Owners and Admins changed, and who did it: members, keys, integrations and settings. |
+| **Settings › CI keys** | Every CI key, and members' `fw` devices. Sign out a device there; its owner runs `fw login` to sign in again. |

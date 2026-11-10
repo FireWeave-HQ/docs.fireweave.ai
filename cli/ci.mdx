@@ -1,0 +1,46 @@
+---
+title: "Run in CI"
+description: "Run fw sync in your own CI with a CI key, and read fw pr check's exit codes."
+---
+
+FireWeave already runs its readiness check on every pull request, so you don't need CI for that. Add `fw` to your own CI when you want your jobs to have this branch's FireWeave state.
+
+<Steps>
+  <Step title="Create a CI key">
+    In the web app, open **Project Setup**, go to **Set up locally**, choose **Run in CI**, then **Create CI key**. Pick the **CI read** scope. Only Owners and Admins can create one, and you see the key once.
+  </Step>
+  <Step title="Save it as a secret">
+    Store the key in your CI as `FW_ORG_API_KEY`.
+  </Step>
+  <Step title="Add the step">
+    The repo must already be linked to a project (the setup PR commits `.fireweave/project.json`).
+  </Step>
+</Steps>
+
+```yaml .github/workflows/fireweave.yml
+- name: Install fw
+  run: |
+    curl https://assets-fireweave-ai.s3.us-east-2.amazonaws.com/cli/latest/install.sh | FW_NO_MODIFY_PATH=1 bash
+    echo "$HOME/.fireweave/bin" >> "$GITHUB_PATH"
+
+- name: FireWeave sync
+  run: fw sync --branch "${{ github.head_ref || github.ref_name }}"
+  env:
+    FW_ORG_API_KEY: ${{ secrets.FW_ORG_API_KEY }}
+```
+
+Pull request runs need `--branch`, because CI checks out a detached HEAD.
+
+<Warning>
+  `FW_ORG_API_KEY` takes only a CI key (`fw_org_…`). Your app's `FIREWEAVE_KEY` doesn't work here, and `fw` won't fall back to a signed-in profile.
+</Warning>
+
+## `fw pr check`
+
+`fw pr check` is the readiness check FireWeave runs on each pull request and reports on the PR. It reads only the checkout, the diff and a manifests file that FireWeave writes for the run. It makes no network call and needs no key. Its exit codes:
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | Ready, or nothing to roll out. |
+| `1` | Not ready. The report lists each finding. |
+| `2` | Could not evaluate. Treat it as not ready. |

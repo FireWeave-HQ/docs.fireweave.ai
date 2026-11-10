@@ -1,0 +1,91 @@
+---
+title: "Set up FireWeave"
+description: "Create a project, merge the setup pull request FireWeave opens, then set your deploy key."
+---
+
+Most repositories are set up in the cloud: FireWeave opens a setup pull request and you merge it. If that fails, you can set up locally with your coding agent.
+
+## Cloud setup
+
+<Steps>
+  <Step title="Create a project">
+    In the [web app](https://app.fireweave.ai), create a project, pick your repositories and choose **Safe rollouts**. The wizard is covered step by step in [Create a project](/connect/create-project).
+  </Step>
+  <Step title="Review the setup pull request">
+    FireWeave analyzes your code and opens one setup PR per managed repository, on the branch `fireweave/setup`. It adds the SDK, the agent instructions and the `.fireweave/` folder. FireWeave never merges it.
+  </Step>
+  <Step title="Merge it">
+    Merge the setup PR once. The repository is now ready for features.
+  </Step>
+  <Step title="Set your deploy key">
+    See [below](#set-your-deploy-key). Your app needs it before a rollout can reach users.
+  </Step>
+</Steps>
+
+Track each repository on the project's **Project Setup** page. Its badge reads **Preparing…**, **Setup PR open**, **Needs your answers**, **Merged** or **Failed**.
+
+<Tip>
+Not the right person to run setup? Use **Send to a developer** to email the setup steps to a teammate. Running setup needs Write on the project.
+</Tip>
+
+## If cloud setup fails
+
+Open the **Project Setup** page. You have two ways forward.
+
+<Tabs>
+  <Tab title="Retry in the cloud">
+    Press **Retry** (or **Open a new PR** if the PR was closed). If setup stopped on questions, answer them and press **Save and rerun**.
+  </Tab>
+  <Tab title="Set up locally instead">
+    Press **Set up locally instead**. FireWeave closes its setup PR and stops its run; your setup answers stay. Then, in each managed repository:
+
+    <Steps>
+      <Step title="Install fw">
+        ```bash
+        curl https://assets-fireweave-ai.s3.us-east-2.amazonaws.com/cli/latest/install.sh | bash
+        ```
+      </Step>
+      <Step title="Sign in">
+        ```bash
+        fw login
+        ```
+      </Step>
+      <Step title="Link the repo">
+        ```bash
+        fw init
+        ```
+      </Step>
+      <Step title="Add the agent plugin">
+        ```bash
+        fw plugins install fireweave
+        ```
+        In Claude Code you can instead run `/plugin marketplace add FireWeave-HQ/plugins-marketplace`, then `/plugin install fireweave@fireweave`.
+      </Step>
+      <Step title="Run initialise in your coding agent">
+        ```text
+        /fireweave:initialise
+        ```
+        It reads your saved answers. Review the changes, commit, open a PR and merge it.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Set your deploy key
+
+After the setup PR merges, give your app its key in each environment it deploys to. Create keys on the project's keys page ([Keys](/connect/keys)).
+
+| App | Variable | Key |
+| --- | --- | --- |
+| Server | `FIREWEAVE_KEY` | Server key |
+| Browser | `FIREWEAVE_BROWSER_KEY` | Browser key |
+
+<Warning>
+Never put a server key in browser code. Browser apps use a browser key.
+</Warning>
+
+## Next
+
+<Card title="Ship your first rollout" icon="rocket" href="/first-rollout">
+  Build a feature with your agent and take it to stable.
+</Card>

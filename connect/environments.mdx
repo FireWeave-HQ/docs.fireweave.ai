@@ -1,0 +1,44 @@
+---
+title: "Environments"
+description: "Map your branches to environments, in the order your changes promote through them."
+---
+
+import { Flow, FlowRow, FlowStart, FlowStep, FlowDecision, FlowTurn, FlowEnd } from "/snippets/flow.jsx";
+
+An environment is one stage your changes go through, such as Staging or Production. Each one names the branch that feeds it, so a merge tells FireWeave where a change lands.
+
+<Flow kicker="FLOW" title="From merge to environment">
+  <FlowRow><FlowStart /><FlowStep title="Merge a PR" sub="into a branch" /><FlowDecision label="Environment branch?" /><FlowStep title="Rollout registered" sub="in that branch's environment" kind="key" /><FlowTurn /></FlowRow>
+  <FlowRow><FlowStep title="Press Start" sub="after your deploy" /><FlowStep title="Ramp to stable" kind="ok" /><FlowStep title="Next environment" sub="promotion order" /><FlowEnd /></FlowRow>
+</Flow>
+
+## What an environment has
+
+| Field | What it does |
+| --- | --- |
+| **Order** | Promotion order, top to bottom. A rollout in an environment starts only once its change has completed in every environment above it. |
+| **Branch rules** | The branch in each Managed repository that feeds this environment. |
+| **Tag rules** | Comma-separated tags, with `*` for any characters, for example `v*-rc*`. |
+| **Tier** | **Production** or **Non-production**. With no tier set, the last environment counts as production. |
+| **Observability** | The accounts that read metrics, logs and traces here. See [Observability](/connect/observability). |
+
+## Which merge registers where
+
+Only an **exact** branch rule makes an environment branch. Merging into it registers a rollout in that environment. A merge into any other branch registers nothing.
+
+| Merge into | Registers a rollout in |
+| --- | --- |
+| `develop` | Development |
+| `staging` | Staging |
+| `main` | Production |
+| `feature/login` | Nothing |
+
+The table is an example. Your branches are whatever you set in the wizard or on **Environments**.
+
+<Note>FireWeave edits exact branches only. A prefix or pattern rule is kept as set: remove it and add an exact branch to change it.</Note>
+
+## Edit environments
+
+Open your project's **Environments** page. Use **Add environment**, move environments up or down to reorder them, or open one to edit its rules, tier and observability. Owners, Admins and Members can change them; Viewers can only look.
+
+You can't delete an environment while a rollout is live in it.

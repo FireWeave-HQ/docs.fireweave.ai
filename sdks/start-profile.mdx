@@ -1,0 +1,75 @@
+---
+title: "Start profile"
+description: "The variables start() reads, how it picks local or remote mode, and which key goes where."
+---
+
+import { Flow, FlowRow, FlowStart, FlowStep, FlowDecision, FlowTurn, FlowEnd } from "/snippets/flow.jsx";
+
+`start()` sets the SDK up from a few variables and fails loudly when a deploy is missing its key. It never sends the environment name anywhere and never prints a key.
+
+## How the mode is chosen
+
+<Flow kicker="MODE RULE" title="Local or remote">
+  <FlowRow><FlowStart /><FlowDecision label="Mode option set?" /><FlowStep title="Use that mode" sub="local ignores the key, with a warning" /><FlowTurn /></FlowRow>
+  <FlowRow><FlowDecision label="Key present?" /><FlowStep title="Remote" sub="The rollout decides" kind="ok" /><FlowTurn /></FlowRow>
+  <FlowRow><FlowDecision label="Dev environment name?" /><FlowStep title="Local" sub="Serves your local values" kind="ok" /><FlowTurn /></FlowRow>
+  <FlowRow><FlowStep title="Configuration error" sub="Names the missing key variable" kind="key" /><FlowEnd /></FlowRow>
+</Flow>
+
+The development names are `development`, `dev`, `local` and `test`, compared case-insensitively. Anything else, including no name at all, is an error: a deploy that lost its key never turns into silent local evaluation.
+
+## Variables
+
+Each setting resolves as: `start()` option, then the variable, then the default. Blank values count as unset.
+
+| Setting | Option | Server | Browser and mobile apps (build time) |
+| --- | --- | --- | --- |
+| Key | `key` | `FIREWEAVE_KEY` | `FIREWEAVE_BROWSER_KEY` |
+| Endpoint | `url` | `FIREWEAVE_URL` | `FIREWEAVE_URL` |
+| Environment name | `environment` | `FIREWEAVE_ENV`, then `APP_ENV` | `FIREWEAVE_ENV` |
+| Instance id | `instanceId` | `FIREWEAVE_INSTANCE_ID` | — |
+| Local values | `controlPoints` | — | — |
+| Mode override | `mode` | — | — |
+
+<Note>
+Node also reads `NODE_ENV` after `APP_ENV`. Option names follow each language (`control_points`, `instance_id` in Python and Rust; `ControlPoints`, `InstanceID` in Go).
+</Note>
+
+`FIREWEAVE_URL` is optional: by default the SDK calls FireWeave's production endpoint. An explicit URL must be `https`, except on `localhost`.
+
+### Where browser and mobile apps get their values
+
+A shipped app has no environment to trust, so its values are fixed at build time.
+
+| Platform | Source |
+| --- | --- |
+| Web (Vite) | The `fireweave()` plugin from `@fireweaveai/web-sdk/vite`. It fails the build if a server key reaches the output. |
+| Web (other bundlers) | `fireweaveDefine()` from `@fireweaveai/web-sdk/define` |
+| Flutter, Dart web <Badge color="orange">Preview</Badge> | `--dart-define=FIREWEAVE_BROWSER_KEY=…` |
+| iOS, macOS <Badge color="orange">Preview</Badge> | Info.plist keys of the same names |
+
+## Key families
+
+Create keys on the project's **SDK keys** page ([Keys](/connect/keys)). The SDK checks the key before any request; an error names where the key came from, never its value.
+
+| Key | Server | Browser and mobile apps |
+| --- | --- | --- |
+| Server key `project-api-key_…` | Accepted | **Rejected.** A server key must never ship to a client: revoke it. |
+| Browser key `fw_public_…` | **Rejected** | Accepted |
+| Org tokens `fw_org_…`, CLI tokens `cli_at_…`, analytics-vendor keys | Rejected | Rejected |
+
+## When something is wrong
+
+| Profile | Bad configuration | Key refused or FireWeave unreachable |
+| --- | --- | --- |
+| Server | `start()` fails, so the deploy doesn't start | One log line per kind; reads serve defaults |
+| Browser and mobile apps | One log line; reads serve defaults; the app keeps running | Reported in status; reads serve defaults |
+
+`status()` reports the mode, why it was chosen, the host and where each value came from. It never includes the key.
+
+## Rules worth knowing
+
+- One client per process (per page in browsers, per isolate in Dart).
+- Calling `start()` again with the same settings does nothing. Different settings are an error on servers.
+- Reads never throw. In Node, Python, Go, Java and Rust, a server read before `start()` starts the SDK from the environment.
+- Local values are served only in local mode. In remote mode your call site's default (`false`) applies until a rollout says otherwise.

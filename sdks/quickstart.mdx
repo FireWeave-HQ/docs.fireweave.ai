@@ -1,0 +1,215 @@
+---
+title: "SDK quickstart"
+description: "Install the FireWeave SDK, start it once, and read your first control point."
+---
+
+import { Flow, FlowRow, FlowStart, FlowStep, FlowEnd } from "/snippets/flow.jsx";
+
+One `start` call at boot, one read where the change lives. Locally you need no key; deployed apps set one.
+
+<Flow kicker="FLOW" title="From install to your first read">
+  <FlowRow><FlowStart /><FlowStep title="Install" sub="One package" /><FlowStep title="Start" sub="Once, at boot" kind="key" /><FlowStep title="Read" sub="Default stays false" /><FlowStep title="Set the key" sub="In your deploy" /><FlowEnd /></FlowRow>
+</Flow>
+
+<Note>
+If you set up FireWeave with the setup PR, the SDK is already wired. Your coding agent adds reads as it builds features. This page is for wiring it by hand.
+</Note>
+
+<Steps>
+  <Step title="Install">
+    <CodeGroup>
+
+    ```bash Node
+    npm install @fireweaveai/server-sdk
+    # bun add @fireweaveai/server-sdk  ·  deno add npm:@fireweaveai/server-sdk
+    ```
+
+    ```bash Web
+    npm install @fireweaveai/web-sdk
+    ```
+
+    ```bash Python
+    pip install fireweave
+    ```
+
+    ```bash Go
+    go get github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v3
+    ```
+
+    ```xml Java
+    <dependency>
+      <groupId>ai.fireweave</groupId>
+      <artifactId>fireweave-sdk</artifactId>
+      <version>3.0.0</version>
+    </dependency>
+    ```
+
+    ```bash Rust
+    cargo add fireweave
+    ```
+
+    ```yaml Dart (Preview)
+    # Not on pub.dev yet: clone fireweave-sdk next to your app
+    dependencies:
+      fireweave:
+        path: ../fireweave-sdk/sdks/dart
+    ```
+
+    ```swift Swift (Preview)
+    // Package.swift — clone fireweave-sdk next to your package
+    dependencies: [.package(path: "../fireweave-sdk/sdks/swift")],
+    // in your target
+    dependencies: [.product(name: "FireweaveStart", package: "swift")]
+    ```
+
+    </CodeGroup>
+
+    Dart and Swift <Badge color="orange">Preview</Badge> install from source.
+  </Step>
+
+  <Step title="Start once, then read">
+    List each control point with the value it serves locally, call `start` first thing at boot, and read with `false` as the default.
+
+    <CodeGroup>
+
+    ```ts Node
+    import { start, fw, defineControlPoints } from '@fireweaveai/server-sdk/start';
+
+    start({ controlPoints: defineControlPoints({ 'new-checkout': { local: true } }) });
+
+    // @fireweave-controlpoint new-checkout
+    if (await fw.controlPoints.getBooleanValue('new-checkout', false, { targetingKey: user.id })) {
+      // new path
+    }
+    ```
+
+    ```ts Web
+    // vite.config.ts: plugins: [fireweave()] from '@fireweaveai/web-sdk/vite'
+    import { start, fw, defineControlPoints } from '@fireweaveai/web-sdk/start';
+
+    await start({ controlPoints: defineControlPoints({ 'new-checkout': { local: true } }) });
+    await fw.identify(user.id);
+
+    // Synchronous: safe in a render path.
+    // @fireweave-controlpoint new-checkout
+    if (fw.controlPoints.getBooleanValue('new-checkout', false)) {
+      // new path
+    }
+    ```
+
+    ```python Python
+    from fireweave import EvaluationContext
+    from fireweave.start import start, fw, define_control_points
+
+    start(control_points=define_control_points({"new-checkout": {"local": True}}))
+
+    # @fireweave-controlpoint new-checkout
+    if fw.control_points.get_boolean_value("new-checkout", False, EvaluationContext(user_id)):
+        ...  # new path
+    ```
+
+    ```go Go
+    import "github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v3/fw"
+
+    var controlPoints = fw.DefineControlPoints(fw.LocalControlPoints{
+    	"new-checkout": {Local: true},
+    })
+
+    func main() {
+    	if err := fw.Start(fw.Options{ControlPoints: controlPoints}); err != nil {
+    		log.Fatal(err)
+    	}
+    	defer fw.Shutdown(context.Background())
+
+    	// @fireweave-controlpoint new-checkout
+    	if fw.ControlPoints().GetBooleanValue("new-checkout", false, fw.For(user.ID)) {
+    		// new path
+    	}
+    }
+    ```
+
+    ```java Java
+    import ai.fireweave.sdk.domain.EvaluationContext;
+    import ai.fireweave.sdk.start.*;
+
+    Fw.start(StartOptions.builder()
+            .controlPoints(Fw.defineControlPoints(Map.of("new-checkout", LocalControlPoint.local(true))))
+            .build());
+
+    // @fireweave-controlpoint new-checkout
+    if (Fw.controlPoints().getBooleanValue("new-checkout", false,
+            EvaluationContext.builder().targetingKey(user.id()).build())) {
+        // new path
+    }
+    ```
+
+    ```rust Rust
+    use fireweave::start::{self, define_control_points, LocalControlPoint, StartOptions};
+    use fireweave::EvaluationContext;
+
+    start::start(StartOptions {
+        control_points: define_control_points([("new-checkout", LocalControlPoint::local(true))]),
+        ..Default::default()
+    })?;
+
+    let ctx = EvaluationContext::new().with_targeting_key(&user.id);
+    // @fireweave-controlpoint new-checkout
+    if start::control_points().get_boolean_value("new-checkout", false, Some(&ctx)) {
+        // new path
+    }
+    ```
+
+    ```dart Dart (Preview)
+    import 'package:fireweave/client.dart'; // server.dart for Dart servers
+
+    Future<void> main() async {
+      await Fireweave.start(
+          controlPoints: defineControlPoints({'new-checkout': LocalControlPoint.local(true)}));
+      runApp(const App());
+    }
+
+    // Inside build(): synchronous.
+    // @fireweave-controlpoint new-checkout
+    if (fw.controlPoints.getBooleanValue('new-checkout', false)) { /* new path */ }
+    ```
+
+    ```swift Swift (Preview)
+    import FireweaveStart
+
+    // First thing in App.init() or main
+    startFireweave(controlPoints: defineControlPoints(["new-checkout": .local(true)]))
+
+    // @fireweave-controlpoint new-checkout
+    if fw.controlPoints.getBooleanValue("new-checkout", default: false) { /* new path */ }
+    ```
+
+    </CodeGroup>
+
+    The `@fireweave-controlpoint` comment marks the one place the code reads the control point. Your coding agent writes it for you.
+  </Step>
+
+  <Step title="Run it">
+    | Where | Set | Mode |
+    | --- | --- | --- |
+    | Your machine, tests | `FIREWEAVE_ENV=development` (or `dev`, `local`, `test`), no key | Local: serves the `local` values |
+    | Deployed server | `FIREWEAVE_KEY` = a server key | Remote: the rollout decides |
+    | Deployed browser or mobile app | `FIREWEAVE_BROWSER_KEY` = a browser key, at build time | Remote |
+
+    A server deploy with no key and no development environment name fails at start instead of serving defaults. A browser or mobile app logs the problem and serves defaults. Details: [Start profile](/sdks/start-profile).
+  </Step>
+
+  <Step title="See it in the web app">
+    Create keys on the project's **SDK keys** page ([Keys](/connect/keys)). Once a merged change adds the control point, it appears on the project's **Control points** page with its state in each environment.
+  </Step>
+</Steps>
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Start profile" href="/sdks/start-profile" icon="power-off">
+    Variables, mode rule and key families.
+  </Card>
+  <Card title="Local mode and testing" href="/sdks/local-mode-and-testing" icon="flask">
+    Run without a key; test without a network.
+  </Card>
+</Columns>

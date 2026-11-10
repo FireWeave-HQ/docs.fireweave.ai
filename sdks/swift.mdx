@@ -1,0 +1,73 @@
+---
+title: "Swift"
+description: "Add the FireWeave Swift package from source, start it in one line and read control points."
+---
+
+<Badge color="orange">Preview</Badge>
+
+The Swift SDK covers iOS and macOS apps and Swift servers. It is not on a registry yet, so you add it from the SDK repository.
+
+<Steps>
+  <Step title="Add it from source">
+    Clone `https://github.com/FireWeave-HQ/fireweave-sdk` next to your package, then depend on it by path:
+    ```swift Package.swift
+    // swift-tools-version: 6.0
+    platforms: [.macOS(.v13), .iOS(.v16)],
+    dependencies: [.package(path: "../fireweave-sdk/sdks/swift")],
+    // in your target
+    dependencies: [.product(name: "FireweaveStart", package: "swift")]
+    ```
+  </Step>
+  <Step title="Declare your control points">
+    ```swift FireweaveControlPoints.swift
+    import FireweaveStart
+
+    // Every control point the app reads, with the value served in local mode.
+    let appControlPoints = defineControlPoints([
+      "new-checkout": .local(true, description: "New checkout flow"),
+    ])
+    ```
+  </Step>
+  <Step title="Start once at launch">
+    ```swift
+    @main
+    struct MyApp: App {
+      init() { startFireweave(controlPoints: appControlPoints) }
+      // ...
+    }
+    ```
+    In UIKit, call it in `application(_:didFinishLaunchingWithOptions:)`; on a server, first thing in `main`.
+  </Step>
+  <Step title="Read a control point">
+    ```swift
+    // @fireweave-controlpoint new-checkout
+    if fw.controlPoints.getBooleanValue("new-checkout", default: false) {
+      // new path
+    }
+    ```
+    Reads are synchronous lookups and never throw.
+  </Step>
+</Steps>
+
+## Apps and servers
+
+| Profile | Key | Where it is read from |
+| --- | --- | --- |
+| App (iOS, macOS) | Browser key, `fw_public_…` | Info.plist: `FIREWEAVE_BROWSER_KEY`, `FIREWEAVE_URL`, `FIREWEAVE_ENV` |
+| Server | Project key, `project-api-key_…` | Environment: `FIREWEAVE_KEY`, `FIREWEAVE_URL`, `FIREWEAVE_ENV`, then `APP_ENV` |
+
+A debug build of an app with no key and no environment name runs local. A release build that lost its key never does: the app keeps running, logs the problem and serves defaults. A server with a bad configuration stops at launch with the message.
+
+<Warning>
+  Never ship a project key (`project-api-key_…`) in an app. The app profile rejects it.
+</Warning>
+
+## Identify users
+
+At sign-in, register the user. The app then fetches that user's decisions.
+
+```swift
+await fw.identify("user_42", properties: ["plan": "pro"])
+```
+
+Call `await fw.reset()` at sign-out, and `await fw.ready()` to wait for the first fetch.
