@@ -1,113 +1,69 @@
 ---
-title: "Package and API index"
-description: "Fireweave package names, versions, publish state, env vars, and runtime compatibility. Links out to per-SDK pages."
+title: "Packages"
+description: "FireWeave SDK package names, versions, runtimes and the settings they read."
 ---
 
-Fireweave ([fireweave.ai](https://fireweave.ai)) is an AI release engineer that takes every coding-agent change to production safely with control points, cohort rollouts, guardrails, and live stability and adoption signals.
+Every SDK is at **3.0**. Upgrading from 2.x? See [Migrate to 3.0](/sdks/migrate-3).
 
-Developer index. Full call surfaces live on the [SDK pages](/sdks/node). All six registries below published **2.3.0** on 2026-09-09. Brand tokens stay as published: npm `@fireweaveai/*`, PyPI `fireweave`, Go `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2`, Java `ai.fireweave`, crates.io `fireweave`.
+## SDKs
 
-## Packages
-
-| Surface | Package | Published | Runtime |
+| SDK | Package | Version | Runtime |
 | --- | --- | --- | --- |
-| [Node / Bun / Deno](/sdks/node) | `@fireweaveai/server-sdk` | npm **2.3.0** (`latest`) | Node `>=20.20`; Bun `>=1.2`; Deno `>=2.0` |
-| [Python](/sdks/python) | `fireweave` | PyPI **2.3.0** | Python `>=3.10` |
-| [Go](/sdks/go) | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2` | module proxy **v2.3.0** | `go 1.25.13` |
-| [Java](/sdks/java) | `ai.fireweave:fireweave-sdk` | Maven Central **2.3.0** | Java 11+ |
-| [Browser](/sdks/web) | `@fireweaveai/web-sdk` | npm **2.3.0** | Browser. Not a Node/Deno target |
-| [Rust](/sdks/rust) | `fireweave` | crates.io **2.3.0** | rust-version **1.75**; deps `ureq`, `serde`, `serde_json` |
+| [Node, Bun, Deno](/sdks/node) | npm `@fireweaveai/server-sdk` | 3.0.0 | Node 20.20+ |
+| [Browser](/sdks/web) | npm `@fireweaveai/web-sdk` | 3.0.0 | Browsers |
+| [Python](/sdks/python) | PyPI `fireweave` | 3.0.0 | Python 3.10+ |
+| [Go](/sdks/go) | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v3` | v3.0.0 | Go 1.26.9+ |
+| [Java](/sdks/java) | Maven `ai.fireweave:fireweave-sdk` | 3.0.0 | Java 11+ |
+| [Rust](/sdks/rust) | crates.io `fireweave` | 3.0.0 | Rust 1.85+ |
+| [Dart](/sdks/dart) <Badge color="orange">Preview</Badge> | from source | — | Dart 3.8+ |
+| [Swift](/sdks/swift) <Badge color="orange">Preview</Badge> | from source | — | iOS 16+, macOS 13+ |
 
-`@fireweaveai/sdk` is frozen at **2.1.0**. Do not present it as the Node install target. Use `@fireweaveai/server-sdk`.
+<CodeGroup>
 
-### Java artifact skew
+```bash Node
+npm install @fireweaveai/server-sdk
+```
 
-`fireweave-sdk` is **2.3.0**. These leftover artifacts remain at **0.1.0** and are not the 2.3.0 SDK:
+```bash Browser
+npm install @fireweaveai/web-sdk
+```
 
-- `ai.fireweave:fireweave-openfeature` **0.1.0**
-- `ai.fireweave:fireweave-adapter-posthog` **0.1.0**
-- `ai.fireweave:fireweave-testing` **0.1.0**
+```bash Python
+pip install fireweave
+```
 
-Do not imply a uniform 2.3.0 line across every `ai.fireweave:*` coordinate.
+```bash Go
+go get github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v3
+```
 
-### Swift
+```bash Rust
+cargo add fireweave
+```
 
-A Swift package exists in-tree at `sdks/swift/Package.swift` (iOS 16+, macOS 13+, zero dependencies, tag `swift/v2.2.0`). `Package.swift` is not at the repository root, so SwiftPM cannot resolve it from the repository URL. It is **not installable**. There is no Swift SDK page.
+</CodeGroup>
 
-Node, Python core, Web, Go, and Java `fireweave-sdk` have zero runtime dependencies. Rust has exactly three: `ureq`, `serde`, `serde_json`.
+## Settings the start profile reads
 
-See [Compatibility](/sdks/compatibility) for the adapter and type matrix.
+The [start profile](/sdks/start-profile) reads these. The core API (`initFireweave` and its equivalents) reads none.
 
-## Env vars and config
+| Setting | Server apps | Browser and mobile apps (at build time) |
+| --- | --- | --- |
+| Key | `FIREWEAVE_KEY` (server key) | `FIREWEAVE_BROWSER_KEY` (browser key) |
+| Endpoint | `FIREWEAVE_URL` | `FIREWEAVE_URL` |
+| Environment name | `FIREWEAVE_ENV`, then `APP_ENV` | `FIREWEAVE_ENV` |
 
-**No SDK reads environment variables.** Credentials are explicit init options in every language.
+With no key, the SDK runs locally only when the environment name is `development`, `dev`, `local` or `test`. Anywhere else, a server app fails at start; a browser or mobile app serves defaults and reports the missing key.
 
-| Name | Who reads it |
-| --- | --- |
-| `FW_API_URL` | **Nobody in the SDK.** Your app may read it and pass `apiUrl` / `api_url` / `APIURL`. |
-| `FW_PROJECT_API_KEY` | **Nobody in the SDK.** Your app may read it and pass `apiKey` / `api_key` / `APIKey`. |
-| `FW_DEPRECATION_WARNINGS` | **Nothing.** Removed. The `flags` alias is silent at runtime (Python emits one `DeprecationWarning` on first access). |
-
-Timeouts: request **3000 ms**, shutdown **10000 ms**. Host allowlists and https rules: [Configuration](/production/configuration).
-
-## Adapters (quick map)
-
-| Adapter | Node | Python | Go | Java | Web | Rust |
-| --- | --- | --- | --- | --- | --- | --- |
-| Remote | `FireweaveRemoteAdapter` | `FireweaveRemoteAdapter` | `infrastructure/adapters/remote` | `FireweaveRemoteAdapter` | `FireweaveRemoteWebAdapter` | `FireweaveRemoteAdapter` |
-| Local / dev | `FireweaveLocalAdapter` | `FireweaveLocalAdapter` | `infrastructure/adapters/local` | `FireweaveLocalAdapter` | `FireweaveLocalWebAdapter` | `FireweaveLocalAdapter` |
-| In-memory | `InMemoryAdapter` | `InMemoryAdapter` | `infrastructure/adapters/inmemory` | `InMemoryAdapter` (testing leftover) | `InMemoryWebAdapter` | `InMemoryAdapter` |
-| PostHog / OpenFeature | **absent** | **absent** | **absent** | leftover 0.1.0 artifacts only | **absent** | **absent** |
-
-`initFireweave` / `init_fireweave` / `Fireweave.init` / `fireweave.Init` selects remote or local from the required `mode` option.
-
-## Errors
-
-15 kinds. Evaluation never throws. Full table: [Errors](/production/errors).
-
-Node/Web: `FireweaveError`. Python: per-kind classes + `ErrorKind`. Go: `fireweave.Error`. Java: `ErrorKind` + `FireweaveException`. Rust: `FireweaveError`.
-
-## Language gates
-
-| API | Node | Python | Go | Java | Web | Rust |
-| --- | --- | --- | --- | --- | --- | --- |
-| Entry point | `initFireweave` | `init_fireweave` | `fireweave.Init` | `Fireweave.init` | `initFireweave` | `init_fireweave` |
-| Product namespace | `controlPoints` | `control_points` | `ControlPoints()` | `controlPoints()` | `controlPoints` (sync) | `control_points` |
-| Deprecated alias | `flags` (silent) | `flags` (one warning) | `Flags()` (silent) | `flags()` (silent) | `flags` (silent) | `flags()` (silent) |
-| Register target | `client.registerTarget` | `client.register_target` | `client.RegisterTarget` | `client.registerTarget` | `registerTarget` + `identify` | `client.register_target` |
-| Typed getters | boolean / string / number / object | boolean / string / number / object | same, `Get*Value` | same, including `getNumberValue` / `getObjectValue` | same (sync) | same, `get_*_value` |
-| Env auto-read | **no** | **no** | **no** | **no** | **no** | **no** |
-
-The `flags` alias shares identity with `controlPoints` and is not the documented name.
+<Warning>
+  `FW_PROJECT_API_KEY` and `FW_API_URL` are no longer read. Rename them to `FIREWEAVE_KEY` and `FIREWEAVE_URL`; the values don't change.
+</Warning>
 
 ## Wire paths
 
-| Method | Path | Who implements the client |
-| --- | --- | --- |
-| `POST` | `/v1/flags/evaluate` | All seven remote adapters |
-| `POST` | `/v1/targets/register` | All seven remote adapters |
-| `POST` | `/v1/capture` | Still a protocol path. v1 public surface does not expose exposures or signals. Node and Web remote adapters still define the constant. |
+SDKs call three routes with `Authorization: Bearer <key>`. See [HTTP API](/reference/http-api).
 
-Auth: `Authorization: Bearer <key>`.
-
-See [HTTP API](/reference/http-api). The [test server](/testing) implements evaluate and `/health` — **not** `/v1/targets/register`.
-
-## Runtime compatibility notes
-
-- **Node** is ESM, portable across Node / Bun / Deno. Deno import: `npm:@fireweaveai/server-sdk`.
-- **Web** targets browsers only. Suite runs on Bun + happy-dom. No server entry point.
-- **Go** import and `go get` must include `/v2`.
-- CI “latest” / “stable” / “canary” cells **float**. Document minimums from manifests.
-- Swift is in-tree and not distributable. There is no Android, .NET, PHP, or Ruby package under `sdks/`.
-
-## Next
-
-<Columns cols={3}>
-  <Card title="Node" href="/sdks/node" icon="js" />
-  <Card title="Python" href="/sdks/python" icon="python" />
-  <Card title="Go" href="/sdks/go" icon="golang" />
-  <Card title="Java" href="/sdks/java" icon="java" />
-  <Card title="Web" href="/sdks/web" icon="window" />
-  <Card title="Rust" href="/sdks/rust" icon="gear" />
-  <Card title="Compatibility" href="/sdks/compatibility" icon="table" />
-</Columns>
+| Method | Path |
+| --- | --- |
+| `POST` | `/v1/control-points/evaluate` |
+| `POST` | `/v1/capture` |
+| `POST` | `/v1/targets/register` |

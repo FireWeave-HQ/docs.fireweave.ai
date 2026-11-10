@@ -1,0 +1,53 @@
+---
+title: "Keys"
+description: "Create the server, browser and CI keys your deployed apps and pipelines use."
+---
+
+Your deployed apps need a key to reach FireWeave. Local development needs none: without a key the SDK runs in local mode.
+
+| Key | Starts with | Set it as | Where it's allowed |
+| --- | --- | --- | --- |
+| **Server key** | `project-api-key_` | `FIREWEAVE_KEY` | Your servers. It's a secret. |
+| **Browser key** | `fw_public_` | `FIREWEAVE_BROWSER_KEY` | Your web bundle, at build time. It can only read control points and send events. |
+| **CI key** | `fw_org_` | `FW_ORG_API_KEY` | Your CI, for `fw sync`. |
+
+<Warning>Never commit a server key or a CI key, or paste one into a chat or a pull request.</Warning>
+
+## Server and browser keys
+
+<Steps>
+  <Step title="Open SDK keys">
+    In your project, open **Settings › SDK keys** and press **Create key**.
+  </Step>
+  <Step title="Pick the type and environment">
+    Choose **Server key** or **Browser key**, and the environment it serves. A project with no environments yet gets a key for any environment.
+  </Step>
+  <Step title="Copy it once">
+    Press **Create & copy key**. It's shown only once.
+  </Step>
+  <Step title="Set it where the app is deployed">
+    Set it as `FIREWEAVE_KEY` or `FIREWEAVE_BROWSER_KEY` in that environment's deploy.
+  </Step>
+</Steps>
+
+A key scoped to an environment serves only that environment. If the environment is removed, the key stops working. Only Owners and Admins create and revoke keys. Revoking stops apps that use it at their next call, and it can't be undone.
+
+## CI keys
+
+Create one from your project's **Run in CI** sheet with **Create CI key**:
+
+| Scope | Use it for |
+| --- | --- |
+| **CI read** | Reads what `fw sync` needs. The key for CI. |
+| **Management** | Full access to the organization's projects. Not for CI. |
+
+Owners, Admins and roles with **Manage CI keys** create them. A CI key expires after 1 to 365 days and acts for the person who created it. Store it as the secret `FW_ORG_API_KEY`, then add this step:
+
+```yaml GitHub Actions
+- name: FireWeave sync
+  run: fw sync --branch "${{ github.head_ref || github.ref_name }}"
+  env:
+    FW_ORG_API_KEY: ${{ secrets.FW_ORG_API_KEY }}
+```
+
+Pull request runs need `--branch`, because CI checks out a detached HEAD. Owners and Admins see and revoke every CI key in **Settings › CI keys**. More in [fw in CI](/cli/ci).

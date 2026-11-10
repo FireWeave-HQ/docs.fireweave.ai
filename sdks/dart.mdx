@@ -1,0 +1,81 @@
+---
+title: "Dart and Flutter"
+description: "Add the FireWeave Dart SDK from source, start it in one line and read control points."
+---
+
+<Badge color="orange">Preview</Badge>
+
+The Dart SDK covers Flutter apps, Dart web apps and Dart servers. It is not on pub.dev yet, so you add it from the SDK repository.
+
+<Steps>
+  <Step title="Add it from source">
+    Clone `https://github.com/FireWeave-HQ/fireweave-sdk` next to your app, then depend on it by path:
+    ```yaml pubspec.yaml
+    dependencies:
+      fireweave:
+        path: ../fireweave-sdk/sdks/dart
+    ```
+  </Step>
+  <Step title="Declare your control points">
+    ```dart lib/fireweave/control_points.dart
+    import 'package:fireweave/client.dart';
+
+    // Every control point the app reads, with the value served in local mode.
+    final controlPoints = defineControlPoints({
+      'new-checkout': const LocalControlPoint.local(true, description: 'New checkout flow'),
+    });
+    ```
+  </Step>
+  <Step title="Start before runApp">
+    ```dart lib/main.dart
+    Future<void> main() async {
+      await Fireweave.start(controlPoints: controlPoints);
+      runApp(const App());
+    }
+    ```
+  </Step>
+  <Step title="Read a control point">
+    ```dart
+    // @fireweave-controlpoint new-checkout
+    if (fw.controlPoints.getBooleanValue('new-checkout', false)) {
+      // new path
+    }
+    ```
+    Reads are synchronous, safe inside `build()`, and never throw.
+  </Step>
+</Steps>
+
+## Apps and servers
+
+<Tabs>
+  <Tab title="Flutter and web">
+    Import `package:fireweave/client.dart`. It reads no environment at run time: pass your browser key (`fw_public_…`) at build time.
+    ```bash
+    flutter build apk --dart-define=FIREWEAVE_BROWSER_KEY=fw_public_...
+    ```
+    `flutter run --dart-define=FIREWEAVE_ENV=development` with no key runs local.
+  </Tab>
+  <Tab title="Servers and CLIs">
+    Import `package:fireweave/server.dart`. It reads `FIREWEAVE_KEY` (your project key) from the process environment, so the key is never baked into an executable.
+    ```bash
+    FIREWEAVE_KEY=project-api-key_... dart run bin/server.dart
+    ```
+    Call `await fw.shutdown()` on SIGTERM.
+  </Tab>
+</Tabs>
+
+<Warning>
+  Never ship a project key (`project-api-key_…`) in an app. The client entry point rejects it.
+</Warning>
+
+## Identify users
+
+At sign-in, register the user. The app then fetches that user's decisions.
+
+```dart
+await fw.identify('user_42', properties: {'plan': 'pro'});
+```
+
+<Note>
+  Dart statics belong to one isolate, so start FireWeave in every isolate that reads.
+</Note>

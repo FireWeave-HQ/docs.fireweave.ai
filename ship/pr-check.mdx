@@ -1,0 +1,54 @@
+---
+title: "PR check"
+description: "What FireWeave reports on a pull request: the readiness check and the release-safety risk reading."
+---
+
+Every pull request into an environment branch gets a GitHub check, **FireWeave — rollout readiness**. It reports whether the change can ship behind a rollout. It doesn't block merging.
+
+## The readiness check
+
+| Check title | Result in GitHub | What it means |
+| --- | --- | --- |
+| Rollout-ready | Success | No blocking findings. |
+| No rollout surface in this PR | Success | Nothing in the PR needs a rollout. |
+| Not rollout-ready: N blocking findings | Failure | Findings are shown as annotations on the changed lines. |
+| Could not evaluate rollout readiness | Neutral | FireWeave couldn't look. That is not a pass: treat the PR as unchecked. |
+| Readiness check ran out of time | Timed out | Same as above. Push again to re-run it. |
+
+### Findings
+
+Each finding names a rule. A **block** finding fails the check; a **warn** finding is shown and never fails it.
+
+| Rule | What it means | What to do |
+| --- | --- | --- |
+| `unmanifested-anchor` | Code reads a control point that nothing declares. | Ask your agent to record the control point for this change. |
+| `orphan-manifest-flag` | A declared control point isn't used anywhere in the code. | Use it, or remove it from the change. |
+| `unsafe-default` | A control point defaults to on. | Make it default to off. |
+| `no-signal` | No guardrail metric watches the control point (warn). | Add a metric, or record why none is needed. |
+| `duplicate-key` | The same control point is read in more than one place. | Use one control point per place in the code. |
+| `stale-agent-instructions` | FireWeave's instructions in the repo are out of date (warn). | Follow the fix the finding names. |
+
+<Tip>Fix the code in GitHub or with your coding agent. FireWeave checks again on every push.</Tip>
+
+## The release-safety reading
+
+FireWeave also scores how risky each pull request is. The reading appears on the project's **Release safety** page, and as a pull request comment when your organization has those turned on. It is advisory only and never changes the check result.
+
+| Band | Score |
+| --- | --- |
+| 🔴 Critical | 80–100 |
+| 🟠 High | 60–79 |
+| 🟡 Medium | 30–59 |
+| 🟢 Low | 0–29 |
+
+A reading has these parts:
+
+| Part | What it shows |
+| --- | --- |
+| **What's changing** | What the PR does, in plain words. |
+| **Reasons** | Each risk, and each mitigation, behind the score. |
+| **Services in the blast radius** | What a mistake in this change could reach. |
+| **Control points touched** | The control points this PR adds or changes. |
+| **What to do** | Steps grouped as **Before merge**, **During ramp** and **After release**. |
+
+<Note>No score doesn't mean safe. If the reading says **Analysis failed** or **Not analyzed**, treat the change as unreviewed.</Note>

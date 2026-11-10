@@ -1,0 +1,67 @@
+---
+title: "Install the CLI"
+description: "Install fw, sign in once, and keep it current."
+---
+
+`fw` is FireWeave's command-line tool. It signs you in, links a repo to a project and installs the FireWeave plugin for your coding agent.
+
+<Steps>
+  <Step title="Install fw">
+    <Tabs>
+      <Tab title="macOS / Linux">
+        ```bash
+        curl https://assets-fireweave-ai.s3.us-east-2.amazonaws.com/cli/latest/install.sh | bash
+        ```
+      </Tab>
+      <Tab title="Windows">
+        ```powershell
+        iwr https://assets-fireweave-ai.s3.us-east-2.amazonaws.com/cli/latest/install.ps1 -UseBasicParsing | iex
+        ```
+      </Tab>
+    </Tabs>
+    The installer checks the binary's checksum, puts `fw` in `~/.fireweave/bin` and adds that folder to your `PATH`. Open a new terminal afterwards.
+  </Step>
+  <Step title="Sign in">
+    ```bash
+    fw login
+    ```
+    `fw` shows a code and a link to the web app, and tries to open it for you. Approve the sign-in there, and `fw` saves it as a profile.
+  </Step>
+  <Step title="Check">
+    ```bash
+    fw whoami
+    fw doctor
+    ```
+  </Step>
+</Steps>
+
+Binaries exist for Linux x64 and arm64, macOS x64 and arm64, and Windows x64.
+
+## Installer options
+
+| Variable | Effect |
+| --- | --- |
+| `FW_NO_MODIFY_PATH=1` | Leave shell config alone and print the `PATH` line instead. Use it in CI images and devcontainers. |
+| `FW_MODIFY_PATH=1` | Write the `PATH` change without asking. |
+| `FW_INSTALL_DIR` | Install somewhere other than `~/.fireweave/bin`. |
+
+## Profiles
+
+Each sign-in is a profile in `~/.fireweave/profiles/`. Your first one becomes active.
+
+| Command | Does |
+| --- | --- |
+| `fw profile list` | List profiles. |
+| `fw profile use <alias>` | Make one active. |
+| `fw profile remove <alias>` | Delete one. Add `--force` for the active one. |
+| `fw logout` | Sign out of the active profile. `--all` signs out of every one. |
+
+## Keep it current
+
+```bash
+fw self-update
+```
+
+`fw self-update` checks the download and swaps the binary in place. If `fw` goes missing from your `PATH`, run `fw doctor --fix`.
+
+<Card title="Next: the plugin for your coding agent" href="/agents/setup" icon="robot" horizontal />

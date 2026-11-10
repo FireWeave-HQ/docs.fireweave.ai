@@ -1,9 +1,9 @@
 ---
 title: "Terraform quickstart"
-description: "Install the Fireweave provider, authenticate with FIREWEAVE_API_KEY, and apply a project with stage and prod environments."
+description: "Install the FireWeave provider, authenticate with FIREWEAVE_API_KEY, and apply a project with stage and prod environments."
 ---
 
-This walkthrough creates one Fireweave project and two environments (`stage`, `prod`) with git ref rules.
+This walkthrough creates one FireWeave project and two environments (`stage`, `prod`) with git ref rules.
 
 <Note>
   You need Terraform **>= 1.5** and an org-scoped API key (`fw_org_…`). Create the key before you apply — see [Authentication](/infrastructure/terraform/authentication).
@@ -99,7 +99,7 @@ This walkthrough creates one Fireweave project and two environments (`stage`, `p
     }
 
     output "project_id" {
-      description = "Fireweave project identifier"
+      description = "FireWeave project identifier"
       value       = fireweave_project.demo.id
     }
 

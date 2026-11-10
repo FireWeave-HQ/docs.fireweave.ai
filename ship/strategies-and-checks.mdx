@@ -1,0 +1,102 @@
+---
+title: "Strategies and checks"
+description: "Set the stages each environment's rollouts start from, and the endpoints FireWeave asks before a stage moves on."
+---
+
+import { Ramp, RampStage } from "/snippets/flow.jsx";
+
+A rollout strategy is the list of stages a new rollout starts from in an environment. Each stage sets an exposure, a hold, and optional promotion checks. Owners and Admins set strategies in the project's settings, under **Rollout strategies**.
+
+<Ramp title="Example production strategy">
+  <RampStage label="Step 1" percent="5" note="hold 30m · checks: smoke-tests" />
+  <RampStage label="Step 2" percent="25" note="hold 60m" />
+  <RampStage label="Step 3" percent="50" note="hold 2h · checks: smoke-tests" />
+  <RampStage label="Step 4" percent="100" note="then stability soak" />
+</Ramp>
+
+Without a strategy, an environment uses the FireWeave default: 10% for 30 minutes, 50% for 60 minutes, then 100%.
+
+## Strategy rules
+
+| Rule | Limit |
+| --- | --- |
+| Steps | 1 to 20 |
+| Exposure | Above 0, higher than the step before; the last step is 100% |
+| Hold | At least 1 minute on every step before the last; at most 7 days |
+| Applies to | New rollouts in that environment, including ones promoted into it |
+
+For each step you choose **If a check fails**: **Hold** (wait for a person) or **Roll back to 0%**.
+
+## Promotion checks
+
+A promotion check is an endpoint of yours that FireWeave asks before a rollout step moves on. Owners and Admins add them under **Promotion checks** in the project's settings, using a Custom HTTP account.
+
+<Steps>
+  <Step title="Add a Custom HTTP account">It holds your endpoint's address, its auth, and a **Request-signing key**. Copy the key when it's shown: it isn't shown again.</Step>
+  <Step title="Add promotion check">Set **Method**, **Path and query**, **Headers**, **Body** (**FireWeave payload**, **Custom template** or **No body**) and a **Timeout** of 1–30 seconds.</Step>
+  <Step title="Send test">Check your endpoint answers before you use it.</Step>
+  <Step title="Add it to a strategy step">Under **Checks before moving on**.</Step>
+</Steps>
+
+<Warning>Never type a credential into a header, query or body. Add it as a named secret on the Custom HTTP account, such as `api-token`, and write `{{secret.api-token}}`.</Warning>
+
+### Request and answer
+
+FireWeave calls your endpoint after the step's hold. Your endpoint answers with a decision.
+
+<CodeGroup>
+```json Request body (FireWeave payload)
+{
+  "event": "fireweave.promotion-check",
+  "version": 1,
+  "sentAt": "2026-11-10T14:02:11.000Z",
+  "test": false,
+  "idempotencyKey": "…",
+  "attempt": 1,
+  "project": { "id": "…", "name": "checkout" },
+  "environment": "production",
+  "rollout": {
+    "id": "…",
+    "name": "new-checkout-flow",
+    "link": "https://app.fireweave.ai/…",
+    "mode": "auto",
+    "pullRequest": { "number": 482, "url": "https://github.com/…/pull/482" },
+    "commit": "9ed3930…",
+    "controlPoints": ["new-checkout-flow"]
+  },
+  "step": { "index": 0, "of": 3, "from": 0, "to": 10, "holdMinutes": 30, "startedAt": "…", "endedAt": "…" },
+  "evidence": { "metrics": [{ "name": "checkout_errors", "verdict": "healthy" }], "checks": [] }
+}
+```
+
+```json Response
+{ "decision": "promote", "reason": "smoke tests green" }
+```
+
+```text Headers
+X-FireWeave-Timestamp: <unix seconds>
+X-FireWeave-Signature: v1=<hex HMAC-SHA256>
+Idempotency-Key: <same as idempotencyKey>
+```
+</CodeGroup>
+
+| Decision | What happens |
+| --- | --- |
+| `promote` | The step may move on. Any other 2xx answer counts as promote. |
+| `hold` | The check fails; the step follows **If a check fails**. |
+| `rollback` | The check fails; the step follows **If a check fails**. |
+| `pending` | FireWeave asks again every 60 seconds, for up to 30 minutes. |
+
+A non-2xx answer, a timeout or an unknown decision is an error, and the step holds for a person. `reason` is optional and shown on the rollout, up to 300 characters.
+
+### Verify the signature
+
+The signature is an HMAC-SHA256, keyed with your **Request-signing key**, of this string:
+
+```text
+v1:<timestamp>.<METHOD>.<path?query>.<Idempotency-Key>.<body>
+```
+
+The body is empty for `GET`. While a key is being rotated, the header carries a second `v1=` value, comma-separated, made with the previous key.
+
+<Note>Checks run after your metrics are read, never instead of them. On a manual rollout a check's answer is advice; you still press **Ramp up**. **Run checks now** on the rollout's **Ramp** tab calls them without moving anything.</Note>

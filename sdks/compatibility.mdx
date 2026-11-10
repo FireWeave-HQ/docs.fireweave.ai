@@ -1,122 +1,66 @@
 ---
 title: "Compatibility"
-description: "Runtime floors, evaluation types, adapters, and the 65×7 conformance aggregate for the seven Fireweave language bindings."
+description: "The eight FireWeave SDKs: packages, versions, runtime floors and what each one supports."
 ---
 
-Spec version **0.1.0**. Source: SDK `master` plus live registry checks on 2026-09-11. v1 scope is [ADR-0010](https://github.com/FireWeave-HQ/fireweave-sdk/blob/master/docs/adr/0010-control-points-only-v1.md): control-point reads and target registration only.
+Every SDK reads control points with the same nine methods and registers targets, under its own language's naming. The published SDKs are at **3.0.0**; Dart and Swift install from source.
+
+## Packages
+
+| SDK | Package | Install | Status |
+| --- | --- | --- | --- |
+| Node, Bun, Deno | `@fireweaveai/server-sdk` | npm 3.0.0 | Stable |
+| Web (browser) | `@fireweaveai/web-sdk` | npm 3.0.0 | Stable |
+| Python | `fireweave` | PyPI 3.0.0 | Stable |
+| Go | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v3` | v3.0.0 | Stable |
+| Java | `ai.fireweave:fireweave-sdk` | Maven Central 3.0.0 | Stable |
+| Rust | `fireweave` | crates.io 3.0.0 | Stable |
+| Dart, Flutter | `fireweave` | From source | <Badge color="orange">Preview</Badge> |
+| Swift | `Fireweave`, `FireweaveStart` | From source | <Badge color="orange">Preview</Badge> |
+
+## Runtime floors
+
+| SDK | Minimum |
+| --- | --- |
+| Node | Node 20.20 |
+| Bun, Deno | Bun 1.2, Deno 2.0 (same package as Node) |
+| Web | Browsers only |
+| Python | Python 3.10 |
+| Go | Go 1.26.9 |
+| Java | Java 11 |
+| Rust | Rust 1.85 |
+| Dart | Dart 3.8: Flutter on Android, iOS, macOS, Windows, Linux and web; the Dart VM |
+| Swift | Swift 6.0, macOS 13, iOS 16 |
+
+## What each SDK supports
+
+| | Node | Web | Python | Go | Java | Rust | Dart | Swift |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Start profile | Server | App | Server | Server | Server | Server | App and server | App and server |
+| Reads | Async, per call | Sync, from cache | Blocking, per call | Blocking, per call | Blocking, per call | Blocking, per call | Sync, from cache | Sync, from cache |
+| Local mode | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Register targets (`identify`) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| In-memory adapter for tests | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
+
+Server reads ask FireWeave on each call. Browser and mobile apps fetch decisions for the signed-in user up front, so reads are instant and safe in a render path. Dart and Swift servers refresh their decisions every 30 seconds.
 
 <Note>
-  Language surfaces share the same nine methods and `registerTarget`. Casing and entry-point names differ. Do not assume a camelCase method exists in Python or Rust.
+The SDKs ship control points and target registration only. Guardrails, metrics and rollout control live in the web app, not in the SDK.
 </Note>
 
-## Packages and publish state
+## Numbers
 
-| Surface | Package | Published (2026-09-09) |
-| --- | --- | --- |
-| Node / Bun / Deno | `@fireweaveai/server-sdk` | npm **2.3.0**. `@fireweaveai/sdk` is frozen at 2.1.0 — not the install target. |
-| Python | `fireweave` | PyPI **2.3.0**. No `[openfeature]` or `[posthog]` extra. |
-| Go | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v2` | **v2.3.0**. `/v2` suffix required. |
-| Java | `ai.fireweave:fireweave-sdk` | Maven Central **2.3.0**. `fireweave-openfeature`, `fireweave-adapter-posthog`, and `fireweave-testing` remain at **0.1.0**. |
-| Browser | `@fireweaveai/web-sdk` | npm **2.3.0** |
-| Rust | `fireweave` | crates.io **2.3.0** |
-| Swift | in-tree `sdks/swift` | **Not installable.** `Package.swift` is not at the repo root. |
-
-## Runtime floors (manifests)
-
-CI also runs extra cells (`latest` / `stable` / `canary`). Those float. **Support floors are the manifest numbers.**
-
-| SDK | Manifest floor | Also exercised in CI (not a guarantee) |
-| --- | --- | --- |
-| Node | Node `>=20.20` (`engines`) | Node 20 + 24 |
-| Bun (same package) | Bun `1.2` (runtime docs) | Bun 1.2 + latest |
-| Deno (same package) | Deno `2.0` (runtime docs) | `v2.x` + canary |
-| Python | Python `>=3.10` | 3.10 + 3.14 |
-| Go | `go 1.25.13` (`go.mod`) | `1.25.x` + stable |
-| Java | Java **11+** | JDK 11 + 25 |
-| Web | Browser. No Node/Deno target. | Bun + happy-dom only |
-| Rust | rust-version **1.75** | crate CI |
-
-## Evaluation types
-
-The wire uses `flagKey`. Native product noun is **control point**.
-
-| | Native evaluate | Boolean | String | Number | Object |
-| --- | --- | --- | --- | --- | --- |
-| Node | `client.controlPoints.*` | `getBooleanValue` | `getStringValue` | IEEE-754 `number` | `getObjectValue` |
-| Python | `client.control_points.*` | `get_boolean_value` | `get_string_value` | `get_number_value` | `get_object_value` |
-| Go | `client.ControlPoints()` | `GetBooleanValue` | `GetStringValue` | `GetNumberValue` (`float64`) | `GetObjectValue` |
-| Java | `client.controlPoints()` | `getBooleanValue` | `getStringValue` | `getNumberValue` (`double`) | `getObjectValue` |
-| Web | `client.controlPoints.*` (**sync**) | `getBooleanValue` | `getStringValue` | IEEE-754 `number` | `getObjectValue` |
-| Rust | `client.control_points.*` | `get_boolean_value` | `get_string_value` | `get_number_value` | `get_object_value` |
-
-Each language also ships the four `*Details` methods plus `evaluate`. That is the nine-method surface in `conformance/surface/control-points.surface.json`.
-
-### Numeric limitations
-
-| Language | Limitation |
-| --- | --- |
-| Node / Web | Single IEEE-754 double. Integers beyond ±(2^53−1) are not lossless. |
-| All | Canonical JSON numbers. Cross-language integer reliability within ±(2^53−1). |
-
-Python `get_integer_value` is a deprecated alias of `get_number_value`. Go and Java no longer split integer/float on the native surface (`FlagTypeNumber` / `FlagType.NUMBER` only).
-
-## Feature matrix
-
-| Capability | Node | Python | Go | Java | Web | Rust |
-| --- | --- | --- | --- | --- | --- | --- |
-| Entry point | `initFireweave` | `init_fireweave` | `Init` | `Fireweave.init` | `initFireweave` | `init_fireweave` |
-| Required `mode` | yes | yes | yes | yes | yes | yes |
-| Product namespace | `controlPoints` | `control_points` | `ControlPoints()` | `controlPoints()` | `controlPoints` (sync) | `control_points` |
-| `registerTarget` | `client.registerTarget` | `client.register_target` | `client.RegisterTarget` | `client.registerTarget` | `registerTarget` + `identify` | `client.register_target` |
-| Remote adapter | yes | yes | yes | yes | `FireweaveRemoteWebAdapter` | yes |
-| Local / dev adapter | yes | yes | `infrastructure/adapters/local` | yes | yes | yes |
-| In-memory adapter | yes | yes | yes | testing leftover | yes | yes |
-| OpenFeature provider | **absent** | **absent** | **absent** | leftover 0.1.0 only | **absent** | **absent** |
-| PostHog adapter | **absent** | **absent** | **absent** | leftover 0.1.0 only | **absent** | **absent** |
-| `releases` / `exposures` / `signals` / `capabilities` / `guardrails` | **absent** | **absent** | **absent** | **absent** | **absent** | **absent** |
-| Env-var config | **no** | **no** | **no** | **no** | **no** | **no** |
-| Default host allowlist | Fireweave hosts + loopback | Fireweave hosts + loopback | Fireweave hosts + loopback | Fireweave + leftover PostHog hosts + loopback | Fireweave hosts + loopback | Fireweave hosts + loopback |
-
-Conformance asserts the cut namespaces via `mustNotExpose` in `conformance/surface/control-points.surface.json`.
-
-## Conformance
-
-The suite is a **65×7 aggregate**: the same 65 fixtures run against all seven language bindings (`scripts/conformance-all.sh`). Surface parity (the nine methods plus `registerTarget`) is green for node, web, python, java, go, rust, and swift.
-
-All behavioural skips, when present, are pre-declared (`skipped-with-documented-limitation`). Node/Web IEEE-754 integer fixtures are the documented numeric limitation.
-
-## Server vs web
-
-| | Server SDKs | Web |
-| --- | --- | --- |
-| `controlPoints.*` | Promise / blocking | **synchronous** |
-| Evaluation source | per-call (remote) | prefetched cache |
-| Extra lifecycle | — | **STALE** (5s prefetch ceiling) |
-| Config | explicit init options | explicit init options |
-
-## Known gaps (do not paper over)
-
-1. **Swift is not distributable** — in-tree only; SwiftPM cannot resolve `Package.swift` from the repository URL.
-2. **Java leftover artifacts** — `fireweave-openfeature`, `fireweave-adapter-posthog`, and `fireweave-testing` stay at 0.1.0. They are not the 2.3.0 SDK.
-3. **OpenFeature is unbundled** — no core SDK ships a provider. A future optional bridge is not forbidden; it is not published as part of 2.3.0.
+Node and Web hold numbers as JavaScript doubles: integers beyond ±(2^53−1) lose precision. Keep numeric values inside that range for the same result in every language.
 
 ## Language pages
 
-<Card title="Node.js, Bun, Deno" href="/sdks/node">
-  `@fireweaveai/server-sdk` 2.3.0.
-</Card>
-<Card title="Python" href="/sdks/python">
-  `fireweave` 2.3.0 — `control_points`, no extras.
-</Card>
-<Card title="Go" href="/sdks/go">
-  `ControlPoints()` and `RegisterTarget` on `/v2`.
-</Card>
-<Card title="Java" href="/sdks/java">
-  `controlPoints()`, `registerTarget()`, 2.3.0 / 0.1.0 skew.
-</Card>
-<Card title="Browser" href="/sdks/web">
-  Sync reads, `identify`, `fw_public_` keys.
-</Card>
-<Card title="Rust" href="/sdks/rust">
-  crates.io `fireweave` 2.3.0.
-</Card>
+<Columns cols={2}>
+  <Card title="Node.js, Bun, Deno" href="/sdks/node" />
+  <Card title="Web" href="/sdks/web" />
+  <Card title="Python" href="/sdks/python" />
+  <Card title="Go" href="/sdks/go" />
+  <Card title="Java" href="/sdks/java" />
+  <Card title="Rust" href="/sdks/rust" />
+  <Card title="Dart and Flutter" href="/sdks/dart" />
+  <Card title="Swift" href="/sdks/swift" />
+</Columns>

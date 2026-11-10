@@ -1,0 +1,51 @@
+---
+title: "Create a project"
+description: "Create a FireWeave project in the web app with the nine-step setup wizard."
+---
+
+A project is what you ship through FireWeave: its repositories, environments and settings. Open **Create project** in the [web app](https://app.fireweave.ai) and walk the wizard.
+
+<Info>Creating a project needs Project Write: an Owner, Admin or Member. A Viewer can't.</Info>
+
+<Steps>
+  <Step title="GitHub">
+    **Connect** your GitHub organization. FireWeave reads your repositories through its GitHub App. See [GitHub App](/connect/github-app).
+  </Step>
+  <Step title="Repositories">
+    Pick every repository this project covers. **Repo not listed?** The App only sees the repositories each GitHub account shares with it.
+  </Step>
+  <Step title="Modes">
+    Mark each repository **Managed** (checks and rollouts) or **Context only** (read for knowledge), and pick its exact production branch. A repository is Managed by one project only.
+  </Step>
+  <Step title="Rollouts">
+    Choose what FireWeave does with your Managed repositories (see below).
+  </Step>
+  <Step title="Analyze">
+    **Start analysis**. It's read-only, and it keeps going if you leave.
+  </Step>
+  <Step title="Answers">
+    Confirm what the analysis found: your apps, where users sign in, metrics, and your team's agents. Not right? Run it again.
+  </Step>
+  <Step title="Environments">
+    List your environments in promotion order, with one exact branch per Managed repository and a tier. See [Environments](/connect/environments).
+  </Step>
+  <Step title="Tools">
+    Optional. Pick the account that reads **Metrics**, **Logs** and **Traces** in each environment. Skip it and each tool goes on your **Get set up** list on Home. See [Observability](/connect/observability).
+  </Step>
+  <Step title="Review">
+    Name the project and press **Create project**.
+  </Step>
+</Steps>
+
+## Release safety only or safe rollouts
+
+| Choice | What you get | Changes your code? |
+| --- | --- | --- |
+| **Release safety only** | Risk analysis on every pull request. Skips **Analyze** and **Answers**. | No |
+| **Safe rollouts** (recommended) | Analysis now, then a setup PR in each Managed repository. Changes ramp behind control points. | Yes, through the setup PR |
+
+With **Safe rollouts**, FireWeave opens one setup PR per Managed repository on branch `fireweave/setup`. Merge each one to finish. Next: [Set up FireWeave](/setup).
+
+## Finish later
+
+Press **Finish later** at any step. Your progress is saved as a draft, and Home shows a **Continue setup** card to you and to everyone with Project Write. Any of them can continue it or discard it, on any device.

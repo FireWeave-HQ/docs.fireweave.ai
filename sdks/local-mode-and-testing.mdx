@@ -1,0 +1,136 @@
+---
+title: "Local mode and testing"
+description: "Run control points on your machine with no key, and test both code paths with no network."
+---
+
+Local mode serves the values you list in your control-points file. Nothing is sent to FireWeave, so you need no key and no account.
+
+| You want to | Use |
+| --- | --- |
+| Run the app on your machine | Local mode: `FIREWEAVE_ENV=development`, no key |
+| Test both paths of a change | Local mode with `mode: 'local'`, or a test environment name |
+| Assert exact decisions, targeting or faults | `InMemoryAdapter` |
+
+## Local mode
+
+Your control-points file holds the value each control point serves locally. With no key and a development environment name (`development`, `dev`, `local` or `test`), `start()` picks local mode.
+
+<CodeGroup>
+
+```ts Node
+// src/fireweave/control-points.ts
+import { defineControlPoints } from '@fireweaveai/server-sdk/start';
+
+export const controlPoints = defineControlPoints({
+  'new-checkout': { local: true, description: 'New checkout flow' },
+});
+```
+
+```python Python
+from fireweave.start import define_control_points
+
+control_points = define_control_points({"new-checkout": {"local": True}})
+```
+
+```go Go
+var ControlPoints = fw.DefineControlPoints(fw.LocalControlPoints{
+	"new-checkout": {Local: true, Description: "New checkout flow"},
+})
+```
+
+</CodeGroup>
+
+```bash
+FIREWEAVE_ENV=development npm run dev
+```
+
+| Read | Result |
+| --- | --- |
+| A key in the file | Its `local` value |
+| A key missing from the file | Your call site's default, with one warning naming the file |
+
+<Note>
+Keep call-site defaults `false`. The `local` value is used only in local mode and can never switch a feature on in production. A default of `true` would be the production fallback too.
+</Note>
+
+## Testing both paths
+
+Force the mode in a test, flip the local value, and assert each path.
+
+<CodeGroup>
+
+```ts Node
+import { start, resetForTests, fw } from '@fireweaveai/server-sdk/start';
+
+afterEach(() => resetForTests());
+
+test('new checkout path', async () => {
+  start({ mode: 'local', controlPoints: { 'new-checkout': { local: true } } });
+  expect(await fw.controlPoints.getBooleanValue('new-checkout', false)).toBe(true);
+});
+```
+
+```python Python
+from fireweave.start import start, reset_for_tests, fw
+
+def test_new_checkout_path():
+    reset_for_tests()
+    start(mode="local", control_points={"new-checkout": {"local": True}})
+    assert fw.control_points.get_boolean_value("new-checkout", False) is True
+```
+
+</CodeGroup>
+
+Other languages: Rust `fireweave::start::reset_for_tests()`, Dart `Fireweave.debugResetForTests()` <Badge color="orange">Preview</Badge>, Swift `resetFireweaveForTesting()` <Badge color="orange">Preview</Badge>.
+
+## InMemoryAdapter
+
+For decisions beyond on and off: string or number values, matching on context attributes, or simulated failures. No network, no bucketing.
+
+<CodeGroup>
+
+```ts Node
+import { FireweaveClient, FireweaveRuntime, InMemoryAdapter } from '@fireweaveai/server-sdk';
+
+const runtime = new FireweaveRuntime(new InMemoryAdapter({
+  flags: {
+    'new-checkout': { type: 'boolean', enabled: true, value: true, matchAttribute: { cohort: 'beta' } },
+  },
+}));
+await runtime.initialize();
+const client = new FireweaveClient(runtime);
+
+await client.controlPoints.getBooleanValue('new-checkout', false, { targetingKey: 'u1', cohort: 'beta' }); // true
+await client.controlPoints.getBooleanValue('new-checkout', false, { targetingKey: 'u2' });                 // false
+```
+
+```python Python
+from fireweave import EvaluationContext, FireweaveClient, FireweaveRuntime, InMemoryAdapter
+
+adapter = InMemoryAdapter({
+    "new-checkout": {"enabled": True, "value": True,
+                     "matchAttribute": {"cohort": "beta"}},
+})
+runtime = FireweaveRuntime(adapter)
+runtime.initialize()
+with FireweaveClient(runtime) as client:
+    assert client.control_points.get_boolean_value(
+        "new-checkout", False, EvaluationContext("u1", {"cohort": "beta"})) is True
+```
+
+</CodeGroup>
+
+| Language | In-memory adapter |
+| --- | --- |
+| Node, Python, Go, Rust | `InMemoryAdapter` |
+| Web | `InMemoryWebAdapter` |
+| Dart, Swift <Badge color="orange">Preview</Badge> | `InMemoryAdapter` |
+| Java | Not published. Use local mode. |
+
+Node's adapter also takes `fault: { kind: 'Timeout' }` to make every read fail with that error kind, so you can test the fallback path. See [Errors and lifecycle](/sdks/errors-and-lifecycle).
+
+## What to test
+
+- On, off and no match each give the value you expect.
+- A missing control point gives your default, never a throw.
+- A read before start, or after shutdown, gives your default.

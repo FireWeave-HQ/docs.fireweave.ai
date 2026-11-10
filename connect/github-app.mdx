@@ -1,0 +1,54 @@
+---
+title: "GitHub App"
+description: "Install the FireWeave GitHub App so FireWeave can read your repositories and check your pull requests."
+---
+
+FireWeave reads your repositories, checks your pull requests and opens setup PRs through its GitHub App. You connect it on the first step of [Create a project](/connect/create-project).
+
+<Steps>
+  <Step title="Connect">
+    On the **GitHub** step, press **Connect**. GitHub opens in a popup.
+  </Step>
+  <Step title="Authorize and install">
+    Authorize FireWeave, then install the App on your GitHub organization or personal account, choosing which repositories it can see. The authorization is stored for you, not for the organization.
+  </Step>
+  <Step title="Link the account">
+    Back in FireWeave, the account shows **App installed**. Press **Link**. Use **Link another account** to add more.
+  </Step>
+</Steps>
+
+## Permissions
+
+| Permission | Access | Why |
+| --- | --- | --- |
+| Metadata | Read | Lists your repositories and branches. |
+| Contents | Read and write | Reads code for analysis. Write is used only to push FireWeave's own branches, such as `fireweave/setup`. |
+| Pull requests | Read and write | Opens the setup PR and comments on your pull requests. |
+| Checks | Write | Posts FireWeave's check on each pull request. |
+
+<Note>A write token covers one repository and exists only while FireWeave pushes its branch. Analysis clones with a read-only token for one repository.</Note>
+
+FireWeave also listens to pull request, check run, push and installation events.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Ask your GitHub owner to approve">
+    GitHub asks an organization owner to approve new installs. When they approve, come back and link the account.
+  </Accordion>
+  <Accordion title="A repository isn't listed">
+    FireWeave only sees the repositories each GitHub account shares with it. Add the repository to the App's installation in GitHub, then press **Check again**.
+  </Accordion>
+  <Accordion title="Setup is waiting for approval">
+    The App needs an owner to approve new permissions for this repository. Setup waits, then carries on once they accept.
+  </Accordion>
+  <Accordion title="The popup didn't open">
+    Your browser blocked it. Allow popups for FireWeave and try again.
+  </Accordion>
+  <Accordion title="Couldn't confirm your GitHub access">
+    Your GitHub authorization expired or was removed on GitHub. Press **Authorize GitHub** to see your accounts again.
+  </Accordion>
+  <Accordion title="An account needs reconnecting">
+    Open **Settings › Integrations › GitHub** and press **Reconnect**.
+  </Accordion>
+</AccordionGroup>

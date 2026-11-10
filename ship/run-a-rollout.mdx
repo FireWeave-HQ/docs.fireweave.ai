@@ -1,0 +1,71 @@
+---
+title: "Run a rollout"
+description: "Start a rollout, move it through its stages, and pause, ramp or cancel it."
+---
+
+import { Ramp, RampStage, StateRail, State, StateSep } from "/snippets/flow.jsx";
+
+A merge registers a rollout as **Waiting for Start**. Nothing reaches users until you press **Start rollout** after your deploy. From there, exposure rises stage by stage, each stage holding while your [guardrails](/ship/guardrails) are checked.
+
+<Ramp title="FireWeave default strategy">
+  <RampStage label="Stage 1" percent="10" note="hold 30m · metrics checked" />
+  <RampStage label="Stage 2" percent="50" note="hold 60m · metrics checked" />
+  <RampStage label="Stage 3" percent="100" note="then stability soak" />
+</Ramp>
+
+Each environment can set its own stages. See [Strategies and checks](/ship/strategies-and-checks).
+
+## States
+
+<StateRail title="What the rollout page shows">
+  <State>Waiting for Start</State><StateSep /><State kind="on">Ramping</State><StateSep /><State kind="on">Soaking</State><StateSep /><State kind="on">Stability soak</State><StateSep /><State>Ready to mark stable</State><StateSep /><State kind="good">Completed</State>
+  <StateSep label="side exits:" /><State kind="warn">Paused</State><State kind="warn">Held</State><State kind="bad">Breached</State><State kind="bad">Cancelled</State>
+</StateRail>
+
+## Start
+
+Open the rollout and press **Start rollout**. Any Writer can start it.
+
+<Note>Environments have an order. A rollout starts only once its change has completed in every environment above it. An org owner or admin can **Start anyway**, with a recorded reason.</Note>
+
+## Manual or automatic
+
+| Mode | What it does |
+| --- | --- |
+| **Manual** — you move each step | Starts at 0%. FireWeave watches metrics and runs checks, then waits for you to press **Ramp up**. |
+| **Automatic** — moves on by itself on proof | Moves to the next stage when every Alert and Block metric has proof, and holds for you when it doesn't. |
+
+Automatic needs **Auto-ramp** on for the project and observability connected for the environment. Only Owners and Admins can switch a rollout to automatic: press **Check if it can switch**, fix anything listed, then **Switch to automatic**. You can switch back to manual at any time; the stage stays where it is.
+
+## Controls
+
+| Control | What it does |
+| --- | --- |
+| **Ramp up** | Moves to the next stage now. |
+| **Ramp down** | Moves exposure back down. |
+| **Pause** / **Resume** | **Pause** stops the clock at the current exposure. On an automatic rollout, **Resume** restarts the stage's hold. |
+| **Retry step** | Runs a failed step again. |
+| **Edit schedule** | Changes stages that haven't run yet, when the project allows editable ramp plans. |
+| **Mark stable now** | Ends the stability soak and completes the rollout. |
+| **Cancel rollout** | Ends the rollout. Can't be undone. |
+
+## When it holds
+
+A **Held** rollout waits for you. The rollout page says why:
+
+| Reason | What to do |
+| --- | --- |
+| A guardrail warned (Alert) | **Ramp up** or **Ramp down**. |
+| A guardrail breached (Block) — parked at 0% | **Ramp up** re-runs the stage, or **Ramp down**. |
+| No guardrail readings, or not enough data | **Resume**, or ramp up or down. |
+| A promotion check didn't pass | **Resume** to run it again, or ramp up or down. |
+| No longer meets the rules for automatic | Fix it and **Resume**, or switch to manual. |
+
+**Resume** works on automatic rollouts only. On a manual rollout, press **Ramp up** or **Ramp down**.
+
+## Cancel
+
+**Cancel rollout** asks how, and needs a reason:
+
+- **Return to 0% first** — users stop seeing the change, then the rollout ends.
+- **Keep at N%** — the change stays live for that share of users.

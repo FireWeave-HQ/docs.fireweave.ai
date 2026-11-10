@@ -1,0 +1,43 @@
+---
+title: "How FireWeave works"
+description: "Set up once, then every feature goes from your coding agent to a pull request to a controlled ramp you start."
+---
+
+import { Flow, FlowRow, FlowStart, FlowStep, FlowDecision, FlowTurn, FlowEnd } from "/snippets/flow.jsx";
+
+You set FireWeave up once per repository. After that, every feature follows the same path: your agent wraps it, you merge it, and you decide when it reaches users.
+
+<Flow kicker="FLOW" title="Set up once, then for every feature">
+  <FlowRow><FlowStart /><FlowStep title="Create a project" sub="In the web app" /><FlowStep title="Merge the setup PR" sub="Once per repository" kind="key" /><FlowTurn /></FlowRow>
+  <FlowRow><FlowStep title="Build a feature" sub="With your coding agent" /><FlowStep title="Agent wraps it" sub="Behind a control point, off" /><FlowStep title="Open a PR" sub="Readiness checked" /><FlowStep title="Merge" sub="Into an environment branch" /><FlowTurn /></FlowRow>
+  <FlowRow><FlowStep title="Press Start" sub="After your deploy" kind="key" /><FlowStep title="Ramp" sub="Stage by stage" /><FlowDecision label="Healthy?" /><FlowStep title="Stable" kind="ok" /><FlowTurn /></FlowRow>
+  <FlowRow><FlowStep title="Clean up" sub="Remove the old code path" /><FlowEnd /></FlowRow>
+</Flow>
+
+## The steps
+
+| Step | What happens | Who |
+| --- | --- | --- |
+| Set up | FireWeave opens a setup PR in each repository; you merge it. | You |
+| Build | Your agent, following FireWeave's instructions in the repo, wraps the change behind a control point and records what to watch. A check stops the agent if it skips this. | Your coding agent |
+| Pull request | FireWeave reports readiness on the PR, and risk when PR analysis is on. | FireWeave |
+| Merge | Merging into an environment branch registers a rollout. | You |
+| Start | After your deploy, you press **Start rollout**. | You |
+| Ramp | Exposure rises stage by stage while your metrics are checked. | FireWeave |
+| Stable | After the stability soak at 100%, the control point is marked stable. In **Manual** mode you press **Mark stable now**. | FireWeave, or you |
+| Clean up | Your agent removes the old code path in a later change. | You and your agent |
+
+<Info>
+**What FireWeave doesn't do**
+
+- It doesn't detect your deploys. Pressing **Start rollout** tells FireWeave the code is live.
+- Agents never register, start, ramp or promote rollouts.
+- Nothing reaches users until you press **Start rollout**: a new control point starts off.
+</Info>
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Set up FireWeave" icon="wrench" href="/setup">Cloud setup, and the local fallback.</Card>
+  <Card title="Your first rollout" icon="rocket" href="/first-rollout">From feature to stable.</Card>
+</Columns>

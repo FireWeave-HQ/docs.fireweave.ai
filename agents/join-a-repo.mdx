@@ -1,0 +1,46 @@
+---
+title: "Join a repository"
+description: "Start working in a repository a teammate already set up with FireWeave."
+---
+
+Someone already set FireWeave up, so the instructions and hooks are in the repository. You only need `fw`, a sign-in and the plugin.
+
+<Steps>
+  <Step title="Install fw">
+    ```bash
+    curl https://assets-fireweave-ai.s3.us-east-2.amazonaws.com/cli/latest/install.sh | bash
+    ```
+  </Step>
+  <Step title="Sign in">
+    ```bash
+    fw login
+    ```
+
+    Approve the code in the web app when it asks.
+  </Step>
+  <Step title="Pick the project">
+    In your clone:
+
+    ```bash
+    fw select-project
+    ```
+
+    The repository already names its project, so this pins your sign-in to it and changes nothing that's committed.
+  </Step>
+  <Step title="Install the plugin">
+    Add the FireWeave plugin to your coding agent. See [Set up your coding agent](/agents/setup).
+  </Step>
+  <Step title="Check your agent is wired">
+    ```bash
+    fw agents status
+    ```
+
+    If `fw doctor` or your agent says hooks or instructions are missing for your agent, run `/fireweave:adopt` in it. It adds only those, and you commit the result.
+  </Step>
+</Steps>
+
+<Tip>
+Your agent was added after setup? `/fireweave:adopt --check` shows what's missing without writing anything.
+</Tip>
+
+Want FireWeave's instructions off in your clone? See [Turn FireWeave's instructions on or off](/agents/instructions-switch).

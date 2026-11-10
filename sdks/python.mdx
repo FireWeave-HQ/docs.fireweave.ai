@@ -1,195 +1,92 @@
 ---
 title: "Python"
-description: "Install and use the fireweave Python SDK to evaluate control points and register targets."
+description: "Read control points from a Python service with the fireweave 3.0 package."
 ---
 
-`fireweave` is the Fireweave server SDK for Python. It evaluates **control points** and registers **targets** — the two v1 capabilities. The wire protocol still uses the parameter name `flagKey`.
-
-## Supported versions
-
-From `pyproject.toml`:
-
-| | Value |
-| --- | --- |
-| Package | `fireweave` **2.3.0** |
-| Python | `>=3.10` |
-| Runtime dependencies | **none** |
-| Extra | `dev` (`pytest>=8`) only |
-
-There is no `[openfeature]` extra and no `[posthog]` extra. Do not run those install commands.
-
-## Install
+The `fireweave` package reads control points and registers targets from Python `>=3.10`. It has no runtime dependencies.
 
 ```bash
 pip install fireweave
 ```
 
-For local checkout development:
+## Start profile
 
-```bash
-git clone https://github.com/FireWeave-HQ/fireweave-sdk && cd fireweave-sdk
-python -m venv .venv
-.venv/bin/pip install -e 'sdks/python[dev]'
+Call `start()` once, first thing in each process entrypoint, then read through `fw` anywhere.
+
+<CodeGroup>
+
+```python control_points.py
+from fireweave.start import define_control_points
+
+# Local values only. In production the rollout decides.
+control_points = define_control_points({"new-checkout": {"local": True}})
 ```
 
-## Initialize
+```python entrypoint
+from fireweave.start import start
+from control_points import control_points
 
-`init_fireweave` is the single entry point. `mode` is required and never inferred. Init raises `ConfigurationError` when mode is missing, remote credentials are blank, `api_url` fails the host allowlist, or local mode is combined with credentials.
-
-```python
-from fireweave import EvaluationContext, init_fireweave
-
-client = init_fireweave(mode="local", local={"control_points": {"new-checkout": True}})
-
-enabled = client.control_points.get_boolean_value(
-    "new-checkout", False, EvaluationContext(targeting_key="user_42")
-)
-print("new-checkout:", enabled)
-
-client.shutdown()
+start(control_points=control_points)
 ```
 
-Production — pass credentials explicitly. The SDK reads **no** environment variables:
+```python anywhere
+from fireweave import EvaluationContext
+from fireweave.start import fw
+
+if fw.control_points.get_boolean_value("new-checkout", False, EvaluationContext(user.id)):
+    ...  # new path
+```
+
+</CodeGroup>
+
+| Variable | What it does |
+| --- | --- |
+| `FIREWEAVE_KEY` | The server key (`project-api-key_…`). Set means remote mode. |
+| `FIREWEAVE_URL` | Optional. Overrides the FireWeave endpoint. |
+| `FIREWEAVE_ENV`, then `APP_ENV` | With no key, `development`, `dev`, `local` or `test` means local mode. Anything else, or no name at all, fails at start. |
+
+Every option is keyword-only, among them `control_points`, `mode`, `environment`, `url`, `key` and `instance_id`. `fw` also has `identify(targeting_key, properties)`, `instance_key()` for reads with no user, `status()` and `shutdown()`. A forked worker gets its own client. Rules for every SDK: [Start profile](/sdks/start-profile).
+
+## Core API
+
+`init_fireweave` reads no environment. `mode` is required.
 
 ```python
 import os
-from fireweave import init_fireweave
+from fireweave import EvaluationContext, RegisterTargetOptions, init_fireweave
 
 client = init_fireweave(
-    mode="remote",
-    api_key=os.environ["FW_PROJECT_API_KEY"],
-    api_url=os.environ["FW_API_URL"],
+    mode="remote",  # or mode="local", local={"control_points": {"new-checkout": True}}
+    api_url="https://app-server.fireweave.ai",
+    api_key=os.environ["FIREWEAVE_KEY"],
 )
+
+client.register_target("user_42", RegisterTargetOptions(kind="user", properties={"plan": "pro"}))
+
+on = client.control_points.get_boolean_value("new-checkout", False, EvaluationContext("user_42"))
 ```
 
-`FireweaveClient` is a context manager: `with init_fireweave(mode="local") as client:`.
+`control_points` has nine methods, and none of them raises:
 
-Lower-level construction:
+| Values | Details (whole `Decision`) |
+| --- | --- |
+| `get_boolean_value` | `get_boolean_details` |
+| `get_string_value` | `get_string_details` |
+| `get_number_value` | `get_number_details` |
+| `get_object_value` | `get_object_details` |
+| `evaluate(key, FlagType.BOOLEAN, default, context)` | |
+
+A `Decision` carries `value`, `reason`, `control_point_metadata` and, on failure, `error_kind`. `register_target` returns `ok=False` instead of raising.
+
+## Errors and shutdown
+
+A read that fails returns your default. Configuration problems raise `ConfigurationError` at start. Every error subclasses `FireweaveError`, for example `ControlPointNotFoundError`: see [Errors and lifecycle](/sdks/errors-and-lifecycle).
 
 ```python
-from fireweave import FireweaveClient, FireweaveRuntime, InMemoryAdapter
-
-adapter = InMemoryAdapter({
-    "new-checkout": {"enabled": True, "variant": "on", "value": True},
-})
-runtime = FireweaveRuntime(adapter)
-runtime.initialize()
-client = FireweaveClient(runtime)
+fw.shutdown()  # or client.shutdown()
 ```
 
-The async `fireweave.aio` / `AsyncFireweaveClient` surface is **gone**.
-
-## Configuration and authentication
-
-Remote mode speaks `POST /v1/flags/evaluate` and `POST /v1/targets/register`. Auth is `Authorization: Bearer <key>`.
-
-| Option | Mode | Description |
-| --- | --- | --- |
-| `api_url` | `remote` | fw-server base URL (required) |
-| `api_key` | `remote` | Fireweave project key (required) |
-| `allowed_hosts` | `remote` | SSRF allowlist override |
-| `local.control_points` | `local` | Seeded boolean map |
-| `local.log` | `local` | Sink for the `[fireweave:local]` register_target trace |
-
-`https` off-loopback; `http` on loopback only. A literal `"*"` disables host pinning.
-
-See [Configuration and auth](/production/configuration).
-
-## Targets
-
-`register_target` lives on the **client**.
-
-```python
-from fireweave import RegisterTargetOptions
-
-result = client.register_target(
-    "user_42",
-    RegisterTargetOptions(kind="user", properties={"plan": "pro", "region": "eu-west"}),
-)
-print(result.ok, result.error)
-```
-
-`RegisterTargetOptions`: `kind` (`"user"` or `"device"`), `properties`, `environment`. Returns `ok=False` rather than raising.
-
-In local mode the adapter records the target in-process and traces the call. `InMemoryAdapter` does not implement registration.
-
-See [Targeting and targets](/concepts/targeting).
-
-## Control points
-
-`client.control_points` is the product API. `client.flags` is the same object. The alias shares identity. On first access Python emits one `DeprecationWarning` per process.
-
-`FlagType`: `BOOLEAN`, `STRING`, `NUMBER`, `OBJECT`. There is no separate integer/float type in v1.
-
-```python
-from fireweave import EvaluationContext, FlagType
-
-ctx = EvaluationContext(targeting_key="user_42", attributes={"tier": "gold"})
-
-on = client.control_points.get_boolean_value("new-checkout", False, ctx)
-theme = client.control_points.get_string_value("checkout-theme", "classic", ctx)
-ratio = client.control_points.get_number_value("discount", 0.0, ctx)
-
-decision = client.control_points.get_boolean_details("new-checkout", False, ctx)
-print(decision.value, decision.reason)
-
-general = client.control_points.evaluate(
-    "new-checkout", FlagType.BOOLEAN, False, ctx,
-)
-```
-
-Nine methods: `get_boolean_value`, `get_string_value`, `get_number_value`, `get_object_value`, `get_boolean_details`, `get_string_details`, `get_number_details`, `get_object_details`, `evaluate`. Evaluation **never raises**.
-
-`get_integer_value` is a deprecated alias of `get_number_value`. It still works and logs one `DeprecationWarning` per process. Use `get_number_value`.
-
-See [Control points](/concepts/control-points).
-
-## Adapters
-
-| Adapter | Import | Use |
-| --- | --- | --- |
-| `FireweaveRemoteAdapter` | `from fireweave import FireweaveRemoteAdapter` | Production fw-server |
-| `FireweaveLocalAdapter` | `from fireweave import FireweaveLocalAdapter` | Dev `control_points` boolean map |
-| `InMemoryAdapter` | `from fireweave import InMemoryAdapter` | Tests / fixtures |
-
-See [Adapters](/concepts/adapters).
-
-## Errors
-
-`ErrorKind` has the same 15 PascalCase kinds. Concrete subclasses include `NotReadyError`, `FlagNotFoundError`, `TypeMismatchError`, `InvalidContextError`, `TargetingKeyMissingError`, `AuthenticationError`, `AuthorizationError`, `RateLimitedError`, `TimeoutError_`, `NetworkError`, `BackendUnavailableError`, `MalformedResponseError`, `UnsupportedCapabilityError`, `ConfigurationError`, `AlreadyClosedError`, `InternalError`.
-
-Evaluation **never raises**. Init can raise `ConfigurationError`.
-
-See [Errors](/production/errors).
-
-## Testing
-
-`InMemoryAdapter` fixture fields used in tests: `type`, `enabled`, `value`, `variant`, optional `matchAttribute`. Local mode is enough for an offline boolean seed. The repo test-server does **not** implement `POST /v1/targets/register`.
-
-See [Testing](/testing).
-
-## Shutdown
-
-```python
-client.shutdown()  # never raises; idempotent
-```
-
-See [Initialize, ready, shutdown](/production/lifecycle).
-
-## Not in this SDK
-
-- `fireweave[openfeature]` or `fireweave[posthog]`
-- `FireweaveProvider` / `make_fireweave_local_provider`
-- `releases`, `exposures`, `signals`, `capabilities`, `guardrails`
-- Environment-variable auto-read
-- `AsyncFireweaveClient` / `fireweave.aio`
-- A camelCase `controlPoints` namespace (Python is `control_points`)
-
-## Next
-
-<Card title="Quickstart" href="/quickstart">
-  Offline evaluate in every language.
-</Card>
-<Card title="Compatibility" href="/sdks/compatibility">
-  Seven-language surface and the 65×7 aggregate.
-</Card>
+<Columns cols={2}>
+  <Card title="Local mode and testing" href="/sdks/local-mode-and-testing">Run offline, and test with fixed values.</Card>
+  <Card title="Migrate to 3.0" href="/sdks/migrate-3">Upgrade from 2.x, including `get_integer_value`.</Card>
+</Columns>

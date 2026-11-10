@@ -1,0 +1,57 @@
+---
+title: "Working as a team"
+description: "Feature coordination tells you when another branch is already building the same feature, and can hold the second one back."
+---
+
+import { Flow, FlowRow, FlowStart, FlowStep, FlowDecision, FlowTurn, FlowEnd } from "/snippets/flow.jsx";
+
+<Badge color="gray">Off by default</Badge>
+
+When feature coordination is on, the first branch to start a feature claims it. If a second branch starts the same feature, **Notify** tells both branches, and **Lock** makes the second one wait for a decision.
+
+<Flow kicker="FLOW" title="Two branches, one feature, with Lock">
+  <FlowRow><FlowStart /><FlowStep title="Branch A starts" sub="Claims the feature" /><FlowStep title="Branch B starts" sub="Same feature or control point" /><FlowDecision label="Lock?" /><FlowTurn /></FlowRow>
+  <FlowRow><FlowStep title="B is refused" sub="Nothing written yet" kind="key" /><FlowStep title="You decide" sub="Stop, build alongside or take over" /><FlowStep title="A merges" sub="Claim released" kind="ok" /><FlowEnd /></FlowRow>
+</Flow>
+
+## Choose a setting
+
+Set **Feature coordination** in the project's **Settings → Repositories**.
+
+| Setting | What happens when two branches build the same feature |
+| --- | --- |
+| **Off** | Branches aren't told about each other, and a merge replaces the shipped feature whole. |
+| **Notify** | Both branches hear about a possible duplicate; nothing is blocked. |
+| **Lock** | The second branch to start the same feature stops until someone decides. |
+
+FireWeave treats two branches as the same feature when they share a feature name or a control point.
+
+## When your branch is refused
+
+Your coding agent stops before writing any code, shows you who holds the feature, and offers only the choices you have:
+
+| Choice | What it does |
+| --- | --- |
+| **Stop** | Withdraws your waiting claim. |
+| **Build alongside** | Goes ahead next to the other claim, with a reason. |
+| **Take over** | Takes the claim, with a reason. Offered only when the other claim is stale, or you're an organization owner or admin. |
+
+The agent never chooses for you. Your reason is shown to the other holder and kept in the audit log.
+
+## When a claim goes stale
+
+A claim moves through **Claimed** → **In code** → **In review** → **Released**. It goes stale after a stretch with no activity:
+
+| Stage | Goes stale after |
+| --- | --- |
+| **Claimed** | 3 days |
+| **In code** | 14 days |
+| **In review** (an open pull request) | Never |
+
+You can change both numbers in the same settings, from 1 to 365 days.
+
+## See features in progress
+
+The project's **Settings → Repositories** page lists **Features in progress**: each feature, its holder, branch, stage and whether it's stale. From there you can **Release**, **Stop**, **Take over** or **Build alongside**. Only the holder, or an organization owner or admin, can decide.
+
+With coordination on, a merge built on an older version of a feature can meet a newer one that changed the same control point. It then waits under **Conflicted drafts** until someone picks **Take this version** or **Keep shipped**.

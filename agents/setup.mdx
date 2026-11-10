@@ -1,0 +1,85 @@
+---
+title: "Set up your coding agent"
+description: "Install the FireWeave plugin in your coding agent so it follows FireWeave's instructions in your repository."
+---
+
+FireWeave works through the coding agent you already use. Install `fw`, then add the FireWeave plugin to your agent.
+
+| Agent | FireWeave skills | Repository hooks |
+| --- | --- | --- |
+| Claude Code | Yes | Yes |
+| Cursor | Yes | Yes |
+| Codex | Yes | Yes |
+| Cline | Yes | Yes |
+| OpenCode | Yes | — |
+| Gemini CLI | — | Yes |
+| GitHub Copilot | — | Yes |
+| Kiro | — | Yes |
+| Junie, Windsurf, Zed | — | — |
+
+- **Skills** are the `/fireweave:*` commands you run, such as `initialise` and `adopt`. See [Skills](/agents/skills).
+- **Hooks** tell the agent whether FireWeave's instructions apply, and stop it finishing a change that skipped a control point. Setup adds them to your repository.
+- Every agent reads FireWeave's instructions from `AGENTS.md` or its own entry file.
+
+## Install
+
+Install the CLI first:
+
+```bash
+curl https://assets-fireweave-ai.s3.us-east-2.amazonaws.com/cli/latest/install.sh | bash
+fw login
+```
+
+Then add the plugin to your agent:
+
+<Tabs>
+  <Tab title="Claude Code">
+    Run in Claude Code:
+
+    ```text
+    /plugin marketplace add FireWeave-HQ/plugins-marketplace
+    /plugin install fireweave@fireweave
+    ```
+  </Tab>
+  <Tab title="Cursor">
+    Open **Settings → Plugins → Import**, paste the address below, then enable **fireweave**.
+
+    ```text
+    https://github.com/FireWeave-HQ/plugins-marketplace
+    ```
+  </Tab>
+  <Tab title="Codex">
+    ```bash
+    fw plugins install fireweave --tool codex
+    ```
+  </Tab>
+  <Tab title="Cline">
+    ```bash
+    fw plugins install fireweave --tool cline
+    ```
+  </Tab>
+  <Tab title="OpenCode">
+    ```bash
+    fw plugins install fireweave --tool opencode
+    ```
+  </Tab>
+  <Tab title="Gemini CLI, Copilot">
+    FireWeave ships no skills for these yet. This writes the rules that let the agent run `fw` without asking:
+
+    ```bash
+    fw plugins install fireweave --tool gemini
+    fw plugins install fireweave --tool vscode-copilot
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+`fw plugins install` asks before it writes your agent's allow rules for `fw tool`, `fw status` and `fw sync`, so the agent can run them without a prompt each time.
+</Tip>
+
+## Next
+
+<Columns cols={2}>
+  <Card title="Building features" icon="code" href="/agents/building-features">How your agent wraps a change.</Card>
+  <Card title="Join a repository" icon="users" href="/agents/join-a-repo">A teammate already set FireWeave up.</Card>
+</Columns>

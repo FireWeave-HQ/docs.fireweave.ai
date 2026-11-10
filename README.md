@@ -1,10 +1,8 @@
 # Fireweave docs
 
-Source repository for Fireweave SDK documentation. Pages are MDX. Site config is `docs.json`. Mintlify builds and hosts the site.
+Source repository for FireWeave's documentation (docs.fireweave.ai). Pages are MDX. Site config is `docs.json`. Mintlify builds and hosts the site.
 
-The intended public hostname is `docs.fireweave.ai`. That hostname is **not** claimed live from this repo — custom domain setup is a Mintlify dashboard + DNS step. See `audits/mintlify-foundation-notes.md`.
-
-Do not invent product APIs here. Writer tasks, the sitemap, and validation checkpoints live in [`TASKS.md`](TASKS.md).
+Do not invent product APIs here. Every page is written from the `main` branches of `fireweaveai-platform` (its knowledge base, `docs/kb/`) and `fireweave-sdk`. See [`AGENTS.md`](AGENTS.md) for the writing rules and the house diagram components.
 
 This checkout started from the [Mintlify starter kit](https://github.com/mintlify/templates). The root `LICENSE` is MIT, copyright Mintlify 2026.
 
@@ -46,4 +44,4 @@ Deploys are configured in the [Mintlify dashboard](https://app.mintlify.com) (Gi
 
 ## What is not published
 
-`.mintignore` keeps internal files off the docs site, including `TASKS.md`, `audits/`, `DOCUMENTATION_GAPS.md`, `scripts/`, and `.github/`.
+`.mintignore` keeps internal files off the docs site, including `drafts/`, `scripts/` and `.github/`.

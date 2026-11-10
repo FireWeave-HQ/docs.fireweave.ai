@@ -1,0 +1,61 @@
+---
+title: "Observability"
+description: "Connect Datadog, Sentry, Oodle or OpenObserve so FireWeave can check your metrics during a rollout."
+---
+
+FireWeave reads your metrics, logs and traces to decide whether a rollout is healthy. Add an account once, then choose which account serves each environment.
+
+<Tabs>
+  <Tab title="Datadog">
+    | Have ready | Notes |
+    | --- | --- |
+    | Datadog site | The domain in your Datadog URL, for example `datadoghq.eu`. |
+    | API key | |
+    | Application key | Needs `metrics_read`, `logs_read_data` and `apm_read`. |
+  </Tab>
+  <Tab title="Sentry">
+    Sign in to Sentry in a new window to choose the account.
+
+    | Have ready | Notes |
+    | --- | --- |
+    | Sentry organization slug | Only when your Sentry login reaches several organizations. It's in your Sentry URL. |
+  </Tab>
+  <Tab title="Oodle">
+    | Have ready | Notes |
+    | --- | --- |
+    | Instance | The instance name in your Oodle URL. |
+    | Region | Optional. |
+    | API key | |
+    | Log index | Optional. |
+  </Tab>
+  <Tab title="OpenObserve">
+    | Have ready | Notes |
+    | --- | --- |
+    | API host | Your OpenObserve address, for example `https://api.openobserve.ai`. |
+    | Organization ID | |
+    | Service account email | |
+    | Service account token | |
+  </Tab>
+</Tabs>
+
+FireWeave asks for read-only access and checks the credentials before saving.
+
+## Add an account
+
+Go to **Settings › Integrations**, pick the tool and press **Add account**. Adding an account needs an Owner or Admin, or a role with **Manage integrations**. You can also add one on the **Tools** step of [Create a project](/connect/create-project).
+
+## Choose accounts per environment
+
+Open your project's **Environments** page and edit an environment. Under **Observability**, pick the account for each signal:
+
+| Signal | Used for |
+| --- | --- |
+| **Metrics** | The default source. A metric that names no source reads from this account. |
+| **Logs** | Log queries for that environment. |
+| **Traces** | Trace queries for that environment. |
+
+### More metrics sources
+
+Need metrics from a second account or tool? Use **Add a metrics source**. Each account can be added once. You can add one while rollouts are live, but you can't remove one a live rollout reads from.
+
+<Tip>Automatic ramps need an observability account in at least one environment. See [Strategies and checks](/ship/strategies-and-checks).</Tip>

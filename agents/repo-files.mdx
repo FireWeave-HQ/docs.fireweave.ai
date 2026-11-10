@@ -1,0 +1,65 @@
+---
+title: "What FireWeave adds to your repo"
+description: "The files setup commits to your repository, and the ones that stay on your machine."
+---
+
+Setup adds a small set of files. FireWeave edits only its own blocks in files your team already has, so your text is never touched.
+
+<Tree>
+  <Tree.File name="AGENTS.md" />
+  <Tree.File name="CLAUDE.md" />
+  <Tree.Folder name=".fireweave" defaultOpen>
+    <Tree.File name="project.json" />
+    <Tree.File name="agent-instructions.md" />
+    <Tree.Folder name="instructions">
+      <Tree.File name="contract.md" />
+    </Tree.Folder>
+    <Tree.Folder name="hooks">
+      <Tree.File name="agent-gate.sh" />
+      <Tree.File name="rollout-build-gate.sh" />
+    </Tree.Folder>
+    <Tree.File name="stamps.ts" />
+    <Tree.File name=".gitignore" />
+    <Tree.File name="local.json (gitignored)" />
+    <Tree.Folder name=".cache (gitignored)" />
+  </Tree.Folder>
+  <Tree.Folder name=".claude">
+    <Tree.File name="settings.json" />
+  </Tree.Folder>
+  <Tree.Folder name=".cursor">
+    <Tree.File name="hooks.json" />
+  </Tree.Folder>
+  <Tree.Folder name="src">
+    <Tree.Folder name="fireweave">
+      <Tree.File name="start.ts" />
+      <Tree.File name="control-points.ts" />
+    </Tree.Folder>
+  </Tree.Folder>
+</Tree>
+
+## Committed
+
+| File | What it's for |
+| --- | --- |
+| `AGENTS.md`, `CLAUDE.md` | A short FireWeave block telling agents when its instructions apply. |
+| `.fireweave/project.json` | Binds the repository to your FireWeave project. |
+| `.fireweave/agent-instructions.md`, `.fireweave/instructions/` | The full instructions an agent reads when FireWeave is on. |
+| `.fireweave/hooks/` | The scripts your agents' hooks run: the on/off check and the stop check. |
+| `.claude/settings.json`, `.cursor/hooks.json` | FireWeave's hook entries, added beside your team's. Other agents get their own hook file. |
+| `.fireweave/stamps.ts` | One line per change, so each change is visible in git. |
+| `src/fireweave/start.ts`, `control-points.ts` | The SDK's start call and your control points' local values, per app. |
+
+The exact names depend on your agents and languages. FireWeave stores feature records itself, so there's no manifest file to edit.
+
+## On your machine only
+
+| File | What it's for |
+| --- | --- |
+| `.fireweave/local.json` | Your sign-in profile and your [instructions switch](/agents/instructions-switch). |
+| `.fireweave/.cache/` | A local copy of what FireWeave knows about this repository. |
+
+`.fireweave/.gitignore` keeps these out of git.
+
+<Warning>
+Hook scripts run as shell commands on every teammate's machine once merged. Review them in the setup pull request like any other code.
+</Warning>

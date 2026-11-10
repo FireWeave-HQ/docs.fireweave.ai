@@ -1,172 +1,106 @@
 ---
-title: "Browser"
-description: "Install and use @fireweaveai/web-sdk 2.3.0 for synchronous control-point reads, registerTarget / identify, and fw_public_ keys. Not a Node SDK."
+title: "Web (browser)"
+description: "Read control points in a browser app with @fireweaveai/web-sdk 3.0."
 ---
 
-`@fireweaveai/web-sdk` is the Fireweave **browser** binding. It evaluates **control points** synchronously from a prefetched cache and registers targets via `registerTarget` / `identify`. Those are the two v1 capabilities. The wire protocol still uses `flagKey`.
-
-This is a different surface from [`@fireweaveai/server-sdk`](/sdks/node). It is not a Node, Bun, or Deno server target.
-
-<Warning>
-  Authenticate the web SDK with a `fw_public_` key scoped to `flags:evaluate` and `events:write`. Do not embed a secret or `attest:write` project key in a frontend bundle. Key families and issuance: [Configuration](/production/configuration).
-</Warning>
-
-## Supported runtime
-
-| | Value |
-| --- | --- |
-| Package | `@fireweaveai/web-sdk` **2.3.0** |
-| Target | Browser |
-| Runtime deps | **none** |
-| CI | Bun + happy-dom only |
-
-It ships no server entry point, reads **no environment**, and imports no runtime built-ins.
-
-## Install
+`@fireweaveai/web-sdk` reads control points in the browser. Reads are synchronous, so they are safe inside a render. It has no runtime dependencies.
 
 ```bash
 npm install @fireweaveai/web-sdk
 ```
 
-or `bun add @fireweaveai/web-sdk`.
+<Warning>
+  A browser holds only a browser key (`fw_public_…`). Never ship the server key (`project-api-key_…`): the Vite plugin fails a build that contains one. See [Keys](/connect/keys).
+</Warning>
 
-## Initialize
+## Start profile
 
-`initFireweave` is the single entry point. `mode` is required and never inferred. Reads after init are **synchronous**.
+The build plugin injects the key and endpoint, `start()` runs first, and `fw` reads anywhere.
 
-```js
+<CodeGroup>
+
+```ts vite.config.ts
+import { defineConfig } from 'vite';
+import { fireweave } from '@fireweaveai/web-sdk/vite';
+
+export default defineConfig({ plugins: [fireweave()] });
+```
+
+```ts src/fireweave/control-points.ts
+import { defineControlPoints } from '@fireweaveai/web-sdk/start';
+
+export const controlPoints = defineControlPoints({
+  'new-checkout': { local: true },
+});
+```
+
+```ts src/fireweave/start.ts
+import { start } from '@fireweaveai/web-sdk/start';
+import { controlPoints } from './control-points';
+
+export const ready = start({ controlPoints });
+```
+
+```ts anywhere
+import { fw } from '@fireweaveai/web-sdk/start';
+
+if (fw.controlPoints.getBooleanValue('new-checkout', false)) {
+  // new path
+}
+```
+
+</CodeGroup>
+
+The plugin reads these at build time. The browser reads no environment.
+
+| Variable | What it does |
+| --- | --- |
+| `FIREWEAVE_BROWSER_KEY` | The browser key. Set means remote mode. |
+| `FIREWEAVE_URL` | Optional. Overrides the FireWeave endpoint. |
+| `FIREWEAVE_ENV`, then `APP_ENV` | With no key, `development`, `dev`, `local` or `test` means local mode. A production build with no key fails. |
+
+Not on Vite? `fireweaveDefine()` from `@fireweaveai/web-sdk/define` runs the same check and returns the values for webpack, esbuild, Rollup or Next.js.
+
+## Users
+
+Reads use an anonymous device id until you identify the user.
+
+| Call | When |
+| --- | --- |
+| `await fw.identify(userId, { plan: 'pro' })` | Sign-in or session restore. Registers the user and switches reads to them. |
+| `await fw.reset()` | Sign-out. Back to the device id. |
+| `fw.setPersistence('memory')`, `await fw.forget()` | Consent. Stop storing, or clear and start over. |
+
+`fw` also has `ready`, `status()`, `subscribe(listener)` and `shutdown()`. A bad setup never crashes your app: reads serve defaults and `fw.status()` names the problem. Rules for every SDK: [Start profile](/sdks/start-profile).
+
+## Core API
+
+`initFireweave` reads no environment. `mode` is required.
+
+```ts
 import { initFireweave } from '@fireweaveai/web-sdk';
 
 const fireweave = await initFireweave({
-  mode: 'remote',
-  apiKey,
-  apiUrl,
-  context: { targetingKey: 'anonymous' },
+  mode: 'remote', // or 'local' with local: { controlPoints: { 'new-checkout': true } }
+  apiUrl: 'https://app-server.fireweave.ai',
+  apiKey: 'fw_public_…',
 });
 
-// SYNCHRONOUS — no await, safe inside render.
+await fireweave.identify('user_42', { kind: 'user', properties: { plan: 'pro' } });
 const on = fireweave.controlPoints.getBooleanValue('new-checkout', false);
 ```
 
-Local mode (no network, no credentials):
+`controlPoints` has the same nine methods as the server SDK (`get{Boolean,String,Number,Object}{Value,Details}` and `evaluate`), returning values directly. None of them throws. `registerTarget` registers without switching reads; `identify` does both.
 
-```js
-const fireweave = await initFireweave({
-  mode: 'local',
-  local: { controlPoints: { 'new-checkout': true } },
-});
+## Errors and shutdown
+
+A read that fails returns your default. After a failed re-fetch, the last good decisions keep serving with reason `STALE`. Error kinds, including `ControlPointNotFound`: [Errors and lifecycle](/sdks/errors-and-lifecycle).
+
+```ts
+await fw.shutdown(); // or fireweave.shutdown()
 ```
 
-A bad host or missing credential still **throws** at `initFireweave()`. `FireweaveWebRuntime.initialize()` itself is fail-open: a hung prefetch must not block app boot. When the initial prefetch loses its 5 second race (`DEFAULT_FLAGS_READY_TIMEOUT_MS`), the runtime serves defaults with reason `STALE`.
-
-## Lifecycle and STALE
-
-States include **`STALE`**: prefetch raced the 5 second ceiling and lost. Reads are defaults with reason `STALE`. Collapsing STALE into READY would make a timed-out boot indistinguishable from a successful one where every control point is off.
-
-## Configuration and authentication
-
-`apiUrl` and `apiKey` are required in remote mode. The package **reads no environment**.
-
-```js
-const fireweave = await initFireweave({
-  mode: 'remote',
-  apiUrl: 'https://app-server.fireweave.ai',
-  apiKey: 'fw_public_…',
-  context: { targetingKey: 'anonymous' },
-});
-```
-
-Use a `fw_public_` key. The adapter rejects `phc_` / `phs_` / `phx_` shapes (`assertNotSecretKey`) with `Configuration`. Default allowlist: `app-server.fireweave.ai`, `staging-app-server.fireweave.ai`, loopback. `https` off-loopback; `http` on loopback only.
-
-Auth: `Authorization: Bearer <key>`. Paths: `/v1/flags/evaluate`, `/v1/targets/register`.
-
-See [Configuration and auth](/production/configuration).
-
-## Targets: `registerTarget` and `identify`
-
-Web exposes both. `registerTarget` matches the other languages. `identify` is the sign-in helper: it registers, then `setContext({ targetingKey })` so the next prefetch buckets on that id.
-
-```js
-const result = await fireweave.identify('user_42', {
-  kind: 'user',
-  properties: { plan: 'pro' },
-});
-
-// Same registration without the context refresh:
-await fireweave.registerTarget('user_42', {
-  kind: 'user',
-  properties: { plan: 'pro' },
-});
-```
-
-`identify` is not OpenFeature `identify` and not analytics `identify`. Options: `kind?: 'user' | 'device'`, `properties?`, `environment?`.
-
-See [Targeting and targets](/concepts/targeting).
-
-## Control points (synchronous)
-
-`ExpectedFlagType`: `'boolean' | 'string' | 'number' | 'object'` — same IEEE-754 number model as Node.
-
-```js
-const on = fireweave.controlPoints.getBooleanValue('new-checkout', false, { targetingKey: 'user_42' });
-const theme = fireweave.controlPoints.getStringValue('copy', 'classic', { targetingKey: 'user_42' });
-const decision = fireweave.controlPoints.getBooleanDetails('new-checkout', false, { targetingKey: 'user_42' });
-```
-
-Nine methods, all **sync**. Evaluation **never throws**. `client.flags` is the same object as `client.controlPoints` (deprecated alias, silent at runtime).
-
-See [Control points](/concepts/control-points).
-
-## Adapters
-
-| Adapter | Use |
-| --- | --- |
-| `FireweaveRemoteWebAdapter` | Production. `initFireweave({ mode: 'remote', … })` builds it. |
-| `FireweaveLocalWebAdapter` | Dev boolean map. `initFireweave({ mode: 'local', … })` builds it. |
-| `InMemoryWebAdapter` | Tests / fixtures. |
-
-There is **no** vendor adapter and **no** in-process definition poll.
-
-See [Adapters](/concepts/adapters).
-
-## Errors
-
-Same 15-kind `FireweaveError` taxonomy as the Node SDK. Evaluation never throws. Init throws on configuration failure.
-
-See [Errors](/production/errors).
-
-## Testing
-
-`initFireweave({ mode: 'local', … })` or `InMemoryWebAdapter`. CI uses Bun and happy-dom.
-
-See [Testing](/testing).
-
-## Shutdown
-
-```js
-await fireweave.shutdown();
-```
-
-A tab has no process shutdown hook.
-
-See [Initialize, ready, shutdown](/production/lifecycle).
-
-## Not in this SDK
-
-- `FireweaveWebProvider` / `@openfeature/web-sdk`
-- `releases`, `exposures`, `signals`, `capabilities`, `guardrails`
-- Environment-variable configuration
-- A server entry point / Node-as-target
-- Secret project keys in the browser
-
-## Next
-
-<Card title="Quickstart" href="/quickstart">
-  Offline evaluate in every language.
-</Card>
-<Card title="Node server SDK" href="/sdks/node">
-  Async server counterpart (`@fireweaveai/server-sdk`).
-</Card>
-<Card title="Compatibility" href="/sdks/compatibility">
-  Seven-language surface and the 65×7 aggregate.
-</Card>
+<Columns cols={2}>
+  <Card title="Local mode and testing" href="/sdks/local-mode-and-testing">Run offline, and test with fixed values.</Card>
+  <Card title="Migrate to 3.0" href="/sdks/migrate-3">Upgrade from 2.x.</Card>
+</Columns>

@@ -1,130 +1,52 @@
 ---
 title: "Troubleshooting"
-description: "Problem, cause, diagnosis, and fix for Fireweave SDK install, mode, auth, targeting, defaults, and STALE."
+description: "Common problems and the fix for each."
 ---
 
-Always read **evaluation details** first: `reason`, `errorKind`, and `metadata['fireweave.errorKind']`. See [Errors](/production/errors).
+Start with `fw doctor`. It checks your install, sign-in and repo, and prints a fix for each problem it finds.
 
-```ts
-const d = await fireweave.controlPoints.getBooleanDetails('new-checkout', false, ctx);
-console.log(d.reason, d.errorKind, d.errorCode, d.metadata);
-```
+## Setup
 
-Also record: language + SDK version, runtime (Node / Bun / Deno + version), adapter (in-memory / local / remote), and `runtime.getState()` / `runtime.state()` / `client.Runtime().State()`.
+| Symptom | Fix |
+| --- | --- |
+| The setup PR never opened, or the run stopped | Open **Project Setup** in the sidebar. Answer any questions and choose **Save and rerun**, or choose **Retry**. |
+| You'd rather not wait on the cloud run | Choose **Set up locally instead**. FireWeave closes its setup PR and shows the commands to run. See [Set up FireWeave](/setup). |
+| The setup PR was closed without merging | Nothing changed in the repo. Choose **Open a new PR** under **Project Setup**. |
+| The app fails at start, naming `FIREWEAVE_KEY` | The deploy has no key. Set `FIREWEAVE_KEY` (or `FIREWEAVE_BROWSER_KEY` for a browser app) in that environment. See [Keys](/connect/keys). |
 
-<AccordionGroup>
-  <Accordion title="Cannot find module '@fireweaveai/sdk' or FireweaveProvider">
-    **Problem.** `Cannot find module '@fireweaveai/sdk'`, `Cannot find module '@fireweaveai/sdk/posthog'`, or `FireweaveProvider` / `makeFireweaveLocalProvider` is not exported.
+## The fw CLI
 
-    **Cause.** You are on the 2.1 package name or a removed API:
+| Symptom | Fix |
+| --- | --- |
+| `fw: command not found` after installing | Open a new terminal. Still missing? Run `~/.fireweave/bin/fw doctor --fix`. |
+| `fw` says you're not signed in | Run `fw login`, then `fw status`. |
+| `fw status` says no project is linked | Run `fw select-project` in a repo a setup PR set up, or `fw init` otherwise. |
+| CI refuses `FW_ORG_API_KEY` | Use a CI key (`fw_org_…`), not your app's key, and make sure `.fireweave/project.json` is committed. See [Run in CI](/cli/ci). |
 
-    - The server package was renamed `@fireweaveai/sdk` → `@fireweaveai/server-sdk`.
-    - v1 removed `FireweaveProvider`, `FireweaveWebProvider`, `makeFireweaveLocalProvider`, and the `releases` / `exposures` / `signals` / `capabilities` / `guardrails` namespaces.
-    - 2.1 already removed `./posthog` and `PostHogAdapter`.
+## Your coding agent
 
-    **Diagnosis.** Check `package.json`. Search for `FireweaveProvider`, `@fireweaveai/sdk`, and `client.releases`.
+| Symptom | Fix |
+| --- | --- |
+| The agent ignores FireWeave | Run `fw agents status`. If it says off, run `fw agents on`. If you're signed out, run `fw login`. |
+| The agent has no FireWeave skills | Install the plugin. See [Set up your coding agent](/agents/setup). |
+| The agent won't finish and names a control point or manifest | FireWeave's check found a change without its control point. Ask the agent to fix what the message names. |
+| The agent is refused because a teammate holds the feature | Your project uses feature coordination. See [Working as a team](/agents/team-coordination). |
 
-    **Solution.** Follow [Migrate 2.1 to 2.3](/migration/v1). Install `@fireweaveai/server-sdk` (or `@fireweaveai/web-sdk` in the browser). Call `initFireweave` and `controlPoints.*`. If you still need the 2.0 PostHog adapter, that cut happened earlier — see [Migrate Node 2.0 to 2.1](/migration/node-2).
-  </Accordion>
+## Pull requests and rollouts
 
-  <Accordion title="Init throws Configuration">
-    **Problem.** Boot fails with kind `Configuration` / `PROVIDER_FATAL`.
+| Symptom | Fix |
+| --- | --- |
+| The readiness check says not ready | Open the check on the PR. Each finding says what to change; ask your agent to fix them and push. |
+| No rollout appeared after merging | Rollouts are registered when you merge into an environment branch. Check the PR's base branch, and see [Environments](/connect/environments). |
+| A rollout sits at **Waiting for Start** | That's expected. Deploy, then press **Start rollout** in the web app. |
+| A rollout went to **Breached** | A guardrail tripped. What happens next depends on its **On breach** setting. See [Guardrails](/ship/guardrails). |
 
-    **Cause.** `mode` is missing or unrecognised; `mode: 'remote'` is missing `apiKey` or `apiUrl`; `apiUrl` fails the host allowlist or is non-https off-loopback; or `mode: 'local'` was given credentials. The SDK does **not** read `FW_API_URL` / `FW_PROJECT_API_KEY` for you.
+## SDKs
 
-    **Diagnosis.** Messages are redacted by design — compare key **prefixes** (`project-api-key_…` vs `fw_public_…` vs `phc_`) and the URL you passed in. Web: confirm constructor `apiUrl` / `apiKey`. A `phc_` / `phs_` / `phx_` key is rejected at construction.
+| Symptom | Fix |
+| --- | --- |
+| Every control point returns its default | A control point stays off until someone starts its rollout. Also check the app has its key: with no key, a `development` or `test` environment runs in local mode. |
+| `ControlPointNotFound` | FireWeave doesn't know that key yet. It is registered when the change merges into an environment branch. Otherwise, check the key for a typo. |
+| Code still reads `FW_PROJECT_API_KEY` | SDK 3.0 reads `FIREWEAVE_KEY` only. See [Migrate to 3.0](/sdks/migrate-3). |
 
-    **Solution.** Pass `mode` and credentials as explicit options ([Configuration](/production/configuration)). Add custom hosts to `allowedHosts`. Never send vendor keys on the Fireweave remote path. Use `fw_public_…` in the browser.
-  </Accordion>
-
-  <Accordion title="I always get the default value">
-    **Problem.** Every evaluate returns the default you passed.
-
-    **Diagnosis.** Match the signature, then fix that cause only:
-
-    | Signature | Cause | Solution |
-    | --- | --- | --- |
-    | `NotReady` | Evaluated before init finished, or you constructed a runtime and never called `initialize` | Use `initFireweave` / `Init` / `Fireweave.init`, or `await runtime.initialize()` |
-    | `AlreadyClosed` | Evaluated after shutdown | Construct a new client. Shutdown is terminal |
-    | `FlagNotFound` | Unknown key on **remote**, wrong project, missing InMemory fixture, or the test-server’s own fixtures | Verify `flagKey` + project. Against the stub, replace fixtures |
-    | `DEFAULT` (no error) | Unknown key on **local** | Expected — seed the key or accept the caller default |
-    | `FlagNotFound` + `fireweave.quotaLimited: true` | Backend quota-empty snapshot | Address quota on the Fireweave project |
-    | `TypeMismatch` | Getter type ≠ stored type | Use the matching getter (`getNumberValue`, not a removed integer-only helper) |
-    | `TARGETING_KEY_MISSING` | No `targetingKey` when required | Pass a stable `targetingKey` ([Targeting](/concepts/targeting)) |
-    | `InvalidContext` | Bounds (128 attrs / 256 B keys / 4 KiB values / depth 6 / 64 KiB) or reserved-key misuse | Slim context; rename `fireweave.*` / `kind` collisions |
-    | `Timeout` / `Network` / `BackendUnavailable` | Transport on the evaluate path | Check URL, egress, allowlist, and the 3 s request timeout |
-    | `Configuration` | Invalid URL, host not allowed, missing key or `mode` | Fix config. Not retried |
-    | `DISABLED` | Control point exists and is off | Expected |
-    | Value “wrong”, no error | Targeting did not match | Compare attributes to rules; keep `targetingKey` stable; check `registerTarget` returned `ok` |
-    | Web / Swift, `reason: STALE` | Prefetch lost the 5 s ceiling | Not a successful all-off rollout. Check network; `identify` / re-init to prefetch again |
-  </Accordion>
-
-  <Accordion title="Targeting does not match">
-    **Problem.** Rules that should match a user do not.
-
-    **Cause.** The SDK forwards `targetingKey` and attributes. It does not invent an identity. InMemory and the test-server stub do **not** persist registration. Local mode records in-process only — nothing reaches fw-server.
-
-    **Diagnosis.** Confirm you pass the same `targetingKey` on every evaluate. `registerTarget` / `identify` returns `{ ok }` and never throws — check `ok`. If you only registered and then evaluated against InMemory, registration was a no-op.
-
-    **Solution.** Register durable properties once per login (`registerTarget` in all seven languages; `identify` on Web and Swift). Still send `targetingKey` (and per-request attributes) on evaluate. Do not expect the test stub to store targets.
-  </Accordion>
-
-  <Accordion title="A feature never ramps and the boot log is green">
-    **Problem.** Production looks healthy. Every control point serves its default. Nothing raises.
-
-    **Cause.** This is the failure mode required `mode` exists to prevent. If you still see it, the process booted in `local` on purpose (or you are reading a stale 2.1 binary that inferred local when credentials were missing).
-
-    **Diagnosis.** Search logs for `[fireweave:local]`. That line on a production host means local mode. Confirm `mode: 'remote'` and that `apiKey` / `apiUrl` are the values you think they are.
-
-    **Solution.** Set `mode: 'remote'` with explicit credentials. Do not infer mode from whether env vars are present — the SDK does not read them.
-  </Accordion>
-
-  <Accordion title="Network, timeouts, or hangs on shutdown">
-    **Problem.** Evaluate times out (`Timeout`), or the process will not exit.
-
-    **Cause.** Default request timeout is **3 s**. Shutdown is deadline-bounded (**10 s**). A hang longer than that means shutdown was never called, or something **outside** Fireweave holds the event loop. Evaluate is **not retried**. `registerTarget` retries **once** only when the kind is retryable.
-
-    **Diagnosis.** Check the `apiUrl` you passed (not an env var the SDK never read), allowlist, and https vs loopback http. Go: pass a deadline to `Runtime().Shutdown(ctx)`.
-
-    **Solution.** Fix egress and config. Call shutdown on SIGTERM. Reproduce faults on the [test server](/testing) (`401`, `429`, `500`, `delay`, `invalid_json`, `quota_limited`).
-  </Accordion>
-
-  <Accordion title="releases / exposures / signals / guardrails / capabilities are missing">
-    **Problem.** `client.releases` (or `exposures`, `signals`, `guardrails`, `capabilities`) does not exist.
-
-    **Cause.** Those namespaces were removed in v1. The guardrails stub is gone entirely — you will not get `UnsupportedCapability` from it. Guardrails are platform-managed in the console; the SDK has no guardrails API.
-
-    **Diagnosis.** This is a compile/import error, not a runtime degrade.
-
-    **Solution.** Delete those calls. Evaluate and `registerTarget` are the v1 surface. See [Migrate 2.1 to 2.3](/migration/v1) and the concept pages for [releases](/concepts/releases), [exposures](/concepts/exposures), [signals](/concepts/signals), and [capabilities](/concepts/capabilities).
-  </Accordion>
-
-  <Accordion title="I expected an OpenFeature provider">
-    **Problem.** There is no `FireweaveProvider` to pass to `OpenFeature.setProviderAndWait`.
-
-    **Cause.** ADR-0010 unbundled OpenFeature from the core SDK. Compatibility is not forbidden; the bridge no longer ships inside the package.
-
-    **Solution.** Call `controlPoints.*` directly. See [OpenFeature](/openfeature) and [Migrate 2.1 to 2.3](/migration/v1).
-  </Accordion>
-</AccordionGroup>
-
-## Language notes
-
-- **Node:** ESM, zero runtime deps, package `@fireweaveai/server-sdk`. Integers beyond ±(2^53−1) are not lossless. `@fireweaveai/sdk` is the old name.
-- **Python:** Package `fireweave`. `get_integer_value` is a deprecated alias of `get_number_value` (one `DeprecationWarning` per process).
-- **Go:** Module `…/sdks/go/v2`. The nine methods do not take `context.Context`. Shutdown is `client.Runtime().Shutdown(ctx)`.
-- **Java:** No env auto-read. `Fireweave.init(InitOptions.remote(apiKey, apiUrl))`. Unpublished (`0.1.0-SNAPSHOT`).
-- **Web:** No env. Sync reads. `identify` then cache refresh. `fw_public_…` keys. Secret key shapes refused at construction.
-- **Rust:** Crate `fireweave`. Blocking. `init_fireweave` returns `Result`.
-- **Swift:** Package `Fireweave`. Sync reads, web-shaped prefetch.
-
-## Next
-
-<Columns cols={2}>
-  <Card title="Errors" href="/production/errors" icon="triangle-exclamation">
-    Full kind table
-  </Card>
-  <Card title="Testing" href="/testing" icon="flask">
-    Reproduce without a backend account
-  </Card>
-</Columns>
+Still stuck? Run `fw feedback` to send FireWeave a report.
