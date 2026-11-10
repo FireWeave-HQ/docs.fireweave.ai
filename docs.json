@@ -1,144 +1,173 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "maple",
   "name": "Fireweave",
-  "description": "Fireweave is an AI release engineer. Developer docs: SDKs for Node, Python, Go, Java, Rust, and the browser, plus onboarding for the CLI, Terraform, and coding-agent plugins.",
+  "description": "FireWeave is an AI release engineer. Set up once, merge the setup PR, and every change your coding agent makes ships behind a control point and ramps safely to stable.",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#c74905",
+    "light": "#ff8a3d",
+    "dark": "#b8460c"
   },
-  "favicon": {
-    "light": "/favicon.png",
-    "dark": "/favicon-dark.png"
-  },
+  "favicon": "/favicon.svg",
   "logo": {
-    "light": "/logo/light.png",
-    "dark": "/logo/dark.png"
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://fireweave.ai"
   },
   "appearance": {
     "default": "system"
   },
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "Get Started",
-        "pages": [
-          "index",
-          "for-coding-agents",
-          "onboarding",
-          "onboarding/setup",
-          "onboarding/first-change",
-          "introduction/how-it-works",
-          "introduction/architecture",
-          "quickstart"
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "index",
+              "how-it-works",
+              "setup",
+              "first-rollout",
+              "glossary"
+            ]
+          },
+          {
+            "group": "Work with your coding agent",
+            "pages": [
+              "agents/setup",
+              "agents/building-features",
+              "agents/instructions-switch",
+              "agents/team-coordination",
+              "agents/skills",
+              "agents/repo-files",
+              "agents/join-a-repo"
+            ]
+          },
+          {
+            "group": "Ship and roll out",
+            "pages": [
+              "ship/ship-path",
+              "ship/pr-check",
+              "ship/run-a-rollout",
+              "ship/guardrails",
+              "ship/strategies-and-checks",
+              "ship/promote-and-clean-up"
+            ]
+          },
+          {
+            "group": "Set up and connect",
+            "pages": [
+              "connect/create-project",
+              "connect/environments",
+              "connect/github-app",
+              "connect/observability",
+              "connect/keys",
+              "connect/team-and-security",
+              "connect/linear-and-slack"
+            ]
+          }
         ]
       },
       {
-        "group": "SDKs",
-        "pages": [
-          "sdks/node",
-          "sdks/python",
-          "sdks/go",
-          "sdks/java",
-          "sdks/rust",
-          "sdks/web",
-          "sdks/compatibility"
+        "tab": "SDKs",
+        "groups": [
+          {
+            "group": "Start here",
+            "pages": [
+              "sdks/quickstart",
+              "sdks/start-profile"
+            ]
+          },
+          {
+            "group": "Languages",
+            "pages": [
+              "sdks/node",
+              "sdks/web",
+              "sdks/python",
+              "sdks/go",
+              "sdks/java",
+              "sdks/rust",
+              "sdks/dart",
+              "sdks/swift"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "sdks/local-mode-and-testing",
+              "sdks/errors-and-lifecycle",
+              "sdks/compatibility",
+              "sdks/migrate-3"
+            ]
+          }
         ]
       },
       {
-        "group": "Concepts",
-        "pages": [
-          "concepts",
-          "concepts/control-points",
-          "concepts/targeting",
-          "concepts/adapters",
-          "concepts/releases",
-          "concepts/exposures",
-          "concepts/signals",
-          "concepts/capabilities"
-        ]
-      },
-      {
-        "group": "Production",
-        "pages": [
-          "production/configuration",
-          "production/lifecycle",
-          "production/errors"
-        ]
-      },
-      {
-        "group": "CLI",
-        "pages": [
-          "cli/overview",
-          "cli/authentication",
-          "cli/commands"
-        ]
-      },
-      {
-        "group": "Terraform",
-        "pages": [
-          "infrastructure/terraform/overview",
-          "infrastructure/terraform/quickstart",
-          "infrastructure/terraform/authentication",
-          "infrastructure/terraform/projects",
-          "infrastructure/terraform/environments",
-          "infrastructure/terraform/data-sources",
-          "infrastructure/terraform/org-members"
-        ]
-      },
-      {
-        "group": "Testing",
-        "pages": [
-          "testing"
-        ]
-      },
-      {
-        "group": "Troubleshooting",
-        "pages": [
-          "troubleshooting"
-        ]
-      },
-      {
-        "group": "Migration",
-        "pages": [
-          "migration/v1",
-          "migration/node-2",
-          "openfeature"
-        ]
-      },
-      {
-        "group": "Reference",
-        "pages": [
-          "reference/packages",
-          "reference/http-api"
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "CLI",
+            "pages": [
+              "cli/install",
+              "cli/commands",
+              "cli/ci"
+            ]
+          },
+          {
+            "group": "Terraform",
+            "pages": [
+              "infrastructure/terraform/overview",
+              "infrastructure/terraform/quickstart",
+              "infrastructure/terraform/authentication",
+              "infrastructure/terraform/projects",
+              "infrastructure/terraform/environments",
+              "infrastructure/terraform/data-sources",
+              "infrastructure/terraform/org-members"
+            ]
+          },
+          {
+            "group": "More",
+            "pages": [
+              "reference/http-api",
+              "reference/packages",
+              "troubleshooting"
+            ]
+          }
         ]
       }
     ],
     "global": {
       "anchors": [
         {
-          "anchor": "Console",
+          "anchor": "Web app",
           "href": "https://app.fireweave.ai",
-          "icon": "browser"
+          "icon": "layout-dashboard"
+        },
+        {
+          "anchor": "fireweave.ai",
+          "href": "https://fireweave.ai",
+          "icon": "globe"
         },
         {
           "anchor": "SDK source",
           "href": "https://github.com/FireWeave-HQ/fireweave-sdk",
           "icon": "github"
-        },
-        {
-          "anchor": "Terraform provider",
-          "href": "https://registry.terraform.io/providers/FireWeave-HQ/fireweave/latest",
-          "icon": "cube"
         }
       ]
     }
   },
   "navbar": {
+    "links": [
+      {
+        "label": "Web app",
+        "href": "https://app.fireweave.ai"
+      }
+    ],
     "primary": {
-      "type": "github",
-      "href": "https://github.com/FireWeave-HQ/fireweave-sdk"
+      "type": "button",
+      "label": "Start free",
+      "href": "https://app.fireweave.ai/signup"
     }
   },
   "contextual": {
@@ -155,18 +184,19 @@
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/FireWeave-HQ/fireweave-sdk"
+      "github": "https://github.com/FireWeave-HQ",
+      "website": "https://fireweave.ai"
     }
   },
   "seo": {
     "indexing": "navigable",
     "metatags": {
-      "og:site_name": "Fireweave Docs",
+      "og:site_name": "FireWeave Docs",
       "canonical": "https://docs.fireweave.ai"
     },
     "organization": {
       "id": "https://fireweave.ai/#organization",
-      "name": "Fireweave",
+      "name": "FireWeave",
       "url": "https://fireweave.ai",
       "sameAs": [
         "https://github.com/FireWeave-HQ",
@@ -175,9 +205,130 @@
     }
   },
   "search": {
-    "prompt": "Search Fireweave docs"
+    "prompt": "Search FireWeave docs"
   },
   "metadata": {
     "timestamp": true
-  }
+  },
+  "background": {
+    "color": {
+      "light": "#faf8f5",
+      "dark": "#121110"
+    }
+  },
+  "fonts": {
+    "heading": {
+      "family": "Area Inktrap",
+      "weight": 600,
+      "source": "/fonts/area-inktrap-semibold.woff2",
+      "format": "woff2"
+    },
+    "body": {
+      "family": "General Sans",
+      "weight": 400,
+      "source": "/fonts/general-sans-regular.woff2",
+      "format": "woff2"
+    }
+  },
+  "icons": {
+    "library": "lucide"
+  },
+  "redirects": [
+    {
+      "source": "/for-coding-agents",
+      "destination": "/agents/setup"
+    },
+    {
+      "source": "/onboarding",
+      "destination": "/setup"
+    },
+    {
+      "source": "/onboarding/setup",
+      "destination": "/setup"
+    },
+    {
+      "source": "/onboarding/first-change",
+      "destination": "/first-rollout"
+    },
+    {
+      "source": "/introduction/how-it-works",
+      "destination": "/how-it-works"
+    },
+    {
+      "source": "/introduction/architecture",
+      "destination": "/how-it-works"
+    },
+    {
+      "source": "/quickstart",
+      "destination": "/sdks/quickstart"
+    },
+    {
+      "source": "/concepts",
+      "destination": "/glossary"
+    },
+    {
+      "source": "/concepts/control-points",
+      "destination": "/glossary"
+    },
+    {
+      "source": "/concepts/targeting",
+      "destination": "/sdks/start-profile"
+    },
+    {
+      "source": "/concepts/adapters",
+      "destination": "/sdks/local-mode-and-testing"
+    },
+    {
+      "source": "/concepts/releases",
+      "destination": "/ship/run-a-rollout"
+    },
+    {
+      "source": "/concepts/exposures",
+      "destination": "/glossary"
+    },
+    {
+      "source": "/concepts/signals",
+      "destination": "/ship/guardrails"
+    },
+    {
+      "source": "/concepts/capabilities",
+      "destination": "/sdks/compatibility"
+    },
+    {
+      "source": "/production/configuration",
+      "destination": "/sdks/start-profile"
+    },
+    {
+      "source": "/production/lifecycle",
+      "destination": "/sdks/errors-and-lifecycle"
+    },
+    {
+      "source": "/production/errors",
+      "destination": "/sdks/errors-and-lifecycle"
+    },
+    {
+      "source": "/cli/overview",
+      "destination": "/cli/install"
+    },
+    {
+      "source": "/cli/authentication",
+      "destination": "/cli/install"
+    },
+    {
+      "source": "/testing",
+      "destination": "/sdks/local-mode-and-testing"
+    },
+    {
+      "source": "/migration/v1",
+      "destination": "/sdks/migrate-3"
+    },
+    {
+      "source": "/migration/node-2",
+      "destination": "/sdks/migrate-3"
+    },
+    {
+      "source": "/openfeature",
+      "destination": "/sdks/migrate-3"
+    }
+  ]
 }

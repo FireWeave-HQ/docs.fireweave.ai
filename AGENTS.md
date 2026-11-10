@@ -1,33 +1,27 @@
-> **First-time setup**: Customize this file for your project. Prompt the user to customize this file for their project.
-> For Mintlify product knowledge (components, configuration, writing standards),
-> install the Mintlify skill: `npx skills add https://mintlify.com/docs`
-
 # Documentation project instructions
 
-## About this project
+Mintlify site for docs.fireweave.ai. Pages are MDX with YAML frontmatter; configuration is `docs.json`.
 
-- This is a documentation site built on [Mintlify](https://mintlify.com)
-- Pages are MDX files with YAML frontmatter
-- Configuration lives in `docs.json`
-- Use the Mintlify MCP server, `https://mcp.mintlify.com`, to edit content and settings via MCP
-- Use the Mintlify docs MCP server, `https://www.mintlify.com/docs/mcp`, to query information about using Mintlify via MCP
+## Sources of truth
+
+Write from the `main` branches only: `fireweaveai-platform` (start at `docs/kb/00-orient/what-is-fireweave.md`; terms in `docs/kb/generated/terms.md`) and `fireweave-sdk`. Check published versions on the registries. Never invent a command, flag, env var, UI label or API.
 
 ## Terminology
 
-{/* Add product-specific terms and preferred usage */}
-{/* Example: Use "workspace" not "project", "member" not "user" */}
+- The product is **FireWeave**. The thing a change ships behind is a **control point**, never a "flag".
+- Retired words (MCP, safe rollout, deploy detection, OpenFeature, "Release Radar", and the rest of the KB glossary's "Retired words") appear only where a page says they are retired.
+- Don't promise what isn't live: automatic revert, a required merge gate, cohort plans, coordinated rollouts.
 
-## Style preferences
+## Style
 
-{/* Add any project-specific style rules below */}
+- Short. One or two sentences, then a visual, then short sections. Tables and code over paragraphs.
+- Second person, active voice, sentence-case headings, **bold** UI labels, `code` for commands and paths.
+- Visuals use the house components in `/snippets/flow.jsx` (`Flow`, `Ramp`, `StateRail`), styled by `brand.css` from the design-system tokens. Never use Mermaid: it can't follow the brand or dark mode.
+- Components take string props only, so Mintlify renders them on the server.
 
-- Use active voice and second person ("you")
-- Keep sentences concise — one idea per sentence
-- Use sentence case for headings
-- Bold for UI elements: Click **Settings**
-- Code formatting for file names, commands, paths, and code references
+## Validate
 
-## Content boundaries
-
-{/* Define what should and shouldn't be documented */}
-{/* Example: Don't document internal admin features */}
+```bash
+npx mint validate
+npx mint broken-links --check-anchors --check-redirects
+```
