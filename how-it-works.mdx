@@ -1,11 +1,11 @@
 ---
-title: "How FireWeave works"
+title: "How Fireweave works"
 description: "Set up once, then every feature goes from your coding agent to a pull request to a controlled ramp you start."
 ---
 
 import { Flow, FlowRow, FlowStart, FlowStep, FlowDecision, FlowTurn, FlowEnd } from "/snippets/flow.jsx";
 
-You set FireWeave up once per repository. After that, every feature follows the same path: your agent wraps it, you merge it, and you decide when it reaches users.
+You set Fireweave up once per repository. After that, every feature follows the same path: your agent wraps it, you merge it, and you decide when it reaches users.
 
 <Flow kicker="FLOW" title="Set up once, then for every feature">
   <FlowRow><FlowStart /><FlowStep title="Create a project" sub="In the web app" /><FlowStep title="Merge the setup PR" sub="Once per repository" kind="key" /><FlowTurn /></FlowRow>
@@ -18,19 +18,19 @@ You set FireWeave up once per repository. After that, every feature follows the 
 
 | Step | What happens | Who |
 | --- | --- | --- |
-| Set up | FireWeave opens a setup PR in each repository; you merge it. | You |
-| Build | Your agent, following FireWeave's instructions in the repo, wraps the change behind a control point and records what to watch. A check stops the agent if it skips this. | Your coding agent |
-| Pull request | FireWeave reports readiness on the PR, and risk when PR analysis is on. | FireWeave |
+| Set up | Fireweave opens a setup PR in each repository; you merge it. | You |
+| Build | Your agent, following Fireweave's instructions in the repo, wraps the change behind a control point and records what to watch. A check stops the agent if it skips this. | Your coding agent |
+| Pull request | Fireweave reports readiness on the PR, and risk when PR analysis is on. | Fireweave |
 | Merge | Merging into an environment branch registers a rollout. | You |
 | Start | After your deploy, you press **Start rollout**. | You |
-| Ramp | Exposure rises stage by stage while your metrics are checked. | FireWeave |
-| Stable | After the stability soak at 100%, the control point is marked stable. In **Manual** mode you press **Mark stable now**. | FireWeave, or you |
+| Ramp | Exposure rises stage by stage while your metrics are checked. | Fireweave |
+| Stable | After the stability soak at 100%, the control point is marked stable. In **Manual** mode you press **Mark stable now**. | Fireweave, or you |
 | Clean up | Your agent removes the old code path in a later change. | You and your agent |
 
 <Info>
-**What FireWeave doesn't do**
+**What Fireweave doesn't do**
 
-- It doesn't detect your deploys. Pressing **Start rollout** tells FireWeave the code is live.
+- It doesn't detect your deploys. Pressing **Start rollout** tells Fireweave the code is live.
 - Agents never register, start, ramp or promote rollouts.
 - Nothing reaches users until you press **Start rollout**: a new control point starts off.
 </Info>
@@ -38,6 +38,6 @@ You set FireWeave up once per repository. After that, every feature follows the 
 ## Next
 
 <Columns cols={2}>
-  <Card title="Set up FireWeave" icon="wrench" href="/setup">Cloud setup, and the local fallback.</Card>
+  <Card title="Set up Fireweave" icon="wrench" href="/setup">Cloud setup, and the local fallback.</Card>
   <Card title="Your first rollout" icon="rocket" href="/first-rollout">From feature to stable.</Card>
 </Columns>

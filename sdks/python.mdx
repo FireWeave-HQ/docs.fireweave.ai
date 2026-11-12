@@ -42,7 +42,7 @@ if fw.control_points.get_boolean_value("new-checkout", False, EvaluationContext(
 | Variable | What it does |
 | --- | --- |
 | `FIREWEAVE_KEY` | The server key (`project-api-key_…`). Set means remote mode. |
-| `FIREWEAVE_URL` | Optional. Overrides the FireWeave endpoint. |
+| `FIREWEAVE_URL` | Optional. Overrides the Fireweave endpoint. |
 | `FIREWEAVE_ENV`, then `APP_ENV` | With no key, `development`, `dev`, `local` or `test` means local mode. Anything else, or no name at all, fails at start. |
 
 Every option is keyword-only, among them `control_points`, `mode`, `environment`, `url`, `key` and `instance_id`. `fw` also has `identify(targeting_key, properties)`, `instance_key()` for reads with no user, `status()` and `shutdown()`. A forked worker gets its own client. Rules for every SDK: [Start profile](/sdks/start-profile).

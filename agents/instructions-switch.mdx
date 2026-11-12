@@ -1,23 +1,23 @@
 ---
-title: "Turn FireWeave's instructions on or off"
-description: "Switch FireWeave's agent instructions off for your own clone, or require them for everyone on a project."
+title: "Turn Fireweave's instructions on or off"
+description: "Switch Fireweave's agent instructions off for your own clone, or require them for everyone on a project."
 ---
 
-FireWeave's instructions are committed to your repository, but you can switch them off for your own clone. Your teammates, CI and the pull request check aren't affected.
+Fireweave's instructions are committed to your repository, but you can switch them off for your own clone. Your teammates, CI and the pull request check aren't affected.
 
 ```bash
-fw agents off      # FireWeave stops guiding coding agents in this repo, on this machine
+fw agents off      # Fireweave stops guiding coding agents in this repo, on this machine
 fw agents on       # turn it back on
 fw agents status   # which state applies, and why
 ```
 
-The change takes effect at your agent's next prompt and lasts on every branch until you switch it back. Run these yourself in a terminal: FireWeave's plugin stops an agent from running `fw agents on` or `off`.
+The change takes effect at your agent's next prompt and lasts on every branch until you switch it back. Run these yourself in a terminal: Fireweave's plugin stops an agent from running `fw agents on` or `off`.
 
 ## What off changes
 
 | | When you switch off |
 | --- | --- |
-| Your coding agent in this clone | Ignores FireWeave's instructions and writes no control points |
+| Your coding agent in this clone | Ignores Fireweave's instructions and writes no control points |
 | The stop check in this clone | Doesn't run |
 | The readiness check on your pull request | Still runs |
 | Teammates' clones | Unaffected |
@@ -25,18 +25,18 @@ The change takes effect at your agent's next prompt and lasts on every branch un
 
 The switch lives in `.fireweave/local.json`, which git ignores.
 
-## Require FireWeave for everyone
+## Require Fireweave for everyone
 
-An Owner or Admin can turn on **Require FireWeave for every coding agent** in the project's **Settings → Repositories**. Saving opens a pull request that records the setting in `.fireweave/project.json`.
+An Owner or Admin can turn on **Require Fireweave for every coding agent** in the project's **Settings → Repositories**. Saving opens a pull request that records the setting in `.fireweave/project.json`.
 
 Once it's merged:
 
-- FireWeave's instructions apply to everyone who works on the repository, set up or not.
+- Fireweave's instructions apply to everyone who works on the repository, set up or not.
 - Coding agents make no changes until the person signs in with `fw login`. Questions and infra-only tasks still go ahead.
 - `fw agents off` is refused:
 
 ```text
-This project requires FireWeave for every coding agent; an Owner or Admin can change that in Project settings.
+This project requires Fireweave for every coding agent; an Owner or Admin can change that in Project settings.
 ```
 
 ## Check the state
@@ -45,9 +45,9 @@ This project requires FireWeave for every coding agent; an Owner or Admin can ch
 
 | State | Meaning |
 | --- | --- |
-| `on` | FireWeave's instructions apply. |
-| `off` | You switched it off, or FireWeave isn't set up on this machine. |
+| `on` | Fireweave's instructions apply. |
+| `off` | You switched it off, or Fireweave isn't set up on this machine. |
 | `ask` | You set this clone up but you're signed out. The agent asks you once to sign in or skip. |
-| `sign-in` | The project requires FireWeave and you're signed out. Changes wait until you sign in. |
+| `sign-in` | The project requires Fireweave and you're signed out. Changes wait until you sign in. |
 
 `fw status` and `fw doctor` print the same line.

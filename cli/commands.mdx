@@ -18,7 +18,7 @@ Run `fw <command> --help` for every flag. `fw --version` prints the version and 
 
 | Command | Does |
 | --- | --- |
-| `fw init` | Link this repo to a FireWeave project, step by step. Safe to run again. |
+| `fw init` | Link this repo to a Fireweave project, step by step. Safe to run again. |
 | `fw select-project` | Pick the project for this repo. Use it in a repo a setup PR already set up. |
 | `fw status` | Say whether `fw` is ready here: signed in, project linked, server reachable. |
 | `fw doctor` | Check everything and print a fix for each problem. `--repair` applies the fixes it can. |
@@ -27,11 +27,11 @@ Run `fw <command> --help` for every flag. `fw --version` prints the version and 
 
 | Command | Does |
 | --- | --- |
-| `fw plugins install fireweave` | Install the FireWeave plugin. Add `--tool cursor`, `codex`, `opencode`, `cline`, `gemini` or `vscode-copilot`. |
+| `fw plugins install fireweave` | Install the Fireweave plugin. Add `--tool cursor`, `codex`, `opencode`, `cline`, `gemini` or `vscode-copilot`. |
 | `fw plugins list \| info \| update \| uninstall` | Manage installed plugins. |
-| `fw agents off` | Stop FireWeave guiding coding agents in this repo, on this machine. |
+| `fw agents off` | Stop Fireweave guiding coding agents in this repo, on this machine. |
 | `fw agents on` | Turn it back on. |
-| `fw agents status` | Show whether FireWeave guides agents here, and why. |
+| `fw agents status` | Show whether Fireweave guides agents here, and why. |
 
 See [Turn instructions on or off](/agents/instructions-switch).
 
@@ -39,7 +39,7 @@ See [Turn instructions on or off](/agents/instructions-switch).
 
 | Command | Does |
 | --- | --- |
-| `fw sync` | Send queued manifest edits, then pull this branch's FireWeave state into `.fireweave/.cache/`. |
+| `fw sync` | Send queued manifest edits, then pull this branch's Fireweave state into `.fireweave/.cache/`. |
 | `fw manifest show --feature <slug>` | Show a feature's control-point contract on this branch. |
 | `fw manifest retire --feature <slug>` | Retire a stable feature's manifest on this branch. It takes effect when the branch merges. |
 | `fw manifest promote \| archive \| gc` | Less common lifecycle moves. See `fw manifest --help`. |
@@ -51,7 +51,7 @@ See [Turn instructions on or off](/agents/instructions-switch).
 | Command | Does |
 | --- | --- |
 | `fw self-update` | Download the latest `fw`, check it and swap it in place. |
-| `fw feedback` | Report that FireWeave behaved wrongly. Shows you a preview and asks before it uploads. |
+| `fw feedback` | Report that Fireweave behaved wrongly. Shows you a preview and asks before it uploads. |
 
 <Note>
   `fw` never starts, ramps or promotes a rollout. A merge into an environment branch registers the rollout, and a person presses **Start** in the web app.

@@ -5,7 +5,7 @@ description: "Map your branches to environments, in the order your changes promo
 
 import { Flow, FlowRow, FlowStart, FlowStep, FlowDecision, FlowTurn, FlowEnd } from "/snippets/flow.jsx";
 
-An environment is one stage your changes go through, such as Staging or Production. Each one names the branch that feeds it, so a merge tells FireWeave where a change lands.
+An environment is one stage your changes go through, such as Staging or Production. Each one names the branch that feeds it, so a merge tells Fireweave where a change lands.
 
 <Flow kicker="FLOW" title="From merge to environment">
   <FlowRow><FlowStart /><FlowStep title="Merge a PR" sub="into a branch" /><FlowDecision label="Environment branch?" /><FlowStep title="Rollout registered" sub="in that branch's environment" kind="key" /><FlowTurn /></FlowRow>
@@ -35,7 +35,7 @@ Only an **exact** branch rule makes an environment branch. Merging into it regis
 
 The table is an example. Your branches are whatever you set in the wizard or on **Environments**.
 
-<Note>FireWeave edits exact branches only. A prefix or pattern rule is kept as set: remove it and add an exact branch to change it.</Note>
+<Note>Fireweave edits exact branches only. A prefix or pattern rule is kept as set: remove it and add an exact branch to change it.</Note>
 
 ## Edit environments
 

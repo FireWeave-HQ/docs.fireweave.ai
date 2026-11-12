@@ -13,7 +13,7 @@ npm install @fireweaveai/server-sdk
 
 ## Start profile
 
-Start FireWeave once, as the first import of your entrypoint, then read through `fw` anywhere.
+Start Fireweave once, as the first import of your entrypoint, then read through `fw` anywhere.
 
 <CodeGroup>
 
@@ -46,7 +46,7 @@ if (await fw.controlPoints.getBooleanValue('new-checkout', false, { targetingKey
 | Variable | What it does |
 | --- | --- |
 | `FIREWEAVE_KEY` | The server key (`project-api-key_…`). Set means remote mode. |
-| `FIREWEAVE_URL` | Optional. Overrides the FireWeave endpoint. |
+| `FIREWEAVE_URL` | Optional. Overrides the Fireweave endpoint. |
 | `FIREWEAVE_ENV`, then `APP_ENV`, then `NODE_ENV` | With no key, `development`, `dev`, `local` or `test` means local mode. Anything else, or no name at all, fails at start. |
 
 No options to pass? Import `@fireweaveai/server-sdk/register` as your first import, or run `node --import @fireweaveai/server-sdk/register app.js`.

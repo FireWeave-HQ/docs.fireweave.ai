@@ -1,6 +1,6 @@
 ---
 title: "Terraform data sources"
-description: "Look up FireWeave projects and environments with fireweave_project, fireweave_projects, and fireweave_environments."
+description: "Look up Fireweave projects and environments with fireweave_project, fireweave_projects, and fireweave_environments."
 ---
 
 Use data sources when you need to read org infrastructure that Terraform in this workspace does not manage — or to inspect what you just applied.
@@ -102,7 +102,7 @@ data "fireweave_environments" "pipeline" {
 
 variable "project_slug" {
   type        = string
-  description = "Slug of an existing FireWeave project to inspect"
+  description = "Slug of an existing Fireweave project to inspect"
 }
 
 output "all_project_slugs" {

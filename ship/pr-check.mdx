@@ -1,9 +1,9 @@
 ---
 title: "PR check"
-description: "What FireWeave reports on a pull request: the readiness check and the release-safety risk reading."
+description: "What Fireweave reports on a pull request: the readiness check and the release-safety risk reading."
 ---
 
-Every pull request into an environment branch gets a GitHub check, **FireWeave — rollout readiness**. It reports whether the change can ship behind a rollout. It doesn't block merging.
+Every pull request into an environment branch gets a GitHub check, **Fireweave — rollout readiness**. It reports whether the change can ship behind a rollout. It doesn't block merging.
 
 ## The readiness check
 
@@ -12,7 +12,7 @@ Every pull request into an environment branch gets a GitHub check, **FireWeave �
 | Rollout-ready | Success | No blocking findings. |
 | No rollout surface in this PR | Success | Nothing in the PR needs a rollout. |
 | Not rollout-ready: N blocking findings | Failure | Findings are shown as annotations on the changed lines. |
-| Could not evaluate rollout readiness | Neutral | FireWeave couldn't look. That is not a pass: treat the PR as unchecked. |
+| Could not evaluate rollout readiness | Neutral | Fireweave couldn't look. That is not a pass: treat the PR as unchecked. |
 | Readiness check ran out of time | Timed out | Same as above. Push again to re-run it. |
 
 ### Findings
@@ -26,13 +26,13 @@ Each finding names a rule. A **block** finding fails the check; a **warn** findi
 | `unsafe-default` | A control point defaults to on. | Make it default to off. |
 | `no-signal` | No guardrail metric watches the control point (warn). | Add a metric, or record why none is needed. |
 | `duplicate-key` | The same control point is read in more than one place. | Use one control point per place in the code. |
-| `stale-agent-instructions` | FireWeave's instructions in the repo are out of date (warn). | Follow the fix the finding names. |
+| `stale-agent-instructions` | Fireweave's instructions in the repo are out of date (warn). | Follow the fix the finding names. |
 
-<Tip>Fix the code in GitHub or with your coding agent. FireWeave checks again on every push.</Tip>
+<Tip>Fix the code in GitHub or with your coding agent. Fireweave checks again on every push.</Tip>
 
 ## The release-safety reading
 
-FireWeave also scores how risky each pull request is. The reading appears on the project's **Release safety** page, and as a pull request comment when your organization has those turned on. It is advisory only and never changes the check result.
+Fireweave also scores how risky each pull request is. The reading appears on the project's **Release safety** page, and as a pull request comment when your organization has those turned on. It is advisory only and never changes the check result.
 
 | Band | Score |
 | --- | --- |

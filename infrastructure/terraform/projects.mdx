@@ -1,9 +1,9 @@
 ---
 title: "Terraform projects"
-description: "Manage a FireWeave project with fireweave_project: name, slug, description, status, and import by project id."
+description: "Manage a Fireweave project with fireweave_project: name, slug, description, status, and import by project id."
 ---
 
-`fireweave_project` manages a FireWeave project in the organisation that owns your API key.
+`fireweave_project` manages a Fireweave project in the organisation that owns your API key.
 
 A project is the top-level container for environments, integrations, and rollouts. Terraform creates and updates it through `GET` / `POST /v1/projects` and `GET` / `PATCH` / `DELETE /v1/projects/{projectID}`.
 
@@ -35,7 +35,7 @@ resource "fireweave_project" "app" {
 
 | Name | Type | Notes |
 | --- | --- | --- |
-| `id` | String | Project identifier assigned by FireWeave. Use this for import. |
+| `id` | String | Project identifier assigned by Fireweave. Use this for import. |
 
 The API also returns `createdAt` and `updatedAt`. Those fields are not Terraform attributes.
 

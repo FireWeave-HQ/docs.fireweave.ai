@@ -27,7 +27,7 @@ d = fw.control_points.get_boolean_details("new-checkout", False, EvaluationConte
 
 | `reason` | Meaning |
 | --- | --- |
-| `TARGETING_MATCH`, `SPLIT` | FireWeave decided for this user |
+| `TARGETING_MATCH`, `SPLIT` | Fireweave decided for this user |
 | `DISABLED` | The control point is off: you get the off value |
 | `STATIC` | Local mode: the value from your control-points file |
 | `DEFAULT` | Local mode: the key isn't in your file |
@@ -44,7 +44,7 @@ d = fw.control_points.get_boolean_details("new-checkout", False, EvaluationConte
 | `TypeMismatch` | Read with the wrong getter (string read as boolean) | No |
 | `InvalidContext` | Missing targeting key, or the context is too large | No |
 | `Authentication`, `Authorization` | Key wrong, revoked, or from another project | No |
-| `RateLimited`, `Timeout`, `Network`, `BackendUnavailable` | FireWeave couldn't answer in time | Yes |
+| `RateLimited`, `Timeout`, `Network`, `BackendUnavailable` | Fireweave couldn't answer in time | Yes |
 | `MalformedResponse` | The response couldn't be read | No |
 | `UnsupportedCapability` | This SDK doesn't support what you asked for | No |
 | `Configuration` | Bad key, URL or mode at start | No |

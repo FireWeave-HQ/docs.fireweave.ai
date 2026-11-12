@@ -1,11 +1,11 @@
 ---
 title: "Set up your coding agent"
-description: "Install the FireWeave plugin in your coding agent so it follows FireWeave's instructions in your repository."
+description: "Install the Fireweave plugin in your coding agent so it follows Fireweave's instructions in your repository."
 ---
 
-FireWeave works through the coding agent you already use. Install `fw`, then add the FireWeave plugin to your agent.
+Fireweave works through the coding agent you already use. Install `fw`, then add the Fireweave plugin to your agent.
 
-| Agent | FireWeave skills | Repository hooks |
+| Agent | Fireweave skills | Repository hooks |
 | --- | --- | --- |
 | Claude Code | Yes | Yes |
 | Cursor | Yes | Yes |
@@ -18,8 +18,8 @@ FireWeave works through the coding agent you already use. Install `fw`, then add
 | Junie, Windsurf, Zed | — | — |
 
 - **Skills** are the `/fireweave:*` commands you run, such as `initialise` and `adopt`. See [Skills](/agents/skills).
-- **Hooks** tell the agent whether FireWeave's instructions apply, and stop it finishing a change that skipped a control point. Setup adds them to your repository.
-- Every agent reads FireWeave's instructions from `AGENTS.md` or its own entry file.
+- **Hooks** tell the agent whether Fireweave's instructions apply, and stop it finishing a change that skipped a control point. Setup adds them to your repository.
+- Every agent reads Fireweave's instructions from `AGENTS.md` or its own entry file.
 
 ## Install
 
@@ -64,7 +64,7 @@ Then add the plugin to your agent:
     ```
   </Tab>
   <Tab title="Gemini CLI, Copilot">
-    FireWeave ships no skills for these yet. This writes the rules that let the agent run `fw` without asking:
+    Fireweave ships no skills for these yet. This writes the rules that let the agent run `fw` without asking:
 
     ```bash
     fw plugins install fireweave --tool gemini
@@ -81,5 +81,5 @@ Then add the plugin to your agent:
 
 <Columns cols={2}>
   <Card title="Building features" icon="code" href="/agents/building-features">How your agent wraps a change.</Card>
-  <Card title="Join a repository" icon="users" href="/agents/join-a-repo">A teammate already set FireWeave up.</Card>
+  <Card title="Join a repository" icon="users" href="/agents/join-a-repo">A teammate already set Fireweave up.</Card>
 </Columns>

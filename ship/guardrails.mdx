@@ -3,7 +3,7 @@ title: "Guardrails"
 description: "The metrics a rollout watches, their limits, and what happens on a breach."
 ---
 
-A guardrail is a metric from your observability tool, a limit, and what to do when the limit is crossed. FireWeave reads each guardrail while a stage holds, and acts on a breach.
+A guardrail is a metric from your observability tool, a limit, and what to do when the limit is crossed. Fireweave reads each guardrail while a stage holds, and acts on a breach.
 
 | Metric | Limit | On breach | Latest |
 | --- | --- | --- | --- |
@@ -26,7 +26,7 @@ To ramp automatically, a rollout needs at least one **Block** metric, and a **Mi
 ## How readings count
 
 - A breach counts only after two readings in a row cross the limit.
-- **Minimum events** sets the fewest events a reading needs before FireWeave judges the metric. A reading with fewer events never breaches.
+- **Minimum events** sets the fewest events a reading needs before Fireweave judges the metric. A reading with fewer events never breaches.
 - On an automatic rollout, a stage moves on only after every Alert and Block metric reads healthy three times.
 - A stage where no metric reports holds the ramp and sends an alert. An outage at your observability tool is not read as a bad release.
 

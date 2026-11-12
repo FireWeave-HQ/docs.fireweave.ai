@@ -1,9 +1,9 @@
 ---
-title: "Set up FireWeave"
-description: "Create a project, merge the setup pull request FireWeave opens, then set your deploy key."
+title: "Set up Fireweave"
+description: "Create a project, merge the setup pull request Fireweave opens, then set your deploy key."
 ---
 
-Most repositories are set up in the cloud: FireWeave opens a setup pull request and you merge it. If that fails, you can set up locally with your coding agent.
+Most repositories are set up in the cloud: Fireweave opens a setup pull request and you merge it. If that fails, you can set up locally with your coding agent.
 
 ## Cloud setup
 
@@ -12,7 +12,7 @@ Most repositories are set up in the cloud: FireWeave opens a setup pull request 
     In the [web app](https://app.fireweave.ai), create a project, pick your repositories and choose **Safe rollouts**. The wizard is covered step by step in [Create a project](/connect/create-project).
   </Step>
   <Step title="Review the setup pull request">
-    FireWeave analyzes your code and opens one setup PR per managed repository, on the branch `fireweave/setup`. It adds the SDK, the agent instructions and the `.fireweave/` folder. FireWeave never merges it.
+    Fireweave analyzes your code and opens one setup PR per managed repository, on the branch `fireweave/setup`. It adds the SDK, the agent instructions and the `.fireweave/` folder. Fireweave never merges it.
   </Step>
   <Step title="Merge it">
     Merge the setup PR once. The repository is now ready for features.
@@ -37,7 +37,7 @@ Open the **Project Setup** page. You have two ways forward.
     Press **Retry** (or **Open a new PR** if the PR was closed). If setup stopped on questions, answer them and press **Save and rerun**.
   </Tab>
   <Tab title="Set up locally instead">
-    Press **Set up locally instead**. FireWeave closes its setup PR and stops its run; your setup answers stay. Then, in each managed repository:
+    Press **Set up locally instead**. Fireweave closes its setup PR and stops its run; your setup answers stay. Then, in each managed repository:
 
     <Steps>
       <Step title="Install fw">
