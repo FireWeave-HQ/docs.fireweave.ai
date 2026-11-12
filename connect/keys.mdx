@@ -3,7 +3,7 @@ title: "Keys"
 description: "Create the server, browser and CI keys your deployed apps and pipelines use."
 ---
 
-Your deployed apps need a key to reach FireWeave. Local development needs none: without a key the SDK runs in local mode.
+Your deployed apps need a key to reach Fireweave. Local development needs none: without a key the SDK runs in local mode.
 
 | Key | Starts with | Set it as | Where it's allowed |
 | --- | --- | --- | --- |
@@ -44,7 +44,7 @@ Create one from your project's **Run in CI** sheet with **Create CI key**:
 Owners, Admins and roles with **Manage CI keys** create them. A CI key expires after 1 to 365 days and acts for the person who created it. Store it as the secret `FW_ORG_API_KEY`, then add this step:
 
 ```yaml GitHub Actions
-- name: FireWeave sync
+- name: Fireweave sync
   run: fw sync --branch "${{ github.head_ref || github.ref_name }}"
   env:
     FW_ORG_API_KEY: ${{ secrets.FW_ORG_API_KEY }}

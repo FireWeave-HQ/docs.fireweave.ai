@@ -56,7 +56,7 @@ The plugin reads these at build time. The browser reads no environment.
 | Variable | What it does |
 | --- | --- |
 | `FIREWEAVE_BROWSER_KEY` | The browser key. Set means remote mode. |
-| `FIREWEAVE_URL` | Optional. Overrides the FireWeave endpoint. |
+| `FIREWEAVE_URL` | Optional. Overrides the Fireweave endpoint. |
 | `FIREWEAVE_ENV`, then `APP_ENV` | With no key, `development`, `dev`, `local` or `test` means local mode. A production build with no key fails. |
 
 Not on Vite? `fireweaveDefine()` from `@fireweaveai/web-sdk/define` runs the same check and returns the values for webpack, esbuild, Rollup or Next.js.

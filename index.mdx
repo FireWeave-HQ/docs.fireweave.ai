@@ -1,11 +1,11 @@
 ---
-title: "FireWeave docs"
-description: "FireWeave is release control for code your coding agents write: each change ships behind a control point and ramps to stable when you say so."
+title: "Fireweave docs"
+description: "Fireweave is release control for code your coding agents write: each change ships behind a control point and ramps to stable when you say so."
 ---
 
 import { Flow, FlowRow, FlowStart, FlowStep, FlowDecision, FlowTurn, FlowEnd } from "/snippets/flow.jsx";
 
-FireWeave puts each user-facing change your coding agent makes behind a control point, so you decide when it reaches users and how fast.
+Fireweave puts each user-facing change your coding agent makes behind a control point, so you decide when it reaches users and how fast.
 
 <Columns cols={3}>
   <Card title="Get a risk score on my PRs" icon="shield-check" href="/connect/github-app">
@@ -24,14 +24,14 @@ FireWeave puts each user-facing change your coding agent makes behind a control 
   <FlowRow><FlowStep title="Press Start" sub="After your deploy" kind="key" /><FlowStep title="Ramp" sub="Metrics checked at each stage" /><FlowDecision label="Healthy?" /><FlowStep title="Stable" kind="ok" /><FlowEnd /></FlowRow>
 </Flow>
 
-New here? Start with [How FireWeave works](/how-it-works), then [Set up FireWeave](/setup).
+New here? Start with [How Fireweave works](/how-it-works), then [Set up Fireweave](/setup).
 
 ## For coding agents
 
-If you are a coding agent working in a repository that uses FireWeave, read these two pages first:
+If you are a coding agent working in a repository that uses Fireweave, read these two pages first:
 
-- [Set up FireWeave](/setup): how a repository gets set up, in the cloud or locally.
-- [Build features with FireWeave](/agents/building-features): how to wrap a change behind a control point.
+- [Set up Fireweave](/setup): how a repository gets set up, in the cloud or locally.
+- [Build features with Fireweave](/agents/building-features): how to wrap a change behind a control point.
 
 <Note>
 Agents never register, start, ramp or promote rollouts. A person presses **Start rollout** in the [web app](https://app.fireweave.ai).

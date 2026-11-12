@@ -8,7 +8,7 @@ Write from the `main` branches only: `fireweaveai-platform` (start at `docs/kb/0
 
 ## Terminology
 
-- The product is **FireWeave**. The thing a change ships behind is a **control point**, never a "flag".
+- The product is **Fireweave**. The thing a change ships behind is a **control point**, never a "flag".
 - Retired words (MCP, safe rollout, deploy detection, OpenFeature, "Release Radar", and the rest of the KB glossary's "Retired words") appear only where a page says they are retired.
 - Don't promise what isn't live: automatic revert, a required merge gate, cohort plans, coordinated rollouts.
 

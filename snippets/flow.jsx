@@ -1,4 +1,4 @@
-// FireWeave diagram components. Stateless and string-props only, so Mintlify renders them on the server.
+// Fireweave diagram components. Stateless and string-props only, so Mintlify renders them on the server.
 // Colours, radius and dark mode come from brand.css (.fw-* classes), which mirrors design-system-next tokens.
 
 export const Flow = ({ kicker, title, children }) => (

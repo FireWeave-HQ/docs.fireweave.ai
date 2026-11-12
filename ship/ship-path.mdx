@@ -5,7 +5,7 @@ description: "How a change goes from a pull request to a rollout your users see.
 
 import { Flow, FlowRow, FlowStart, FlowStep, FlowDecision, FlowTurn, FlowEnd } from "/snippets/flow.jsx";
 
-There is no ship command. A pull request into an environment branch is the ship: FireWeave checks it, merging it registers a rollout, and a person starts that rollout after the deploy.
+There is no ship command. A pull request into an environment branch is the ship: Fireweave checks it, merging it registers a rollout, and a person starts that rollout after the deploy.
 
 <Flow kicker="FLOW" title="From pull request to stable">
   <FlowRow><FlowStart /><FlowStep title="Open a PR" sub="Into an environment branch" /><FlowStep title="PR check" sub="Readiness reported" /><FlowStep title="Merge" sub="In GitHub" kind="key" /><FlowTurn /></FlowRow>
@@ -18,17 +18,17 @@ There is no ship command. A pull request into an environment branch is the ship:
 | Stage | What happens | Who acts |
 | --- | --- | --- |
 | Prepare | The change sits behind a control point that defaults to off, with the metrics to watch recorded. | Your coding agent |
-| Check | FireWeave posts **FireWeave — rollout readiness** on the pull request. See [PR check](/ship/pr-check). | FireWeave |
+| Check | Fireweave posts **Fireweave — rollout readiness** on the pull request. See [PR check](/ship/pr-check). | Fireweave |
 | Merge | You merge the pull request into an environment branch. | You |
-| Register | FireWeave registers a rollout for the control points the merge brings, in the **first environment** of that branch. It shows as **Waiting for Start**. | FireWeave |
+| Register | Fireweave registers a rollout for the control points the merge brings, in the **first environment** of that branch. It shows as **Waiting for Start**. | Fireweave |
 | Start | After your deploy, you press **Start rollout**. Nothing is exposed before this. | You |
-| Ramp | Exposure rises stage by stage while guardrails are checked. See [Run a rollout](/ship/run-a-rollout). | FireWeave, or you on manual |
-| Next environment | A completed rollout moves on by promotion, or by a merge into that environment's own branch. See [Promote and clean up](/ship/promote-and-clean-up). | You, or FireWeave on its own |
+| Ramp | Exposure rises stage by stage while guardrails are checked. See [Run a rollout](/ship/run-a-rollout). | Fireweave, or you on manual |
+| Next environment | A completed rollout moves on by promotion, or by a merge into that environment's own branch. See [Promote and clean up](/ship/promote-and-clean-up). | You, or Fireweave on its own |
 
 <Info>
 - Merging into a branch that isn't an environment branch registers nothing. The rollout is registered when that work reaches an environment branch.
 - Agents never register, start, ramp or promote rollouts.
-- **Start rollout** is how you tell FireWeave your deploy is live.
+- **Start rollout** is how you tell Fireweave your deploy is live.
 </Info>
 
 ## Next

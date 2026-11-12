@@ -1,6 +1,6 @@
 ---
 title: "Strategies and checks"
-description: "Set the stages each environment's rollouts start from, and the endpoints FireWeave asks before a stage moves on."
+description: "Set the stages each environment's rollouts start from, and the endpoints Fireweave asks before a stage moves on."
 ---
 
 import { Ramp, RampStage } from "/snippets/flow.jsx";
@@ -14,7 +14,7 @@ A rollout strategy is the list of stages a new rollout starts from in an environ
   <RampStage label="Step 4" percent="100" note="then stability soak" />
 </Ramp>
 
-Without a strategy, an environment uses the FireWeave default: 10% for 30 minutes, 50% for 60 minutes, then 100%.
+Without a strategy, an environment uses the Fireweave default: 10% for 30 minutes, 50% for 60 minutes, then 100%.
 
 ## Strategy rules
 
@@ -29,11 +29,11 @@ For each step you choose **If a check fails**: **Hold** (wait for a person) or *
 
 ## Promotion checks
 
-A promotion check is an endpoint of yours that FireWeave asks before a rollout step moves on. Owners and Admins add them under **Promotion checks** in the project's settings, using a Custom HTTP account.
+A promotion check is an endpoint of yours that Fireweave asks before a rollout step moves on. Owners and Admins add them under **Promotion checks** in the project's settings, using a Custom HTTP account.
 
 <Steps>
   <Step title="Add a Custom HTTP account">It holds your endpoint's address, its auth, and a **Request-signing key**. Copy the key when it's shown: it isn't shown again.</Step>
-  <Step title="Add promotion check">Set **Method**, **Path and query**, **Headers**, **Body** (**FireWeave payload**, **Custom template** or **No body**) and a **Timeout** of 1–30 seconds.</Step>
+  <Step title="Add promotion check">Set **Method**, **Path and query**, **Headers**, **Body** (**Fireweave payload**, **Custom template** or **No body**) and a **Timeout** of 1–30 seconds.</Step>
   <Step title="Send test">Check your endpoint answers before you use it.</Step>
   <Step title="Add it to a strategy step">Under **Checks before moving on**.</Step>
 </Steps>
@@ -42,10 +42,10 @@ A promotion check is an endpoint of yours that FireWeave asks before a rollout s
 
 ### Request and answer
 
-FireWeave calls your endpoint after the step's hold. Your endpoint answers with a decision.
+Fireweave calls your endpoint after the step's hold. Your endpoint answers with a decision.
 
 <CodeGroup>
-```json Request body (FireWeave payload)
+```json Request body (Fireweave payload)
 {
   "event": "fireweave.promotion-check",
   "version": 1,
@@ -85,7 +85,7 @@ Idempotency-Key: <same as idempotencyKey>
 | `promote` | The step may move on. Any other 2xx answer counts as promote. |
 | `hold` | The check fails; the step follows **If a check fails**. |
 | `rollback` | The check fails; the step follows **If a check fails**. |
-| `pending` | FireWeave asks again every 60 seconds, for up to 30 minutes. |
+| `pending` | Fireweave asks again every 60 seconds, for up to 30 minutes. |
 
 A non-2xx answer, a timeout or an unknown decision is an error, and the step holds for a person. `reason` is optional and shown on the rollout, up to 300 characters.
 

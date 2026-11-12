@@ -1,6 +1,6 @@
 ---
 title: "Compatibility"
-description: "The eight FireWeave SDKs: packages, versions, runtime floors and what each one supports."
+description: "The eight Fireweave SDKs: packages, versions, runtime floors and what each one supports."
 ---
 
 Every SDK reads control points with the same nine methods and registers targets, under its own language's naming. The published SDKs are at **3.0.0**; Dart and Swift install from source.
@@ -42,7 +42,7 @@ Every SDK reads control points with the same nine methods and registers targets,
 | Register targets (`identify`) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | In-memory adapter for tests | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
 
-Server reads ask FireWeave on each call. Browser and mobile apps fetch decisions for the signed-in user up front, so reads are instant and safe in a render path. Dart and Swift servers refresh their decisions every 30 seconds.
+Server reads ask Fireweave on each call. Browser and mobile apps fetch decisions for the signed-in user up front, so reads are instant and safe in a render path. Dart and Swift servers refresh their decisions every 30 seconds.
 
 <Note>
 The SDKs ship control points and target registration only. Guardrails, metrics and rollout control live in the web app, not in the SDK.

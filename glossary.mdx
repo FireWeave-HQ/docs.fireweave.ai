@@ -1,17 +1,17 @@
 ---
 title: "Glossary"
-description: "The words FireWeave uses, one line each, and the old words they replace."
+description: "The words Fireweave uses, one line each, and the old words they replace."
 ---
 
 One line per term. The web app, the CLI and these docs use the same words.
 
 | Term | Meaning |
 | --- | --- |
-| **Project** | What your organization ships through FireWeave: its repositories, environments, settings, rollouts and keys. |
+| **Project** | What your organization ships through Fireweave: its repositories, environments, settings, rollouts and keys. |
 | **Environment** | One stage your project ships through, such as `staging` or `production`. |
 | **Environment branch** | The branch tied to an environment. Merging into it registers a rollout. |
 | **App (surface)** | One deployable app in one SDK language where control points live. |
-| **Control point** | A named decision in your code, read through the SDK, that FireWeave can change without a deploy. |
+| **Control point** | A named decision in your code, read through the SDK, that Fireweave can change without a deploy. |
 | **Manifest** | The record of one feature's change: its control point, where it is wrapped and the metrics that watch it. |
 | **Rollout** | The plan for moving one change out in one environment. |
 | **Stage** | One step of a ramp: a percentage of traffic, then a hold. |
@@ -19,7 +19,7 @@ One line per term. The web app, the CLI and these docs use the same words.
 | **Guardrail** | A metric with a limit, and what happens on breach: **Block**, **Alert** or **Log**. |
 | **Promotion check** | Your own HTTP endpoint that answers whether a stage may move on. |
 | **Release safety** | Each pull request's latest risk reading, per project and per organization. |
-| **Readiness check** | The **FireWeave — rollout readiness** check FireWeave reports on each pull request. |
+| **Readiness check** | The **Fireweave — rollout readiness** check Fireweave reports on each pull request. |
 | **Stable** | A control point whose rollout reached 100% and finished its stability soak. |
 | **Cleanup** | A later change that removes the old code path of a stable control point. |
 | **Server key** | The key a server app reads from `FIREWEAVE_KEY`. Keep it secret. |

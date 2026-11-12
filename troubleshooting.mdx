@@ -10,7 +10,7 @@ Start with `fw doctor`. It checks your install, sign-in and repo, and prints a f
 | Symptom | Fix |
 | --- | --- |
 | The setup PR never opened, or the run stopped | Open **Project Setup** in the sidebar. Answer any questions and choose **Save and rerun**, or choose **Retry**. |
-| You'd rather not wait on the cloud run | Choose **Set up locally instead**. FireWeave closes its setup PR and shows the commands to run. See [Set up FireWeave](/setup). |
+| You'd rather not wait on the cloud run | Choose **Set up locally instead**. Fireweave closes its setup PR and shows the commands to run. See [Set up Fireweave](/setup). |
 | The setup PR was closed without merging | Nothing changed in the repo. Choose **Open a new PR** under **Project Setup**. |
 | The app fails at start, naming `FIREWEAVE_KEY` | The deploy has no key. Set `FIREWEAVE_KEY` (or `FIREWEAVE_BROWSER_KEY` for a browser app) in that environment. See [Keys](/connect/keys). |
 
@@ -27,9 +27,9 @@ Start with `fw doctor`. It checks your install, sign-in and repo, and prints a f
 
 | Symptom | Fix |
 | --- | --- |
-| The agent ignores FireWeave | Run `fw agents status`. If it says off, run `fw agents on`. If you're signed out, run `fw login`. |
-| The agent has no FireWeave skills | Install the plugin. See [Set up your coding agent](/agents/setup). |
-| The agent won't finish and names a control point or manifest | FireWeave's check found a change without its control point. Ask the agent to fix what the message names. |
+| The agent ignores Fireweave | Run `fw agents status`. If it says off, run `fw agents on`. If you're signed out, run `fw login`. |
+| The agent has no Fireweave skills | Install the plugin. See [Set up your coding agent](/agents/setup). |
+| The agent won't finish and names a control point or manifest | Fireweave's check found a change without its control point. Ask the agent to fix what the message names. |
 | The agent is refused because a teammate holds the feature | Your project uses feature coordination. See [Working as a team](/agents/team-coordination). |
 
 ## Pull requests and rollouts
@@ -46,7 +46,7 @@ Start with `fw doctor`. It checks your install, sign-in and repo, and prints a f
 | Symptom | Fix |
 | --- | --- |
 | Every control point returns its default | A control point stays off until someone starts its rollout. Also check the app has its key: with no key, a `development` or `test` environment runs in local mode. |
-| `ControlPointNotFound` | FireWeave doesn't know that key yet. It is registered when the change merges into an environment branch. Otherwise, check the key for a typo. |
+| `ControlPointNotFound` | Fireweave doesn't know that key yet. It is registered when the change merges into an environment branch. Otherwise, check the key for a typo. |
 | Code still reads `FW_PROJECT_API_KEY` | SDK 3.0 reads `FIREWEAVE_KEY` only. See [Migrate to 3.0](/sdks/migrate-3). |
 
-Still stuck? Run `fw feedback` to send FireWeave a report.
+Still stuck? Run `fw feedback` to send Fireweave a report.

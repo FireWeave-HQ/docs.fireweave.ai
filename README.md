@@ -1,6 +1,6 @@
 # Fireweave docs
 
-Source repository for FireWeave's documentation (docs.fireweave.ai). Pages are MDX. Site config is `docs.json`. Mintlify builds and hosts the site.
+Source repository for Fireweave's documentation (docs.fireweave.ai). Pages are MDX. Site config is `docs.json`. Mintlify builds and hosts the site.
 
 Do not invent product APIs here. Every page is written from the `main` branches of `fireweaveai-platform` (its knowledge base, `docs/kb/`) and `fireweave-sdk`. See [`AGENTS.md`](AGENTS.md) for the writing rules and the house diagram components.
 
