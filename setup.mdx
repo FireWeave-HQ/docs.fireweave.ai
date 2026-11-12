@@ -30,18 +30,14 @@ Not the right person to run setup? Use **Send to a developer** to email the setu
 
 ## Which apps cloud setup covers
 
-| Language | Cloud setup | Otherwise |
-| --- | --- | --- |
-| TypeScript/JavaScript server (Node, Bun, Deno) | Yes | — |
-| Browser | Yes | — |
-| Python | <Badge color="gray">Coming soon</Badge> | Set it up locally today |
-| Rust | <Badge color="gray">Coming soon</Badge> | Set it up locally today |
-| Swift | <Badge color="gray">Coming soon</Badge> | Set it up locally today |
-| Go | No | Set it up locally |
-| Java | No | Set it up locally |
-| Dart | No | Set it up locally |
+Every SDK language: TypeScript/JavaScript servers (Node, Bun, Deno), browser apps, Python, Go, Java, Rust, Dart and Swift. FireWeave adds the SDK with your repository's own package manager, changing only the manifest and lockfile, and checks that each app still compiles or type-checks after its edits.
 
-FireWeave still sets up your other apps in the cloud. An app it can't set up shows as **Not set up** on the setup card and as a to-do in the setup PR. Set that app up with `/fireweave:initialise` in your coding agent, after installing `fw` and the plugin as in the local steps [below](#if-cloud-setup-fails). Don't press **Set up locally instead** for this: it closes the setup PR.
+Two kinds of app get a to-do in the setup PR instead of a finished install:
+
+- **Flutter apps:** the SDK is added to `pubspec.yaml`. Run `flutter pub get` and build the app yourself.
+- **Swift apps in an Xcode project:** add the `https://github.com/FireWeave-HQ/fireweave-sdk` package in Xcode.
+
+If FireWeave can't finish an app (for example, its check finds new errors after the edits), that app shows as **Not set up** on the setup card and in the setup PR, with the reason. Your other apps are still set up. Set that app up with `/fireweave:initialise` in your coding agent, after installing `fw` and the plugin as in the local steps [below](#if-cloud-setup-fails). Don't press **Set up locally instead** for this: it closes the setup PR.
 
 ## If cloud setup fails
 
