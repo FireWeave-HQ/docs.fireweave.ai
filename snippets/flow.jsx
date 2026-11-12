@@ -5,10 +5,11 @@ export const Flow = ({ kicker, title, children }) => (
   <div className="fw-flow not-prose" role="group" aria-label={title}>
     {kicker ? <span className="fw-flow-kicker">{kicker}</span> : null}
     {title ? <p className="fw-flow-title">{title}</p> : null}
-    {children}
+    <div className="fw-flow-seq">{children}</div>
   </div>
 );
 
+// FlowRow and FlowTurn are authoring hints only: the browser wraps the sequence to the column width.
 export const FlowRow = ({ children }) => <div className="fw-flow-row">{children}</div>;
 
 export const FlowStart = ({ label }) => <span className="fw-flow-item fw-start">{label || "START"}</span>;

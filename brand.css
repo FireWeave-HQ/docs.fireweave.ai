@@ -80,32 +80,31 @@ code, pre, kbd, .code-block, .code-group { font-family: var(--fw-mono) !importan
 }
 .fw-flow-title { margin: 0; font-weight: 600; font-size: 15px; }
 
-/* ---- Flow card: left to right, rows wrap, arrows only between neighbours ---- */
-/* A row never wraps on its own (that would orphan an arrow): steps shrink, and a narrow screen scrolls the row. */
-.fw-flow-row { display: flex; flex-wrap: nowrap; align-items: center; overflow-x: auto; padding-bottom: 2px; }
-.fw-flow-row > .fw-step { flex: 0 1 160px; min-width: 92px; }
-.fw-flow-row > .fw-start, .fw-flow-row > .fw-end, .fw-flow-row > .fw-decision, .fw-flow-row > .fw-turn { flex: none; }
-.fw-flow-item + .fw-flow-item::before {
-  content: '';
-  display: inline-block;
-  width: 22px;
-  height: 1px;
-  margin-right: 0;
-  background: var(--fw-muted);
-  position: absolute;
-  left: -22px;
-  top: 50%;
+/* ---- Flow card: left to right, wrapping to the column width; arrows only between neighbours ----
+   Rows wrap wherever the column runs out, never clip. Each item carries its OUTGOING arrow in the gap after it,
+   so a wrapped line ends with an arrow (continues below) and never starts with an orphan one. */
+.fw-flow-seq {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 30px;
+  row-gap: 16px;
+  padding-right: 30px;
 }
-.fw-flow-item { position: relative; margin-left: 22px; }
-.fw-flow-item:first-child { margin-left: 0; }
-.fw-flow-item + .fw-flow-item::after {
+.fw-flow-row { display: contents; }
+.fw-turn { display: none; }
+.fw-flow-item { position: relative; flex: 0 0 auto; }
+.fw-flow-item:not(.fw-end)::after {
   content: '';
   position: absolute;
-  left: -6px;
-  top: calc(50% - 3.5px);
-  border: 3.5px solid transparent;
-  border-left: 5px solid var(--fw-muted);
-  border-right: 0;
+  top: 50%;
+  right: -26px;
+  width: 22px;
+  height: 8px;
+  transform: translateY(-50%);
+  background: var(--fw-muted);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 8'%3E%3Cpath d='M0 3.5h16v1H0z'/%3E%3Cpath d='M15 0l7 4-7 4z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 8'%3E%3Cpath d='M0 3.5h16v1H0z'/%3E%3Cpath d='M15 0l7 4-7 4z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 .fw-start, .fw-end {
   font: 700 11px var(--fw-mono);
@@ -118,7 +117,8 @@ code, pre, kbd, .code-block, .code-group { font-family: var(--fw-mono) !importan
 .fw-step {
   display: grid;
   gap: 1px;
-  max-width: 160px;
+  width: max-content;
+  max-width: min(168px, 100%);
   padding: 8px 10px;
   background: var(--fw-surface);
   border: 1px solid var(--fw-line);
@@ -153,7 +153,6 @@ code, pre, kbd, .code-block, .code-group { font-family: var(--fw-mono) !importan
   border: 1px solid var(--fw-q);
   border-radius: 4px;
 }
-.fw-turn { font: 13px var(--fw-mono); color: var(--fw-muted); padding-left: 8px; }
 
 /* ---- Ramp ladder ---- */
 .fw-rung {
