@@ -140,6 +140,11 @@
     "global": {
       "anchors": [
         {
+          "anchor": "Product walkthrough",
+          "href": "https://fireweave.ai/docs",
+          "icon": "book"
+        },
+        {
           "anchor": "Web app",
           "href": "https://app.fireweave.ai",
           "icon": "layout-dashboard"
