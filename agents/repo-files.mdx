@@ -1,9 +1,9 @@
 ---
-title: "What FireWeave adds to your repo"
+title: "What Fireweave adds to your repo"
 description: "The files setup commits to your repository, and the ones that stay on your machine."
 ---
 
-Setup adds a small set of files. FireWeave edits only its own blocks in files your team already has, so your text is never touched.
+Setup adds a small set of files. Fireweave edits only its own blocks in files your team already has, so your text is never touched.
 
 <Tree>
   <Tree.File name="AGENTS.md" />
@@ -41,22 +41,22 @@ Setup adds a small set of files. FireWeave edits only its own blocks in files yo
 
 | File | What it's for |
 | --- | --- |
-| `AGENTS.md`, `CLAUDE.md` | A short FireWeave block telling agents when its instructions apply. |
-| `.fireweave/project.json` | Binds the repository to your FireWeave project. |
-| `.fireweave/agent-instructions.md`, `.fireweave/instructions/` | The full instructions an agent reads when FireWeave is on. |
+| `AGENTS.md`, `CLAUDE.md` | A short Fireweave block telling agents when its instructions apply. |
+| `.fireweave/project.json` | Binds the repository to your Fireweave project. |
+| `.fireweave/agent-instructions.md`, `.fireweave/instructions/` | The full instructions an agent reads when Fireweave is on. |
 | `.fireweave/hooks/` | The scripts your agents' hooks run: the on/off check and the stop check. |
-| `.claude/settings.json`, `.cursor/hooks.json` | FireWeave's hook entries, added beside your team's. Other agents get their own hook file. |
+| `.claude/settings.json`, `.cursor/hooks.json` | Fireweave's hook entries, added beside your team's. Other agents get their own hook file. |
 | `.fireweave/stamps.ts` | One line per change, so each change is visible in git. |
 | `src/fireweave/start.ts`, `control-points.ts` | The SDK's start call and your control points' local values, per app. |
 
-The exact names depend on your agents and languages. FireWeave stores feature records itself, so there's no manifest file to edit.
+The exact names depend on your agents and languages. Fireweave stores feature records itself, so there's no manifest file to edit.
 
 ## On your machine only
 
 | File | What it's for |
 | --- | --- |
 | `.fireweave/local.json` | Your sign-in profile and your [instructions switch](/agents/instructions-switch). |
-| `.fireweave/.cache/` | A local copy of what FireWeave knows about this repository. |
+| `.fireweave/.cache/` | A local copy of what Fireweave knows about this repository. |
 
 `.fireweave/.gitignore` keeps these out of git.
 

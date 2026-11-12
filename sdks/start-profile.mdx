@@ -35,7 +35,7 @@ Each setting resolves as: `start()` option, then the variable, then the default.
 Node also reads `NODE_ENV` after `APP_ENV`. Option names follow each language (`control_points`, `instance_id` in Python and Rust; `ControlPoints`, `InstanceID` in Go).
 </Note>
 
-`FIREWEAVE_URL` is optional: by default the SDK calls FireWeave's production endpoint. An explicit URL must be `https`, except on `localhost`.
+`FIREWEAVE_URL` is optional: by default the SDK calls Fireweave's production endpoint. An explicit URL must be `https`, except on `localhost`.
 
 ### Where browser and mobile apps get their values
 
@@ -60,7 +60,7 @@ Create keys on the project's **SDK keys** page ([Keys](/connect/keys)). The SDK 
 
 ## When something is wrong
 
-| Profile | Bad configuration | Key refused or FireWeave unreachable |
+| Profile | Bad configuration | Key refused or Fireweave unreachable |
 | --- | --- | --- |
 | Server | `start()` fails, so the deploy doesn't start | One log line per kind; reads serve defaults |
 | Browser and mobile apps | One log line; reads serve defaults; the app keeps running | Reported in status; reads serve defaults |

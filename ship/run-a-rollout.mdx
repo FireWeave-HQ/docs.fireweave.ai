@@ -7,7 +7,7 @@ import { Ramp, RampStage, StateRail, State, StateSep } from "/snippets/flow.jsx"
 
 A merge registers a rollout as **Waiting for Start**. Nothing reaches users until you press **Start rollout** after your deploy. From there, exposure rises stage by stage, each stage holding while your [guardrails](/ship/guardrails) are checked.
 
-<Ramp title="FireWeave default strategy">
+<Ramp title="Fireweave default strategy">
   <RampStage label="Stage 1" percent="10" note="hold 30m · metrics checked" />
   <RampStage label="Stage 2" percent="50" note="hold 60m · metrics checked" />
   <RampStage label="Stage 3" percent="100" note="then stability soak" />
@@ -32,7 +32,7 @@ Open the rollout and press **Start rollout**. Any Writer can start it.
 
 | Mode | What it does |
 | --- | --- |
-| **Manual** — you move each step | Starts at 0%. FireWeave watches metrics and runs checks, then waits for you to press **Ramp up**. |
+| **Manual** — you move each step | Starts at 0%. Fireweave watches metrics and runs checks, then waits for you to press **Ramp up**. |
 | **Automatic** — moves on by itself on proof | Moves to the next stage when every Alert and Block metric has proof, and holds for you when it doesn't. |
 
 Automatic needs **Auto-ramp** on for the project and observability connected for the environment. Only Owners and Admins can switch a rollout to automatic: press **Check if it can switch**, fix anything listed, then **Switch to automatic**. You can switch back to manual at any time; the stage stays where it is.

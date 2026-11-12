@@ -1,15 +1,15 @@
 ---
 title: "Create a project"
-description: "Create a FireWeave project in the web app with the nine-step setup wizard."
+description: "Create a Fireweave project in the web app with the nine-step setup wizard."
 ---
 
-A project is what you ship through FireWeave: its repositories, environments and settings. Open **Create project** in the [web app](https://app.fireweave.ai) and walk the wizard.
+A project is what you ship through Fireweave: its repositories, environments and settings. Open **Create project** in the [web app](https://app.fireweave.ai) and walk the wizard.
 
 <Info>Creating a project needs Project Write: an Owner, Admin or Member. A Viewer can't.</Info>
 
 <Steps>
   <Step title="GitHub">
-    **Connect** your GitHub organization. FireWeave reads your repositories through its GitHub App. See [GitHub App](/connect/github-app).
+    **Connect** your GitHub organization. Fireweave reads your repositories through its GitHub App. See [GitHub App](/connect/github-app).
   </Step>
   <Step title="Repositories">
     Pick every repository this project covers. **Repo not listed?** The App only sees the repositories each GitHub account shares with it.
@@ -18,7 +18,7 @@ A project is what you ship through FireWeave: its repositories, environments and
     Mark each repository **Managed** (checks and rollouts) or **Context only** (read for knowledge), and pick its exact production branch. A repository is Managed by one project only.
   </Step>
   <Step title="Rollouts">
-    Choose what FireWeave does with your Managed repositories (see below).
+    Choose what Fireweave does with your Managed repositories (see below).
   </Step>
   <Step title="Analyze">
     **Start analysis**. It's read-only, and it keeps going if you leave.
@@ -44,7 +44,7 @@ A project is what you ship through FireWeave: its repositories, environments and
 | **Release safety only** | Risk analysis on every pull request. Skips **Analyze** and **Answers**. | No |
 | **Safe rollouts** (recommended) | Analysis now, then a setup PR in each Managed repository. Changes ramp behind control points. | Yes, through the setup PR |
 
-With **Safe rollouts**, FireWeave opens one setup PR per Managed repository on branch `fireweave/setup`. Merge each one to finish. Next: [Set up FireWeave](/setup).
+With **Safe rollouts**, Fireweave opens one setup PR per Managed repository on branch `fireweave/setup`. Merge each one to finish. Next: [Set up Fireweave](/setup).
 
 ## Finish later
 
