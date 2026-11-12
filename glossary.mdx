@@ -1,29 +1,169 @@
 ---
 title: "Glossary"
-description: "The words FireWeave uses, one line each, and the old words they replace."
+description: "Every FireWeave word, one line each, and the old words they replace."
 ---
 
 One line per term. The web app, the CLI and these docs use the same words.
 
+## Organization and access
+
+Roles and keys: [Team and security](/connect/team-and-security), [Keys](/connect/keys).
+
 | Term | Meaning |
 | --- | --- |
-| **Project** | What your organization ships through FireWeave: its repositories, environments, settings, rollouts and keys. |
-| **Environment** | One stage your project ships through, such as `staging` or `production`. |
-| **Environment branch** | The branch tied to an environment. Merging into it registers a rollout. |
-| **App (surface)** | One deployable app in one SDK language where control points live. |
-| **Control point** | A named decision in your code, read through the SDK, that FireWeave can change without a deploy. |
-| **Manifest** | The record of one feature's change: its control point, where it is wrapped and the metrics that watch it. |
-| **Rollout** | The plan for moving one change out in one environment. |
-| **Stage** | One step of a ramp: a percentage of traffic, then a hold. |
-| **Hold (soak)** | The wait after a stage, while metrics are watched and checks are called. |
-| **Guardrail** | A metric with a limit, and what happens on breach: **Block**, **Alert** or **Log**. |
-| **Promotion check** | Your own HTTP endpoint that answers whether a stage may move on. |
+| **Organization** | Your company in FireWeave. Members, projects, keys and Integrations belong to one organization. |
+| **Role** | What a member may do. Each member has one role, and it covers every project. |
+| **Owner** | Everything, including transferring ownership and deleting the organization. One per organization. |
+| **Admin** | Full access: members, settings, keys and every project. |
+| **Member** | Write on every project, and can create projects. |
+| **Viewer** | Reads every project. Changes nothing. |
+| **Custom role** | A role you define: **Read** or **Write** on projects, plus chosen organization permissions. |
+| **Write** | Project access that lets you change a project. Owners, Admins, Members and Write custom roles have it. |
+| **Invitation** | An email offer to join at a given role. Lasts 7 days. |
+| **Server key** | A `project-api-key_…` key your servers read from `FIREWEAVE_KEY`. Secret. |
+| **Browser key** | A `fw_public_…` key built into a web or mobile app. Only reads control points and sends events. |
+| **SDK keys** | The project page where you create server and browser keys, each scoped to one environment. |
+| **CI key** | An `fw_org_…` key for `fw sync` in CI. Scoped **CI read** or **Management**; acts for its creator. |
+| **CLI device** | A machine where `fw` is signed in as you. |
+| **Audit log** | Who changed members, keys, Integrations and settings, and when. |
+
+## Projects and setup
+
+Setup: [Create a project](/connect/create-project), [Set up FireWeave](/setup), [Environments](/connect/environments).
+
+| Term | Meaning |
+| --- | --- |
+| **Project** | What you ship through FireWeave: its repositories, environments, settings, rollouts and keys. |
+| **Managed** | A repository mode: FireWeave checks its pull requests, sets it up and runs its rollouts. One project per repository. |
+| **Context only** | A repository mode: read for understanding only. No checks, setup or rollouts. |
+| **Environment** | One stage your changes go through, such as Staging or Production. |
+| **Environment branch** | The exact branch that feeds an environment. Merging into it registers a rollout. |
+| **Promotion order** | Your environments, top to bottom. A rollout can start once its change completed in every environment above. |
+| **Tier** | **Production** or **Non-production**. With none set, the last environment counts as production. |
+| **App (surface)** | One deployable app in one SDK language, where control points live. |
+| **Release safety only** | The wizard choice for risk readings on pull requests, with no code changes. |
+| **Safe rollouts** | The wizard choice that also sets your repositories up, so changes ramp behind control points. |
+| **Cloud setup** | FireWeave analyzes your code and opens a setup PR. TypeScript and JavaScript apps today; Python, Rust and Swift coming soon. |
+| **Setup PR** | The pull request cloud setup opens on `fireweave/setup`. Merging it sets the repository up. |
+| **Project Setup** | The project page that tracks each repository's setup PR, questions and status. |
+| **Not set up** | An app cloud setup can't set up. Listed in the setup PR; set it up locally. |
+| **Local setup** | Setting a repository up on your machine with `/fireweave:initialise`. Use it for any app cloud setup can't set up. |
+| **Initialise** | The `/fireweave:initialise` skill: adds the SDK, agent instructions and hooks to a repository. |
+| **Integration** | A tool FireWeave works with, such as GitHub, Datadog, Sentry, Linear, Slack or Custom HTTP. |
+| **Connection** | An account your organization added for an Integration. The web app calls it an account. |
+| **GitHub App** | FireWeave's GitHub App. It reads your repositories, checks pull requests and opens setup PRs. |
+| **Observability account** | The account that reads an environment's **Metrics**, **Logs** and **Traces**. |
+| **Metrics source** | An extra account an environment reads metrics from, beside its default **Metrics** account. |
+| **Custom HTTP** | An account for your own endpoint, used by promotion checks. |
+
+## Coding agents
+
+How agents work with FireWeave: [Building features](/agents/building-features), [Skills](/agents/skills).
+
+| Term | Meaning |
+| --- | --- |
+| **Coding agent** | The AI tool you build with, such as Claude Code, Cursor or Codex. |
+| **Plugin** | The FireWeave plugin for your coding agent: its skills and the rules to run `fw`. |
+| **Skill** | A `/fireweave:*` command you run in your agent, such as `initialise`, `adopt` or `cleanup`. |
+| **Agent instructions** | FireWeave's committed instructions that tell your agent to wrap each change behind a control point. |
+| **Hooks** | Scripts your agent runs: they say whether FireWeave's instructions apply, and run the stop check. |
+| **Stop check** | The hook check that stops your agent finishing a change that skipped a step. |
+| **Instructions switch** | `fw agents off` and `on`: turns FireWeave's instructions off or on in your own clone only. See [the switch](/agents/instructions-switch). |
+| **Require FireWeave for every coding agent** | A project setting: instructions apply to everyone, agents need `fw login`, and `fw agents off` is refused. |
+| **Anchor** | The `@fireweave-controlpoint <key>` comment marking where the code reads a control point. |
+| **Wrap point** | The place in the code, a file and symbol, where a change sits behind its control point. |
+| **Manifest** | FireWeave's record of one feature's change: its control point, wrap points and metrics. Not a file. |
+| **Feature coordination** | A project setting for two branches building the same feature: **Off**, **Notify** or **Lock**. See [Working as a team](/agents/team-coordination). |
+| **Notify** | Both branches hear about a possible duplicate. Nothing is blocked. |
+| **Lock** | The second branch to start the same feature waits until someone decides. |
+| **Feature claim** | A branch's record that it's building a feature, taken when coordination is on. |
+| **Stale claim** | A claim with no activity for a while: 3 days **Claimed** or 14 days **In code**, by default. |
+| **Take over** | Takes a claim, with a reason. Only for a stale claim, or for an organization owner or admin. |
+| **Build alongside** | Goes ahead next to another branch's claim, with a reason. |
+
+## Pull requests
+
+What FireWeave reports: [PR check](/ship/pr-check), [Ship path](/ship/ship-path).
+
+| Term | Meaning |
+| --- | --- |
+| **Ship path** | A pull request into an environment branch is the ship. Its merge registers the rollout. |
+| **Readiness check** | The **FireWeave — rollout readiness** GitHub check on each pull request. It doesn't block merging. |
+| **Rollout-ready** | Readiness verdict: no blocking findings. |
+| **No rollout surface** | Readiness verdict: nothing in the pull request needs a rollout. |
+| **Not rollout-ready** | Readiness verdict: blocking findings, shown on the changed lines. |
+| **Could not evaluate** | Readiness verdict: FireWeave couldn't look. Not a pass: treat the PR as unchecked. |
+| **Finding** | A rule the pull request breaks. A **block** finding fails the check; a **warn** finding never does. |
 | **Release safety** | Each pull request's latest risk reading, per project and per organization. |
-| **Readiness check** | The **FireWeave — rollout readiness** check FireWeave reports on each pull request. |
-| **Stable** | A control point whose rollout reached 100% and finished its stability soak. |
-| **Cleanup** | A later change that removes the old code path of a stable control point. |
-| **Server key** | The key a server app reads from `FIREWEAVE_KEY`. Keep it secret. |
-| **Browser key** | The browser-safe key a web app reads from `FIREWEAVE_BROWSER_KEY`. It can only read control points and send events. |
+| **PR analysis** | FireWeave's advisory risk reading of a pull request. It never changes the check result. |
+| **Risk band** | A reading's score band: Critical 80–100, High 60–79, Medium 30–59, Low 0–29. |
+| **Analysis failed**, **Not analyzed** | No reading. Treat the change as unreviewed. |
+
+## Rollouts
+
+Running a change out: [Run a rollout](/ship/run-a-rollout), [Guardrails](/ship/guardrails), [Strategies and checks](/ship/strategies-and-checks), [Promote and clean up](/ship/promote-and-clean-up).
+
+| Term | Meaning |
+| --- | --- |
+| **Control point** | A named decision in your code, read through the SDK, that FireWeave changes without a deploy. |
+| **Rollout** | The plan for moving one change out in one environment. |
+| **Waiting for Start** | A registered rollout before anyone presses **Start rollout**. Nothing is exposed. |
+| **Start rollout** | Tells FireWeave your deploy is live, and starts the ramp. FireWeave doesn't detect deploys. |
+| **Start anyway** | Starts before the change completed upstream. Owners and Admins only, with a reason. |
+| **Exposure** | The share of traffic that gets the new code path. |
+| **Ramp** | Raising exposure stage by stage, with your metrics read at each stage. |
+| **Stage** | One step of a ramp: an exposure, then a hold. |
+| **Hold (soak)** | The wait after a stage, while metrics are read and promotion checks are called. |
+| **Held** | The ramp waits for a person. The rollout page says why. |
+| **Stability soak** | The wait at 100% after the last stage, before the rollout completes. |
+| **Rollout strategy** | The stages a new rollout in an environment starts from. Default: 10% for 30m, 50% for 60m, 100%. |
+| **Manual** | A rollout mode: you press **Ramp up** for each stage. |
+| **Automatic** | A rollout mode: moves on by itself when every Alert and Block metric has proof, and holds otherwise. |
+| **Auto-ramp** | A project setting that allows automatic rollouts. Needs observability on the environment. |
+| **Ramp up**, **Ramp down** | Move to the next stage now, or move exposure back down. |
+| **Pause**, **Resume** | **Pause** stops the clock at the current exposure. **Resume** restarts the hold on automatic rollouts. |
+| **Cancel rollout** | Ends the rollout, at 0% or kept at its current share. Can't be undone. |
+| **Guardrail** | A metric, a limit, and what happens on a breach. |
+| **Block** | On breach: parks the rollout at 0% and sends an alert. |
+| **Alert** | On breach: sends an alert, and the ramp waits for a person. Exposure stays. |
+| **Log** | On breach: records the reading only. Shown as **Info**. |
+| **Breach** | Two readings in a row past a guardrail's limit. |
+| **Minimum events** | The fewest events a reading needs before FireWeave judges the metric. |
+| **Promotion check** | Your HTTP endpoint that FireWeave asks before a stage moves on. |
+| **Promote** | Move a completed rollout to the next environment, by a merge or **Promote to**. |
+| **Auto-promote** | A project setting that promotes every completed rollout automatically. |
+| **Mark stable now** | Ends the stability soak and completes the rollout. |
+| **Stable** | A control point whose rollout completed its stability soak. Its old code path can go. |
+| **Cleanup** | A later change, made with `/fireweave:cleanup`, that removes a stable control point's old code path. |
+
+### Control point statuses
+
+The **Control points** page shows one status per control point, across its environments.
+
+| Status | Meaning |
+| --- | --- |
+| **Live** | A rollout holds it in at least one environment. |
+| **Retiring** | Its cleanup is landing in an environment. |
+| **Stable** | Stable everywhere it shipped. **Clean up** gives the command to remove it. |
+| **Retired** | Removed in every environment. |
+| **Not shipped** | No rollout has shipped it yet. |
+
+## SDKs
+
+Wiring the SDK: [Start profile](/sdks/start-profile), [Local mode and testing](/sdks/local-mode-and-testing).
+
+| Term | Meaning |
+| --- | --- |
+| **SDK** | The FireWeave library your app reads control points with. TypeScript/JavaScript, Python, Go, Java, Rust, Dart and Swift. |
+| **Start profile** | One `start()` call at boot plus a control-points file. SDK 3.0 and later. |
+| **Control-points file** | Each control point's local value. Used only in local mode. |
+| **`FIREWEAVE_KEY`** | The variable your server reads its server key from. |
+| **`FIREWEAVE_BROWSER_KEY`** | The build-time variable your web or mobile app reads its browser key from. |
+| **`FIREWEAVE_ENV`** | Your environment name. `development`, `dev`, `local` or `test` with no key means local mode. |
+| **Local mode** | Serves values from your control-points file. Sends nothing, needs no key. |
+| **Remote mode** | Gets decisions from FireWeave. Needs a key. |
+| **Default value** | The value your read passes. Served on any error. Keep it `false`. |
+| **CommonJS twin** | `@fireweaveai/server-sdk-cjs` or `@fireweaveai/web-sdk-cjs`: the same SDK, for toolchains that can't load ES modules. See [CommonJS](/sdks/commonjs). |
 
 ## Retired words
 
@@ -33,9 +173,11 @@ Older docs and code may still use these. Use the new word.
 | --- | --- |
 | flag, feature flag | control point |
 | `@fireweave-flag` | `@fireweave-controlpoint` |
-| safe rollout, `/fireweave:safe-rollout` | the ship path: merging into an environment branch registers the rollout |
-| Release Radar | release safety |
-| deploy attestation, Start ramp | **Start rollout** |
+| `/fireweave:safe-rollout` | the ship path: merging into an environment branch registers the rollout |
+| Release Radar, Release Radar comment | release safety |
+| deploy attestation, awaiting deploys, Start ramp | **Start rollout** |
 | marketplace, integration instance, install | Integration and Connection |
+| integration plugin | Integration |
 | `FW_PROJECT_API_KEY` | `FIREWEAVE_KEY` |
 | tenant | organization |
+| Control Plane UI | the web app |

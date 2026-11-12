@@ -76,7 +76,8 @@
             "group": "Start here",
             "pages": [
               "sdks/quickstart",
-              "sdks/start-profile"
+              "sdks/start-profile",
+              "sdks/commonjs"
             ]
           },
           {

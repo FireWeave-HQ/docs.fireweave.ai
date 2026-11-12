@@ -1,6 +1,6 @@
 ---
 title: "Web (browser)"
-description: "Read control points in a browser app with @fireweaveai/web-sdk 3.0."
+description: "Read control points in a browser app with @fireweaveai/web-sdk 3.1."
 ---
 
 `@fireweaveai/web-sdk` reads control points in the browser. Reads are synchronous, so they are safe inside a render. It has no runtime dependencies.
@@ -8,6 +8,10 @@ description: "Read control points in a browser app with @fireweaveai/web-sdk 3.0
 ```bash
 npm install @fireweaveai/web-sdk
 ```
+
+<Note>
+Tests in Jest, or a Vite 5 config loaded as CommonJS? See [CommonJS projects](/sdks/commonjs).
+</Note>
 
 <Warning>
   A browser holds only a browser key (`fw_public_…`). Never ship the server key (`project-api-key_…`): the Vite plugin fails a build that contains one. See [Keys](/connect/keys).

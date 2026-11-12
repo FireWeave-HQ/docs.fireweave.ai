@@ -28,6 +28,21 @@ Track each repository on the project's **Project Setup** page. Its badge reads *
 Not the right person to run setup? Use **Send to a developer** to email the setup steps to a teammate. Running setup needs Write on the project.
 </Tip>
 
+## Which apps cloud setup covers
+
+| Language | Cloud setup | Otherwise |
+| --- | --- | --- |
+| TypeScript/JavaScript server (Node, Bun, Deno) | Yes | — |
+| Browser | Yes | — |
+| Python | <Badge color="gray">Coming soon</Badge> | Set it up locally today |
+| Rust | <Badge color="gray">Coming soon</Badge> | Set it up locally today |
+| Swift | <Badge color="gray">Coming soon</Badge> | Set it up locally today |
+| Go | No | Set it up locally |
+| Java | No | Set it up locally |
+| Dart | No | Set it up locally |
+
+FireWeave still sets up your other apps in the cloud. An app it can't set up shows as **Not set up** on the setup card and as a to-do in the setup PR. Set that app up with `/fireweave:initialise` in your coding agent, after installing `fw` and the plugin as in the local steps [below](#if-cloud-setup-fails). Don't press **Set up locally instead** for this: it closes the setup PR.
+
 ## If cloud setup fails
 
 Open the **Project Setup** page. You have two ways forward.

@@ -40,7 +40,7 @@ If you set up FireWeave with the setup PR, the SDK is already wired. Your coding
     <dependency>
       <groupId>ai.fireweave</groupId>
       <artifactId>fireweave-sdk</artifactId>
-      <version>3.0.0</version>
+      <version>3.1.0</version>
     </dependency>
     ```
 
@@ -48,23 +48,20 @@ If you set up FireWeave with the setup PR, the SDK is already wired. Your coding
     cargo add fireweave
     ```
 
-    ```yaml Dart (Preview)
-    # Not on pub.dev yet: clone fireweave-sdk next to your app
-    dependencies:
-      fireweave:
-        path: ../fireweave-sdk/sdks/dart
+    ```bash Dart
+    flutter pub add fireweave   # or: dart pub add fireweave
     ```
 
-    ```swift Swift (Preview)
-    // Package.swift — clone fireweave-sdk next to your package
-    dependencies: [.package(path: "../fireweave-sdk/sdks/swift")],
+    ```swift Swift
+    // Package.swift
+    dependencies: [.package(url: "https://github.com/FireWeave-HQ/fireweave-sdk", from: "3.1.0")],
     // in your target
-    dependencies: [.product(name: "FireweaveStart", package: "swift")]
+    dependencies: [.product(name: "FireweaveStart", package: "fireweave-sdk")]
     ```
 
     </CodeGroup>
 
-    Dart and Swift <Badge color="orange">Preview</Badge> install from source.
+    CommonJS project (Jest, NestJS, older Node)? See [CommonJS projects](/sdks/commonjs).
   </Step>
 
   <Step title="Start once, then read">
@@ -159,7 +156,7 @@ If you set up FireWeave with the setup PR, the SDK is already wired. Your coding
     }
     ```
 
-    ```dart Dart (Preview)
+    ```dart Dart
     import 'package:fireweave/client.dart'; // server.dart for Dart servers
 
     Future<void> main() async {
@@ -173,7 +170,7 @@ If you set up FireWeave with the setup PR, the SDK is already wired. Your coding
     if (fw.controlPoints.getBooleanValue('new-checkout', false)) { /* new path */ }
     ```
 
-    ```swift Swift (Preview)
+    ```swift Swift
     import FireweaveStart
 
     // First thing in App.init() or main
