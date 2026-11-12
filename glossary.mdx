@@ -1,9 +1,13 @@
 ---
 title: "Glossary"
-description: "The words Fireweave uses, one line each, and the old words they replace."
+description: "Every FireWeave word, one line each, and the old words they replace."
 ---
 
 One line per term. The web app, the CLI and these docs use the same words.
+
+## Organization and access
+
+Roles and keys: [Team and security](/connect/team-and-security), [Keys](/connect/keys).
 
 | Term | Meaning |
 | --- | --- |
@@ -24,18 +28,3 @@ One line per term. The web app, the CLI and these docs use the same words.
 | **Cleanup** | A later change that removes the old code path of a stable control point. |
 | **Server key** | The key a server app reads from `FIREWEAVE_KEY`. Keep it secret. |
 | **Browser key** | The browser-safe key a web app reads from `FIREWEAVE_BROWSER_KEY`. It can only read control points and send events. |
-
-## Retired words
-
-Older docs and code may still use these. Use the new word.
-
-| Old word | Use instead |
-| --- | --- |
-| flag, feature flag | control point |
-| `@fireweave-flag` | `@fireweave-controlpoint` |
-| safe rollout, `/fireweave:safe-rollout` | the ship path: merging into an environment branch registers the rollout |
-| Release Radar | release safety |
-| deploy attestation, Start ramp | **Start rollout** |
-| marketplace, integration instance, install | Integration and Connection |
-| `FW_PROJECT_API_KEY` | `FIREWEAVE_KEY` |
-| tenant | organization |

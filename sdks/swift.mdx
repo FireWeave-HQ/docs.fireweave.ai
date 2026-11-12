@@ -1,21 +1,18 @@
 ---
 title: "Swift"
-description: "Add the Fireweave Swift package from source, start it in one line and read control points."
+description: "Add the FireWeave Swift package with Swift Package Manager, start it in one line and read control points."
 ---
 
-<Badge color="orange">Preview</Badge>
-
-The Swift SDK covers iOS and macOS apps and Swift servers. It is not on a registry yet, so you add it from the SDK repository.
+The Swift SDK is a Swift package at the root of the `fireweave-sdk` repository. It covers iOS and macOS apps and Swift servers.
 
 <Steps>
-  <Step title="Add it from source">
-    Clone `https://github.com/FireWeave-HQ/fireweave-sdk` next to your package, then depend on it by path:
+  <Step title="Install">
     ```swift Package.swift
     // swift-tools-version: 6.0
     platforms: [.macOS(.v13), .iOS(.v16)],
-    dependencies: [.package(path: "../fireweave-sdk/sdks/swift")],
+    dependencies: [.package(url: "https://github.com/FireWeave-HQ/fireweave-sdk", from: "3.1.0")],
     // in your target
-    dependencies: [.product(name: "FireweaveStart", package: "swift")]
+    dependencies: [.product(name: "FireweaveStart", package: "fireweave-sdk")]
     ```
   </Step>
   <Step title="Declare your control points">

@@ -1,0 +1,96 @@
+---
+title: "CommonJS projects"
+description: "When a TypeScript or JavaScript app needs a CommonJS twin package, and how to install it."
+---
+
+Install the ES module packages, `@fireweaveai/server-sdk` and `@fireweaveai/web-sdk`. Most projects need nothing else, including plain `require()` code on a current Node.
+
+A **CommonJS twin** is the same SDK built as CommonJS: same source, same version, same import paths.
+
+| ES module package (default) | CommonJS twin |
+| --- | --- |
+| `@fireweaveai/server-sdk` | `@fireweaveai/server-sdk-cjs` |
+| `@fireweaveai/web-sdk` | `@fireweaveai/web-sdk-cjs` |
+
+<Note>
+ES modules are the long-term format. The twins will be retired in a future major release, so use one only when a trigger below applies.
+</Note>
+
+## When you need a twin
+
+| Your project | The error you see | Do this |
+| --- | --- | --- |
+| Jest runs tests as CommonJS (the default) | `Unexpected token 'export'`, `Must use import to load ES Module` | [Map Jest to the twins](#jest) |
+| TypeScript `module: commonjs` with `node10` resolution (the NestJS 10 starter) | `TS2307` on `@fireweaveai/server-sdk/start` | [Install the server twin](#install-the-server-twin) |
+| TypeScript `node16`/`node18`, or `nodenext` before 5.8, with no `"type": "module"` | `TS1479` | [Install the server twin](#install-the-server-twin) |
+| Node 21.x or 22.0–22.11 | `ERR_REQUIRE_ESM` | [Install the server twin](#install-the-server-twin) |
+| A Vite 5 config loaded as CommonJS | Vite refuses `@fireweaveai/web-sdk/vite` | [Fix the build config](#build-configs) |
+
+Route each app on its own. In a monorepo, that is each package that uses the SDK, not the repo root.
+
+Server code on an edge runtime (Cloudflare Workers, Next.js edge routes), Bun or Deno takes the ES module package, never the twin.
+
+## Install the server twin
+
+Install it under the ES module name, so your imports stay `@fireweaveai/server-sdk/start`:
+
+<CodeGroup>
+
+```bash npm
+npm install @fireweaveai/server-sdk@npm:@fireweaveai/server-sdk-cjs@3.1.0
+```
+
+```bash pnpm
+pnpm add @fireweaveai/server-sdk@npm:@fireweaveai/server-sdk-cjs@3.1.0
+```
+
+```bash yarn
+yarn add @fireweaveai/server-sdk@npm:@fireweaveai/server-sdk-cjs@3.1.0
+```
+
+</CodeGroup>
+
+Your code is unchanged:
+
+```js
+const { start, fw } = require('@fireweaveai/server-sdk/start');
+```
+
+| Rule | Why |
+| --- | --- |
+| One server package per app | Never install both: an error from one copy fails `isFireweaveError` in the other. |
+| Twin version = ES module version | Install by version or range, never a bare twin name. |
+| Never alias the web twin in `dependencies` | Browser bundles grow by about a third. In a Vite-based app, `vite dev` breaks. |
+
+Moving to ES modules later is a dependency change only: replace the alias with `"@fireweaveai/server-sdk": "^3.1.0"`.
+
+## Jest
+
+Your app keeps the ES module packages. Jest loads the twins under the same names.
+
+```bash
+npm install --save-dev @fireweaveai/server-sdk-cjs@3.1.0   # server code
+npm install --save-dev @fireweaveai/web-sdk-cjs@3.1.0      # browser code
+```
+
+```js jest.config.js
+module.exports = {
+  moduleNameMapper: {
+    '^@fireweaveai/server-sdk(/.*)?$': '@fireweaveai/server-sdk-cjs$1',
+    '^@fireweaveai/web-sdk(/.*)?$': '@fireweaveai/web-sdk-cjs$1',
+  },
+};
+```
+
+With `testEnvironment: 'jsdom'`, also add a `setupFiles` file containing `globalThis.TextEncoder ??= require('node:util').TextEncoder;`. jsdom has no `TextEncoder`.
+
+## Build configs
+
+| Config | Fix |
+| --- | --- |
+| Vite 5: `vite.config.cjs`/`.cts`, or `vite.config.js`/`.ts` with no `"type": "module"` | Rename to `vite.config.mjs` (`.mts` for TypeScript). Vite 6 and later need no change. |
+| Another CommonJS config loading `@fireweaveai/web-sdk/define` (a `next.config.js`, say) | Works on Node 20.20+ and 22.12+. On older Node, rename it to `.mjs`. |
+| You can't rename the config | Add `@fireweaveai/web-sdk-cjs` as a devDependency and use it in the config only: `require('@fireweaveai/web-sdk-cjs/vite')` or `/define`. |
+| webpack 4 (Create React App 4 and older) or Browserify | These ignore `"exports"`, so the app itself needs the web twin. |
+
+Next: [Node.js, Bun, and Deno](/sdks/node) · [Web](/sdks/web) · [Troubleshooting](/troubleshooting)

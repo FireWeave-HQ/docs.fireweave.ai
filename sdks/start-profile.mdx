@@ -3,18 +3,18 @@ title: "Start profile"
 description: "The variables start() reads, how it picks local or remote mode, and which key goes where."
 ---
 
-import { Flow, FlowRow, FlowStart, FlowStep, FlowDecision, FlowTurn, FlowEnd } from "/snippets/flow.jsx";
-
 `start()` sets the SDK up from a few variables and fails loudly when a deploy is missing its key. It never sends the environment name anywhere and never prints a key.
 
 ## How the mode is chosen
 
-<Flow kicker="MODE RULE" title="Local or remote">
-  <FlowRow><FlowStart /><FlowDecision label="Mode option set?" /><FlowStep title="Use that mode" sub="local ignores the key, with a warning" /><FlowTurn /></FlowRow>
-  <FlowRow><FlowDecision label="Key present?" /><FlowStep title="Remote" sub="The rollout decides" kind="ok" /><FlowTurn /></FlowRow>
-  <FlowRow><FlowDecision label="Dev environment name?" /><FlowStep title="Local" sub="Serves your local values" kind="ok" /><FlowTurn /></FlowRow>
-  <FlowRow><FlowStep title="Configuration error" sub="Names the missing key variable" kind="key" /><FlowEnd /></FlowRow>
-</Flow>
+`start()` checks these in order. The first match wins.
+
+| # | Check | Mode |
+| --- | --- | --- |
+| 1 | `mode` option set | That mode. `local` ignores the key, with a warning. |
+| 2 | Key present | **Remote**: the rollout decides. |
+| 3 | Environment name is a development name | **Local**: serves your local values. |
+| 4 | None of the above | **Configuration error** naming the missing key variable. |
 
 The development names are `development`, `dev`, `local` and `test`, compared case-insensitively. Anything else, including no name at all, is an error: a deploy that lost its key never turns into silent local evaluation.
 
@@ -45,8 +45,8 @@ A shipped app has no environment to trust, so its values are fixed at build time
 | --- | --- |
 | Web (Vite) | The `fireweave()` plugin from `@fireweaveai/web-sdk/vite`. It fails the build if a server key reaches the output. |
 | Web (other bundlers) | `fireweaveDefine()` from `@fireweaveai/web-sdk/define` |
-| Flutter, Dart web <Badge color="orange">Preview</Badge> | `--dart-define=FIREWEAVE_BROWSER_KEY=…` |
-| iOS, macOS <Badge color="orange">Preview</Badge> | Info.plist keys of the same names |
+| Flutter, Dart web | `--dart-define=FIREWEAVE_BROWSER_KEY=…` |
+| iOS, macOS | Info.plist keys of the same names |
 
 ## Key families
 

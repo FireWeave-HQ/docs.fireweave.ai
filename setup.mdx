@@ -28,6 +28,17 @@ Track each repository on the project's **Project Setup** page. Its badge reads *
 Not the right person to run setup? Use **Send to a developer** to email the setup steps to a teammate. Running setup needs Write on the project.
 </Tip>
 
+## Which apps cloud setup covers
+
+Every SDK language: TypeScript/JavaScript servers (Node, Bun, Deno), browser apps, Python, Go, Java, Rust, Dart and Swift. FireWeave adds the SDK with your repository's own package manager, changing only the manifest and lockfile, and checks that each app still compiles or type-checks after its edits.
+
+Two kinds of app get a to-do in the setup PR instead of a finished install:
+
+- **Flutter apps:** the SDK is added to `pubspec.yaml`. Run `flutter pub get` and build the app yourself.
+- **Swift apps in an Xcode project:** add the `https://github.com/FireWeave-HQ/fireweave-sdk` package in Xcode.
+
+If FireWeave can't finish an app (for example, its check finds new errors after the edits), that app shows as **Not set up** on the setup card and in the setup PR, with the reason. Your other apps are still set up. Set that app up with `/fireweave:initialise` in your coding agent, after installing `fw` and the plugin as in the local steps [below](#if-cloud-setup-fails). Don't press **Set up locally instead** for this: it closes the setup PR.
+
 ## If cloud setup fails
 
 Open the **Project Setup** page. You have two ways forward.

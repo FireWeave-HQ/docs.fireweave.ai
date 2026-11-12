@@ -81,7 +81,7 @@ def test_new_checkout_path():
 
 </CodeGroup>
 
-Other languages: Rust `fireweave::start::reset_for_tests()`, Dart `Fireweave.debugResetForTests()` <Badge color="orange">Preview</Badge>, Swift `resetFireweaveForTesting()` <Badge color="orange">Preview</Badge>.
+Other languages: Rust `fireweave::start::reset_for_tests()`, Dart `Fireweave.debugResetForTests()`, Swift `resetFireweaveForTesting()`.
 
 ## InMemoryAdapter
 
@@ -124,7 +124,7 @@ with FireweaveClient(runtime) as client:
 | --- | --- |
 | Node, Python, Go, Rust | `InMemoryAdapter` |
 | Web | `InMemoryWebAdapter` |
-| Dart, Swift <Badge color="orange">Preview</Badge> | `InMemoryAdapter` |
+| Dart, Swift | `InMemoryAdapter` |
 | Java | Not published. Use local mode. |
 
 Node's adapter also takes `fault: { kind: 'Timeout' }` to make every read fail with that error kind, so you can test the fallback path. See [Errors and lifecycle](/sdks/errors-and-lifecycle).

@@ -1,20 +1,20 @@
 ---
 title: "Dart and Flutter"
-description: "Add the Fireweave Dart SDK from source, start it in one line and read control points."
+description: "Install the FireWeave Dart SDK from pub.dev, start it in one line and read control points."
 ---
 
-<Badge color="orange">Preview</Badge>
-
-The Dart SDK covers Flutter apps, Dart web apps and Dart servers. It is not on pub.dev yet, so you add it from the SDK repository.
+The Dart SDK is the `fireweave` package on pub.dev. It covers Flutter apps, Dart web apps and Dart servers.
 
 <Steps>
-  <Step title="Add it from source">
-    Clone `https://github.com/FireWeave-HQ/fireweave-sdk` next to your app, then depend on it by path:
-    ```yaml pubspec.yaml
-    dependencies:
-      fireweave:
-        path: ../fireweave-sdk/sdks/dart
+  <Step title="Install">
+    <CodeGroup>
+    ```bash Flutter
+    flutter pub add fireweave
     ```
+    ```bash Dart
+    dart pub add fireweave
+    ```
+    </CodeGroup>
   </Step>
   <Step title="Declare your control points">
     ```dart lib/fireweave/control_points.dart

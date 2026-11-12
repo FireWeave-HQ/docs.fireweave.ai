@@ -46,7 +46,8 @@ Start with `fw doctor`. It checks your install, sign-in and repo, and prints a f
 | Symptom | Fix |
 | --- | --- |
 | Every control point returns its default | A control point stays off until someone starts its rollout. Also check the app has its key: with no key, a `development` or `test` environment runs in local mode. |
-| `ControlPointNotFound` | Fireweave doesn't know that key yet. It is registered when the change merges into an environment branch. Otherwise, check the key for a typo. |
+| `ControlPointNotFound` | FireWeave doesn't know that key yet. It is registered when the change merges into an environment branch. Otherwise, check the key for a typo. |
+| `Must use import to load ES Module`, `ERR_REQUIRE_ESM`, or `TS2307` on `@fireweaveai/server-sdk/start` | Your toolchain loads CommonJS. Use a CommonJS twin. See [CommonJS projects](/sdks/commonjs). |
 | Code still reads `FW_PROJECT_API_KEY` | SDK 3.0 reads `FIREWEAVE_KEY` only. See [Migrate to 3.0](/sdks/migrate-3). |
 
 Still stuck? Run `fw feedback` to send Fireweave a report.

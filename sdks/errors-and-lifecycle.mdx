@@ -59,7 +59,7 @@ The kind is also in the decision's metadata as `fireweave.errorKind`. Error mess
 | Python | `ControlPointNotFoundError` |
 | Go | `KindControlPointNotFound`, `ErrControlPointNotFound` |
 | Rust | `ErrorKind::ControlPointNotFound` |
-| Dart, Swift <Badge color="orange">Preview</Badge> | `.controlPointNotFound` |
+| Dart, Swift | `.controlPointNotFound` |
 
 ## Lifecycle
 
@@ -87,8 +87,8 @@ Shut down once, when the process exits. It flushes pending work and is safe to c
 | Go | `fw.Shutdown(ctx)` |
 | Java | `Fw.shutdown()` |
 | Rust | `fireweave::start::shutdown()` |
-| Dart <Badge color="orange">Preview</Badge> | `await fw.shutdown()` |
-| Swift <Badge color="orange">Preview</Badge> | `await fw.shutdown()` |
+| Dart | `await fw.shutdown()` |
+| Swift | `await fw.shutdown()` |
 
 A later `start()` begins fresh. A Dart command-line tool in remote mode must call `fw.shutdown()` to exit.
 
