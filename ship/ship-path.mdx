@@ -18,7 +18,7 @@ There is no ship command. A pull request into an environment branch is the ship:
 | Stage | What happens | Who acts |
 | --- | --- | --- |
 | Prepare | The change sits behind a control point that defaults to off, with the metrics to watch recorded. | Your coding agent |
-| Check | Fireweave posts **Fireweave — rollout readiness** on the pull request. See [PR check](/ship/pr-check). | Fireweave |
+| Check | Fireweave posts the `FireWeave — rollout readiness` check on the pull request. See [PR check](/ship/pr-check). | Fireweave |
 | Merge | You merge the pull request into an environment branch. | You |
 | Register | Fireweave registers a rollout for the control points the merge brings, in the **first environment** of that branch. It shows as **Waiting for Start**. | Fireweave |
 | Start | After your deploy, you press **Start rollout**. Nothing is exposed before this. | You |

@@ -94,14 +94,14 @@ import { FireweaveClient, FireweaveRuntime, InMemoryAdapter } from '@fireweaveai
 
 const runtime = new FireweaveRuntime(new InMemoryAdapter({
   flags: {
-    'new-checkout': { type: 'boolean', enabled: true, value: true, matchAttribute: { cohort: 'beta' } },
+    'new-checkout': { type: 'boolean', enabled: true, value: true, matchAttribute: { plan: 'beta' } },
   },
 }));
 await runtime.initialize();
 const client = new FireweaveClient(runtime);
 
-await client.controlPoints.getBooleanValue('new-checkout', false, { targetingKey: 'u1', cohort: 'beta' }); // true
-await client.controlPoints.getBooleanValue('new-checkout', false, { targetingKey: 'u2' });                 // false
+await client.controlPoints.getBooleanValue('new-checkout', false, { targetingKey: 'u1', plan: 'beta' }); // true
+await client.controlPoints.getBooleanValue('new-checkout', false, { targetingKey: 'u2' });               // false
 ```
 
 ```python Python
@@ -109,13 +109,13 @@ from fireweave import EvaluationContext, FireweaveClient, FireweaveRuntime, InMe
 
 adapter = InMemoryAdapter({
     "new-checkout": {"enabled": True, "value": True,
-                     "matchAttribute": {"cohort": "beta"}},
+                     "matchAttribute": {"plan": "beta"}},
 })
 runtime = FireweaveRuntime(adapter)
 runtime.initialize()
 with FireweaveClient(runtime) as client:
     assert client.control_points.get_boolean_value(
-        "new-checkout", False, EvaluationContext("u1", {"cohort": "beta"})) is True
+        "new-checkout", False, EvaluationContext("u1", {"plan": "beta"})) is True
 ```
 
 </CodeGroup>

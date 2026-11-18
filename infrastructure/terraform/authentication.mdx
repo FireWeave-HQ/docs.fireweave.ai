@@ -43,21 +43,13 @@ export FIREWEAVE_ENDPOINT="http://localhost:3001"
 
 ## Creating an API key
 
-1. Sign in to the Fireweave app for your organisation.
-2. Create a key with a session-authenticated request:
-
-```http
-POST /api/organizations/{orgId}/api-keys
-Content-Type: application/json
-
-{ "name": "terraform", "scope": "org:management" }
-```
-
-3. Store the returned `key` value once — it is shown only at creation time.
+1. In your project, open the **Run in CI** sheet and press **Create CI key**. See [CI keys](/connect/keys#ci-keys).
+2. Choose the **Management** scope.
+3. Copy the key: it's shown only once.
 4. Export it as `FIREWEAVE_API_KEY` (or pass `api_key` in the provider block).
 
 <Note>
-  `scope` is required: `org:management` for Terraform. Owners, Admins and roles with **Manage CI keys** create keys. Keys expire after 365 days unless you pass `expiresInDays` (1–365).
+  Create it as an Owner or Admin. The key acts for the person who created it, and changing projects or managing environments needs an Owner or Admin, so a key created by anyone else is refused with `403`. Keys expire after 365 days unless you set a shorter expiry.
 </Note>
 
 The key is org-scoped. It authorizes project and environment APIs under `/v1/projects`. It is not a project evaluation key and it is not interchangeable with your app's `FIREWEAVE_KEY`.

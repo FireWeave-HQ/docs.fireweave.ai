@@ -1,6 +1,6 @@
 ---
 title: "CLI commands"
-description: "Every command fw --help lists, grouped by what you want to do."
+description: "The fw commands you use, grouped by what you want to do."
 ---
 
 Run `fw <command> --help` for every flag. `fw --version` prints the version and its channel, for example `<version> (stable)`.
@@ -32,8 +32,10 @@ Run `fw <command> --help` for every flag. `fw --version` prints the version and 
 | `fw agents off` | Stop Fireweave guiding coding agents in this repo, on this machine. |
 | `fw agents on` | Turn it back on. |
 | `fw agents status` | Show whether Fireweave guides agents here, and why. |
+| `fw agents cloud <host>` | Set up a cloud coding agent (`claude`, `codex`, `copilot`, `cursor`) to install a pinned `fw` and use an agent key. |
+| `fw agents grant create \| list \| revoke \| rotate-key \| sponsor \| accept` | Manage agent grants: scoped keys a coding agent uses. Owners and Admins. |
 
-See [Turn instructions on or off](/agents/instructions-switch).
+See [Turn instructions on or off](/agents/instructions-switch) and [Cloud coding agents](/agents/cloud-agents).
 
 ## Control points and pull requests
 
@@ -43,7 +45,7 @@ See [Turn instructions on or off](/agents/instructions-switch).
 | `fw manifest show --feature <slug>` | Show a feature's control-point contract on this branch. |
 | `fw manifest retire --feature <slug>` | Retire a stable feature's manifest on this branch. It takes effect when the branch merges. |
 | `fw manifest promote \| archive \| gc` | Less common lifecycle moves. See `fw manifest --help`. |
-| `fw pr check --manifests <file>` | Check whether this branch is ready to roll out. See [Run in CI](/cli/ci). |
+| `fw pr check --manifests <file>` | The readiness check Fireweave runs on each pull request. It needs a manifests file that only Fireweave writes, so you don't run it in your own CI. See [PR check](/ship/pr-check). |
 | `fw merge register --dry-run` | Print the control points a merge commit would register. Registers nothing. |
 
 ## Keep fw healthy

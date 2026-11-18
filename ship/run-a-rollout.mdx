@@ -13,7 +13,7 @@ A merge registers a rollout as **Waiting for Start**. Nothing reaches users unti
   <RampStage label="Stage 3" percent="100" note="then stability soak" />
 </Ramp>
 
-Each environment can set its own stages. See [Strategies and checks](/ship/strategies-and-checks).
+Your [project default](/ship/strategies-and-checks#project-default) sets the stages, and each environment can override them, including with [cohort steps](/ship/strategies-and-checks#cohort-steps).
 
 ## States
 
@@ -42,12 +42,23 @@ Automatic needs **Auto-ramp** on for the project and observability connected for
 | Control | What it does |
 | --- | --- |
 | **Ramp up** | Moves to the next stage now. |
-| **Ramp down** | Moves exposure back down. |
+| **Ramp down** | Moves exposure back down. With cohort steps it asks how far: see [Rollouts with cohort steps](#rollouts-with-cohort-steps). |
 | **Pause** / **Resume** | **Pause** stops the clock at the current exposure. On an automatic rollout, **Resume** restarts the stage's hold. |
 | **Retry step** | Runs a failed step again. |
 | **Edit schedule** | Changes stages that haven't run yet, when the project allows editable ramp plans. |
 | **Mark stable now** | Ends the stability soak and completes the rollout. |
 | **Cancel rollout** | Ends the rollout. Can't be undone. |
+
+## Rollouts with cohort steps
+
+When the strategy has [cohort steps](/ship/strategies-and-checks#cohort-steps), the **Ramp** tab names each step's cohort, such as `Beta list · 100%`.
+
+| What | What happens |
+| --- | --- |
+| **Start rollout** | Pins each cohort's current version. Refused while a list cohort has no ids or a rule cohort matches no one in this environment: press **Open cohorts** to fix it. |
+| **Cohorts** card | Shows the version each cohort is pinned at, such as `Beta list · v2`. When a cohort has a newer version, Owners and Admins press **Use v3**; it applies at the next step. |
+| **Ramp down** | Asks **Roll back to**: **Everyone, cohorts included** (every step goes to 0%), or **Back to step N** (re-applies that step; the steps after it stop). |
+| **Edit schedule** | Changes holds and percents, but a cohort step that hasn't started can't be removed: it's required by the rollout strategy. |
 
 ## When it holds
 

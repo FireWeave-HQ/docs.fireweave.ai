@@ -1,6 +1,6 @@
 ---
 title: "Swift"
-description: "Add the FireWeave Swift package with Swift Package Manager, start it in one line and read control points."
+description: "Add the Fireweave Swift package with Swift Package Manager, start it in one line and read control points."
 ---
 
 The Swift SDK is a Swift package at the root of the `fireweave-sdk` repository. It covers iOS and macOS apps and Swift servers.
@@ -10,7 +10,7 @@ The Swift SDK is a Swift package at the root of the `fireweave-sdk` repository. 
     ```swift Package.swift
     // swift-tools-version: 6.0
     platforms: [.macOS(.v13), .iOS(.v16)],
-    dependencies: [.package(url: "https://github.com/FireWeave-HQ/fireweave-sdk", from: "3.1.0")],
+    dependencies: [.package(url: "https://github.com/FireWeave-HQ/fireweave-sdk", from: "3.1.1")],
     // in your target
     dependencies: [.product(name: "FireweaveStart", package: "fireweave-sdk")]
     ```
@@ -66,5 +66,7 @@ At sign-in, register the user. The app then fetches that user's decisions.
 ```swift
 await fw.identify("user_42", properties: ["plan": "pro"])
 ```
+
+An app sends properties with its browser key, so they show as **From a browser** and cohort rules never read them: anyone can copy a browser key out of your app. Register the properties your cohorts use from your server, with a server key, under the same user id. A Swift server's properties use its server key, so they are trusted.
 
 Call `await fw.reset()` at sign-out, and `await fw.ready()` to wait for the first fetch.

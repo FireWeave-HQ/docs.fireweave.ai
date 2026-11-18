@@ -36,6 +36,7 @@
             "group": "Work with your coding agent",
             "pages": [
               "agents/setup",
+              "agents/cloud-agents",
               "agents/building-features",
               "agents/instructions-switch",
               "agents/team-coordination",
@@ -52,6 +53,7 @@
               "ship/run-a-rollout",
               "ship/guardrails",
               "ship/strategies-and-checks",
+              "ship/cohorts",
               "ship/promote-and-clean-up"
             ]
           },

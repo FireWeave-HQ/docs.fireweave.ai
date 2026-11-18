@@ -30,6 +30,8 @@ Route each app on its own. In a monorepo, that is each package that uses the SDK
 
 Server code on an edge runtime (Cloudflare Workers, Next.js edge routes), Bun or Deno takes the ES module package, never the twin.
 
+On Cloudflare Workers and Next.js edge routes, `@fireweaveai/server-sdk/start` resolves to its browser build. Point it at the server build by file path: alias `@fireweaveai/server-sdk/start` to `./node_modules/@fireweaveai/server-sdk/dist/start/index.js` (and `/register` to `.../dist/register.js`) with `alias` in the wrangler config, or `turbopack.resolveAlias` / an edge-only webpack `resolve.alias` in Next.
+
 ## Install the server twin
 
 Install it under the ES module name, so your imports stay `@fireweaveai/server-sdk/start`:
@@ -37,15 +39,15 @@ Install it under the ES module name, so your imports stay `@fireweaveai/server-s
 <CodeGroup>
 
 ```bash npm
-npm install @fireweaveai/server-sdk@npm:@fireweaveai/server-sdk-cjs@3.1.0
+npm install @fireweaveai/server-sdk@npm:@fireweaveai/server-sdk-cjs@3.1.1
 ```
 
 ```bash pnpm
-pnpm add @fireweaveai/server-sdk@npm:@fireweaveai/server-sdk-cjs@3.1.0
+pnpm add @fireweaveai/server-sdk@npm:@fireweaveai/server-sdk-cjs@3.1.1
 ```
 
 ```bash yarn
-yarn add @fireweaveai/server-sdk@npm:@fireweaveai/server-sdk-cjs@3.1.0
+yarn add @fireweaveai/server-sdk@npm:@fireweaveai/server-sdk-cjs@3.1.1
 ```
 
 </CodeGroup>
@@ -62,15 +64,15 @@ const { start, fw } = require('@fireweaveai/server-sdk/start');
 | Twin version = ES module version | Install by version or range, never a bare twin name. |
 | Never alias the web twin in `dependencies` | Browser bundles grow by about a third. In a Vite-based app, `vite dev` breaks. |
 
-Moving to ES modules later is a dependency change only: replace the alias with `"@fireweaveai/server-sdk": "^3.1.0"`.
+Moving to ES modules later is a dependency change only: replace the alias with `"@fireweaveai/server-sdk": "^3.1.1"`.
 
 ## Jest
 
 Your app keeps the ES module packages. Jest loads the twins under the same names.
 
 ```bash
-npm install --save-dev @fireweaveai/server-sdk-cjs@3.1.0   # server code
-npm install --save-dev @fireweaveai/web-sdk-cjs@3.1.0      # browser code
+npm install --save-dev @fireweaveai/server-sdk-cjs@3.1.1   # server code
+npm install --save-dev @fireweaveai/web-sdk-cjs@3.1.1      # browser code
 ```
 
 ```js jest.config.js

@@ -1,0 +1,39 @@
+---
+title: "Cloud coding agents"
+description: "Let a cloud coding agent use fw with its own scoped key: an agent grant plus fw agents cloud."
+---
+
+Let a cloud coding agent use `fw` with its own scoped key. An Owner or Admin creates an agent grant, and `fw agents cloud` writes the setup for your agent.
+
+<Steps>
+  <Step title="Create a grant">
+    ```bash
+    fw agents grant create --name "Claude Code on the web" --exposure proxied
+    ```
+
+    `--preset read-only` is the default; `dev-loop` adds repo-state writes. The key is printed once.
+  </Step>
+  <Step title="Write the setup">
+    From the repository root, run `fw agents cloud <host>`, then commit what it writes.
+  </Step>
+  <Step title="Add the key">
+    Add the key as the agent's secret and allow Fireweave's API host. `fw agents cloud` prints the exact steps for your agent.
+  </Step>
+</Steps>
+
+| Agent | `<host>` | Files it writes | Key |
+| --- | --- | --- | --- |
+| Claude Code on the web | `claude` | `.claude/settings.json`, `.claude/hooks/fireweave-session-start.sh` | Proxied key as a network secret (type Bearer) |
+| Codex Cloud | `codex` | None: it prints a setup script to paste | Proxied key as the secret `FW_AGENT_KEY` |
+| Copilot cloud agent | `copilot` | `.github/workflows/copilot-setup-steps.yml` (merge it to the default branch) | Env key, read-only, at most 30 days, as `FW_AGENT_KEY` in the `copilot` environment |
+| Cursor Cloud Agents | `cursor` | `.cursor/environment.json`, `.cursor/fireweave-install-fw.sh` | Env key, read-only, at most 30 days, as `FW_AGENT_KEY` |
+
+## Keys and limits
+
+- A proxied key lasts up to 90 days, an env key up to 30.
+- Codex Cloud (Legacy), `@codex` on GitHub or Linear, isn't supported.
+- `fw agents grant revoke <grantId>` stops a grant's keys within 5 seconds.
+- Members see the keys they sponsor under **Account → Security → Agent keys you sponsor**.
+- An agent key can't register, start, ramp or promote a rollout.
+
+Run `fw agents grant --help` for `list`, `rotate-key`, `sponsor` and `accept`.

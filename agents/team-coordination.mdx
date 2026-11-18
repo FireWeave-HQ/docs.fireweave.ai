@@ -26,6 +26,16 @@ Set **Feature coordination** in the project's **Settings → Repositories**.
 
 Fireweave treats two branches as the same feature when they share a feature name or a control point.
 
+## Sync mode
+
+**Sync mode** sits in the same settings and decides where checks read your branch's state.
+
+| **Sync mode** | What happens |
+| --- | --- |
+| **Offline outbox (C)** (default) | Edits made offline wait in a local outbox and are sent once you're back online. |
+| **Self-healing cache (B)** | Checks read a local copy that refreshes on every run. Offline edits are refused. |
+| **Live only (A)** | Checks always read Fireweave directly. Nothing is cached, and offline edits are refused. |
+
 ## When your branch is refused
 
 Your coding agent stops before writing any code, shows you who holds the feature, and offers only the choices you have:

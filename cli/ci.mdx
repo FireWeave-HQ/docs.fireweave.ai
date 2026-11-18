@@ -3,11 +3,11 @@ title: "Run in CI"
 description: "Run fw sync in your own CI with a CI key, and read fw pr check's exit codes."
 ---
 
-Fireweave already runs its readiness check on every pull request, so you don't need CI for that. Add `fw` to your own CI when you want your jobs to have this branch's Fireweave state.
+Fireweave already runs its readiness check on every pull request into an environment branch, so you don't need CI for that. Add `fw` to your own CI when you want your jobs to have this branch's Fireweave state.
 
 <Steps>
   <Step title="Create a CI key">
-    In the web app, open **Project Setup**, go to **Set up locally**, choose **Run in CI**, then **Create CI key**. Pick the **CI read** scope. Only Owners and Admins can create one, and you see the key once.
+    In the web app, open **Project Setup**, go to **Set up locally**, choose **Run in CI**, then **Create CI key**. **CI read** is preselected: leave it, since **Management** is full access and not for CI. Set **Expires after (days)**, from 1 to 365. Only Owners and Admins can create one, and you see the key once.
   </Step>
   <Step title="Save it as a secret">
     Store the key in your CI as `FW_ORG_API_KEY`.

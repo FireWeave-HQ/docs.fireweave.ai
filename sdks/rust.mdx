@@ -8,7 +8,7 @@ The Rust SDK is the `fireweave` crate. Its `fireweave::start` module is the [sta
 <Steps>
   <Step title="Install">
     ```bash
-    cargo add fireweave@3.1.0
+    cargo add fireweave@3.1.1
     ```
   </Step>
   <Step title="Declare your control points">
@@ -61,13 +61,15 @@ With no key outside a development environment, `start` returns a configuration e
 
 ## Identify users
 
-At sign-in, register the facts your targeting matches on:
+At sign-in, register the facts your cohorts match on:
 
 ```rust
 if let Err(e) = fireweave::start::identify(&user.id, [("plan", "pro")]) {
     eprintln!("fireweave identify failed: {e}");
 }
 ```
+
+Cohort rules read only properties sent with a server key, and only the names an Owner or Admin lists in **Settings › Targets › Properties**. Properties a browser key sends are never trusted. See [Targets and cohorts](/ship/cohorts).
 
 ## Status and shutdown
 

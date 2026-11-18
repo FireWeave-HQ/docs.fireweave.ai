@@ -36,7 +36,7 @@ Once it's merged:
 - `fw agents off` is refused:
 
 ```text
-This project requires Fireweave for every coding agent; an Owner or Admin can change that in Project settings.
+This project requires FireWeave for every coding agent; an Owner or Admin can change that in Project settings.
 ```
 
 ## Check the state
@@ -45,9 +45,10 @@ This project requires Fireweave for every coding agent; an Owner or Admin can ch
 
 | State | Meaning |
 | --- | --- |
-| `on` | Fireweave's instructions apply. |
+| `on` | Fireweave's instructions apply. Always `on` in CI and for Fireweave-hosted reviewers. |
 | `off` | You switched it off, or Fireweave isn't set up on this machine. |
 | `ask` | You set this clone up but you're signed out. The agent asks you once to sign in or skip. |
 | `sign-in` | The project requires Fireweave and you're signed out. Changes wait until you sign in. |
+| `silent` | This isn't a Fireweave repository (no project in `.fireweave/project.json`, or the file isn't a JSON object), so Fireweave stays out of the way. |
 
 `fw status` and `fw doctor` print the same line.

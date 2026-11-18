@@ -14,18 +14,49 @@ A rollout strategy is the list of stages a new rollout starts from in an environ
   <RampStage label="Step 4" percent="100" note="then stability soak" />
 </Ramp>
 
-Without a strategy, an environment uses the Fireweave default: 10% for 30 minutes, 50% for 60 minutes, then 100%.
+## Project default
+
+Owners and Admins set one strategy for the whole project: press **Edit project default**, then **Save as project default**. Every new rollout in the project takes these steps, and an environment can override them.
+
+| Use these steps as the default for | What changes |
+| --- | --- |
+| **Environments on the project default, and environments added later (recommended)** | Staging and environments with their own steps keep their strategy. |
+| **Every environment, Staging included** | Every environment's own strategy is replaced by these steps. |
+
+Rollouts already running keep their steps. Saving different steps on one environment makes it an **Override**; **Use project default** puts it back. Until a project default is saved, it's the Fireweave default: 10% for 30 minutes, 50% for 60 minutes, then 100%.
 
 ## Strategy rules
 
 | Rule | Limit |
 | --- | --- |
 | Steps | 1 to 20 |
-| Exposure | Above 0, higher than the step before; the last step is 100% |
+| Exposure | Above 0, higher than the step before; the last step is 100%. With cohort steps, see [Cohort steps](#cohort-steps) |
 | Hold | At least 1 minute on every step before the last; at most 7 days |
-| Applies to | New rollouts in that environment, including ones promoted into it |
+| Applies to | New rollouts in that environment, including ones promoted into it. A rollout that brings its own steps keeps them, unless they drop or reorder the strategy's cohort steps |
 
-For each step you choose **If a check fails**: **Hold** (wait for a person) or **Roll back to 0%**.
+For each step you choose **If a check fails**: **Hold** (wait for a person) or **Roll back to 0%**. With cohort steps, 0% turns the control point off for everyone, the cohorts included.
+
+## Cohort steps
+
+A step can name a [cohort](/ship/cohorts). Press **Add cohort step** to turn the control point on for that cohort before **Everyone**.
+
+<Ramp title="Example strategy with cohort steps">
+  <RampStage label="Staff" percent="100" note="100% of Staff · hold 60m" />
+  <RampStage label="Beta list" percent="100" note="100% of Beta list · hold 2h" />
+  <RampStage label="Everyone" percent="25" note="cohorts stay in, plus 25% of the rest" />
+  <RampStage label="Everyone" percent="100" note="then stability soak" />
+</Ramp>
+
+| Rule | Limit |
+| --- | --- |
+| Cohorts | Each cohort appears once |
+| Exposure | Percents rise within a cohort, and each cohort's last step reaches 100% |
+| Everyone | Comes last and ends at 100%. It may start lower, because earlier cohorts stay in |
+| Steps | At most 20 in all; every step before the last holds |
+
+**Ramp inside each cohort**: off, each cohort gets the control point all at once; on, you add percent steps inside the cohort (**Ramp inside**). It applies to cohort steps added from then on.
+
+When an environment's strategy has cohort steps, they're required. At **Start rollout**, Fireweave replaces a rollout's own steps if they drop or reorder those cohorts, and the rollout shows **Schedule replaced by the rollout strategy**.
 
 ## Promotion checks
 

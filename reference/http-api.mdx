@@ -14,13 +14,27 @@ Send the key as `Authorization: Bearer <key>`. The production server is `https:/
 
 ## Runtime plane
 
-Use an SDK rather than calling these yourself. They accept requests from any browser origin.
+Use an SDK for evaluate, capture and register. No SDK calls batch, unset or delete, so call those from your server with a server key. These routes accept requests from any browser origin.
 
 | Method | Path | Does |
 | --- | --- | --- |
 | `POST` | `/v1/control-points/evaluate` | Evaluate control points |
 | `POST` | `/v1/capture` | Record exposures and events |
 | `POST` | `/v1/targets/register` | Register a user or device for targeting |
+| `POST` | `/v1/targets/batch` | Register up to 1,000 targets in one call (server key only) |
+| `POST` | `/v1/targets/unset` | Clear up to 100 named properties from one target (server key only) |
+| `POST` | `/v1/targets/delete` | Remove one target from the key's environment (server key only) |
+
+The key decides the environment. `/v1/targets/register` ignores an `environment` in the body: a key bound to an environment tags the target with that environment, and an unbound key tags it with the project's default.
+
+Properties sent with a server key are trusted. Properties sent with a browser key never are, so cohort rules don't match them.
+
+```bash
+curl https://app-server.fireweave.ai/v1/targets/batch \
+  -H "Authorization: Bearer $FIREWEAVE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"targets":[{"targetingKey":"user_42","kind":"user","properties":{"plan":"pro"}}]}'
+```
 
 ## Management plane
 
@@ -36,6 +50,8 @@ The organization always comes from the key, never from the path.
 | `GET` | `/v1/projects/{projectId}/control-points` | Control points that merges have registered |
 | `GET` | `/v1/projects/{projectId}/control-points/graph` | The same, with recorded dependency edges |
 
+`DELETE /v1/projects/{projectId}` is permanent: it removes the project's environments, keys, rollouts and control points.
+
 ```bash
 curl https://app-server.fireweave.ai/v1/projects \
   -H "Authorization: Bearer $FW_ORG_API_KEY"
@@ -44,6 +60,8 @@ curl https://app-server.fireweave.ai/v1/projects \
 A **CI read** key reads only what [`fw sync`](/cli/ci) needs, plus `/v1/whoami`. It can't manage projects or environments.
 
 ## Errors
+
+### Management errors
 
 ```json
 { "error": { "code": "NOT_FOUND", "message": "Project not found" } }
@@ -54,6 +72,23 @@ A **CI read** key reads only what [`fw sync`](/cli/ci) needs, plus `/v1/whoami`.
 | `401` | Missing or invalid key |
 | `403` | The key's scope, or the role of the person who created it, doesn't allow the call |
 | `404` | Unknown id, or an id in another organization |
-| `409` | A project or environment slug that already exists |
+| `409` | A slug that already exists; archiving or deleting a project, or deleting an environment, while a rollout is live (`LIVE_ROLLOUTS`); changing an archived project (`PROJECT_ARCHIVED`); a change that would stop Fireweave enforcing its readiness check on a branch (`MERGE_GATE_REF_ENFORCED`: sign in as an Owner or Admin instead) |
 
-Routes not listed here are not part of the public contract and may change.
+### Runtime errors
+
+```json
+{ "ok": false, "error": "TARGETING_KEY_TOO_LONG" }
+```
+
+| Status | Code | When |
+| --- | --- | --- |
+| `400` | `TARGETING_KEY_TOO_LONG` | A `targetingKey` over 120 characters on evaluate or register. `/v1/capture` drops that event instead. |
+| `400` | `VALIDATION` | A body that batch, unset or delete can't accept |
+| `400` | `TOO_MANY_EVENTS` | More than 500 events in one `/v1/capture` call |
+| `400` | `EVENT_NAME_RESERVED` | An event name that starts with `$` |
+| `400` | `TOO_MANY_PROPERTIES` / `PROPERTIES_TOO_LARGE` | A target with more than 100 properties, or more than 64 KB of them |
+| `403` | `SERVER_KEY_REQUIRED` | Batch, unset or delete called with a key that isn't a server key |
+| `429` | `RATE_LIMITED` | Over the key's per-minute limit. Wait for `Retry-After`. |
+| `429` | `DAILY_LIMIT_REACHED` | Your organization hit its daily limit of evaluate and capture calls |
+
+Cohorts, targets and rollout strategies are managed in the web app; they have no management-plane route. Routes not listed here are not part of the public contract and may change.

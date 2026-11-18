@@ -8,11 +8,14 @@ Most repositories are set up in the cloud: Fireweave opens a setup pull request 
 ## Cloud setup
 
 <Steps>
+  <Step title="Create your account">
+    At [app.fireweave.ai](https://app.fireweave.ai), press **Continue with Google**, or enter an email and password and press **Create account**, then open the link we email you (it lasts 24 hours). On **Join or create**, accept an invitation, or press **Create my own organization**, name it, accept the Terms and press **Create organization**. You'll be its Owner.
+  </Step>
   <Step title="Create a project">
-    In the [web app](https://app.fireweave.ai), create a project, pick your repositories and choose **Safe rollouts**. The wizard is covered step by step in [Create a project](/connect/create-project).
+    In the web app, create a project, pick your repositories and choose **Safe rollouts**. On **Answers**, tick the apps to set up and the SDK for each. The wizard is covered step by step in [Create a project](/connect/create-project).
   </Step>
   <Step title="Review the setup pull request">
-    Fireweave analyzes your code and opens one setup PR per managed repository, on the branch `fireweave/setup`. It adds the SDK, the agent instructions and the `.fireweave/` folder. Fireweave never merges it.
+    Fireweave analyzes your code and opens one setup PR in each repository you left ticked under **Repos to set up**, on the branch `fireweave/setup`. It adds the SDK, the agent instructions and the `.fireweave/` folder. Fireweave never merges it.
   </Step>
   <Step title="Merge it">
     Merge the setup PR once. The repository is now ready for features.
@@ -22,7 +25,22 @@ Most repositories are set up in the cloud: Fireweave opens a setup pull request 
   </Step>
 </Steps>
 
-Track each repository on the project's **Project Setup** page. Its badge reads **Preparing…**, **Setup PR open**, **Needs your answers**, **Merged** or **Failed**.
+Home's **Get set up** list tracks the rest: **Add GitHub account**, **Create a project**, **Set up a repository** and **Invite teammates**. Trouble signing up? See [Sign-up, sign-in and invites](/troubleshooting#sign-up-sign-in-and-invites).
+
+Track each repository on the project's **Project Setup** page by its badge:
+
+| Badge | Meaning |
+| --- | --- |
+| **Analyzing…** / **Preparing…** | Fireweave is reading the code or preparing the PR. |
+| **Waiting for approval** | A GitHub owner must approve the App's new permissions ([GitHub App](/connect/github-app)). |
+| **Needs your answers** | Answer the questions and press **Save and rerun**. |
+| **Setup PR open** | Review and merge it. |
+| **Merged** | Merged; an environment is still waiting for it on its branch. |
+| **Initialised** | Set up and ready in every environment. |
+| **Setup pending** | The PR was closed without merging. Press **Open a new PR**. |
+| **Not set up yet** | No setup PR yet. Press **Open setup PR**, or **Turn on safe rollouts**. |
+| **Nothing to set up** | A Context only repository, or nothing to change. |
+| **Failed** | Press **Retry**, or **Set up locally instead**. |
 
 <Tip>
 Not the right person to run setup? Use **Send to a developer** to email the setup steps to a teammate. Running setup needs Write on the project.
@@ -30,14 +48,14 @@ Not the right person to run setup? Use **Send to a developer** to email the setu
 
 ## Which apps cloud setup covers
 
-Every SDK language: TypeScript/JavaScript servers (Node, Bun, Deno), browser apps, Python, Go, Java, Rust, Dart and Swift. FireWeave adds the SDK with your repository's own package manager, changing only the manifest and lockfile, and checks that each app still compiles or type-checks after its edits.
+Every SDK language: TypeScript/JavaScript servers (Node, Bun, Deno), browser apps, Python, Go, Java, Rust, Dart and Swift. Fireweave adds the SDK with your repository's own package manager, changing only the manifest and lockfile, and checks that each app still compiles or type-checks after its edits.
 
 Two kinds of app get a to-do in the setup PR instead of a finished install:
 
 - **Flutter apps:** the SDK is added to `pubspec.yaml`. Run `flutter pub get` and build the app yourself.
 - **Swift apps in an Xcode project:** add the `https://github.com/FireWeave-HQ/fireweave-sdk` package in Xcode.
 
-If FireWeave can't finish an app (for example, its check finds new errors after the edits), that app shows as **Not set up** on the setup card and in the setup PR, with the reason. Your other apps are still set up. Set that app up with `/fireweave:initialise` in your coding agent, after installing `fw` and the plugin as in the local steps [below](#if-cloud-setup-fails). Don't press **Set up locally instead** for this: it closes the setup PR.
+If Fireweave can't finish an app (for example, its check finds new errors after the edits), that app shows as **Not set up** on the setup card and in the setup PR, with the reason. Your other apps are still set up. Set that app up with `/fireweave:initialise` in your coding agent, after installing `fw` and the plugin as in the local steps [below](#if-cloud-setup-fails). Don't press **Set up locally instead** for this: it closes the setup PR.
 
 ## If cloud setup fails
 

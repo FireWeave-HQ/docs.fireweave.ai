@@ -8,7 +8,7 @@ Your deployed apps need a key to reach Fireweave. Local development needs none: 
 | Key | Starts with | Set it as | Where it's allowed |
 | --- | --- | --- | --- |
 | **Server key** | `project-api-key_` | `FIREWEAVE_KEY` | Your servers. It's a secret. |
-| **Browser key** | `fw_public_` | `FIREWEAVE_BROWSER_KEY` | Your web bundle, at build time. It can only read control points and send events. |
+| **Browser key** | `fw_public_` | `FIREWEAVE_BROWSER_KEY` | Your web bundle, at build time. It reads control points, sends events and registers targets. |
 | **CI key** | `fw_org_` | `FW_ORG_API_KEY` | Your CI, for `fw sync`. |
 
 <Warning>Never commit a server key or a CI key, or paste one into a chat or a pull request.</Warning>
@@ -31,6 +31,12 @@ Your deployed apps need a key to reach Fireweave. Local development needs none: 
 </Steps>
 
 A key scoped to an environment serves only that environment. If the environment is removed, the key stops working. Only Owners and Admins create and revoke keys. Revoking stops apps that use it at their next call, and it can't be undone.
+
+### Trusted properties
+
+Properties your server sends with a server key are **trusted**: no browser can set them, and only trusted properties can be used in [cohort](/ship/cohorts) rules. Properties sent with a browser key are never trusted.
+
+A target registers in its key's environment. A key with no environment registers in the project's default environment. Registering targets in bulk, clearing properties and deleting a target need a server key.
 
 ## CI keys
 

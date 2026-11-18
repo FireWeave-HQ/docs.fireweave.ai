@@ -14,6 +14,20 @@ Start with `fw doctor`. It checks your install, sign-in and repo, and prints a f
 | The setup PR was closed without merging | Nothing changed in the repo. Choose **Open a new PR** under **Project Setup**. |
 | The app fails at start, naming `FIREWEAVE_KEY` | The deploy has no key. Set `FIREWEAVE_KEY` (or `FIREWEAVE_BROWSER_KEY` for a browser app) in that environment. See [Keys](/connect/keys). |
 
+## Sign-up, sign-in and invites
+
+| Symptom | Fix |
+| --- | --- |
+| "An account with this email already exists. Log in instead." | That address already has an account. **Log in**, or use **Forgot password?**. |
+| Logging in shows **Check your inbox** | Your address isn't verified yet. Fireweave just sent a new link. Open the newest email. Links last 24 hours. |
+| **Link expired or not valid** on a verification link | Enter your email and press **Send new link**. |
+| You pressed **Resend link** and nothing arrives | Already verified? You get an email saying so: log in. No email at all? No account uses that address: **Create account**. |
+| "Too many tries. Wait a minute, then try again." | Wait, then try again. |
+| **Link expired or not valid** on a reset link | Reset links last 1 hour and work once. Press **Send a new link**. |
+| "This invite from … has expired." | Invites last 7 days. Ask the person who invited you for a new one. |
+| **This invite isn't valid** | It was withdrawn or already used. Ask for a new invite. |
+| **This code expired** | Codes work for 10 minutes. Press **Send a new code**. |
+
 ## The fw CLI
 
 | Symptom | Fix |
@@ -46,8 +60,11 @@ Start with `fw doctor`. It checks your install, sign-in and repo, and prints a f
 | Symptom | Fix |
 | --- | --- |
 | Every control point returns its default | A control point stays off until someone starts its rollout. Also check the app has its key: with no key, a `development` or `test` environment runs in local mode. |
-| `ControlPointNotFound` | FireWeave doesn't know that key yet. It is registered when the change merges into an environment branch. Otherwise, check the key for a typo. |
+| `ControlPointNotFound` | Fireweave doesn't know that key yet. It is registered when the change merges into an environment branch. Otherwise, check the key for a typo. |
 | `Must use import to load ES Module`, `ERR_REQUIRE_ESM`, or `TS2307` on `@fireweaveai/server-sdk/start` | Your toolchain loads CommonJS. Use a CommonJS twin. See [CommonJS projects](/sdks/commonjs). |
+| `Authentication` or `Authorization` | The key is wrong, revoked or from another project, or its environment was removed. Create a new key. See [Keys](/connect/keys). |
+| `NotReady` | You read before start finished, so you got your default. Wait for start before reading. |
+| A target isn't matched by a cohort rule | Rules read only trusted properties listed on **Settings › Targets**, under **Properties**. Register the property from your server with a server key; properties a browser sends show as **From a browser** and never match. See [Keys](/connect/keys#trusted-properties). |
 | Code still reads `FW_PROJECT_API_KEY` | SDK 3.0 reads `FIREWEAVE_KEY` only. See [Migrate to 3.0](/sdks/migrate-3). |
 
 Still stuck? Run `fw feedback` to send Fireweave a report.
