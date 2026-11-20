@@ -3,7 +3,7 @@ title: "Terraform projects"
 description: "Manage a Fireweave project with fireweave_project: name, slug, description, status, and import by project id."
 ---
 
-`fireweave_project` manages a Fireweave project in the organisation that owns your API key.
+`fireweave_project` manages a Fireweave project in the organization that owns your API key.
 
 A project is the top-level container for environments, integrations, and rollouts. Terraform creates and updates it through `GET` / `POST /v1/projects` and `GET` / `PATCH` / `DELETE /v1/projects/{projectID}`.
 
@@ -20,14 +20,14 @@ resource "fireweave_project" "app" {
 }
 ```
 
-`slug` must be unique within the organisation. Changing it forces a new resource.
+`slug` must be unique within the organization. Changing it forces a new resource.
 
 ## Arguments
 
 | Name | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `name` | String | Yes | Human-readable project name. Updates in place. |
-| `slug` | String | Yes | URL-safe slug, unique within the organisation. **Forces replacement.** |
+| `slug` | String | Yes | URL-safe slug, unique within the organization. **Forces replacement.** |
 | `description` | String | No | Longer description. |
 | `status` | String | No | `active` or `archived`. Optional + computed. Defaults to `active`. |
 
@@ -44,6 +44,16 @@ The API also returns `createdAt` and `updatedAt`. Those fields are not Terraform
 Leave `status` unset and the provider defaults it to `active`. Set `archived` to archive the project.
 
 On create, if you set a status other than the API create default, the provider creates the project and then `PATCH`es status.
+
+## Destroy and archive
+
+<Warning>
+  `terraform destroy` deletes the project permanently, with its environments, keys, rollouts and control points. Its keys stop working at their next call.
+</Warning>
+
+- Fireweave refuses to archive or delete a project while a rollout is live (`409 LIVE_ROLLOUTS`).
+- A destroy that would stop Fireweave enforcing its readiness check on a branch is refused (`409 MERGE_GATE_REF_ENFORCED`). Delete the project in the web app, signed in as an Owner or Admin.
+- Only a key created by an Owner or Admin can change a project.
 
 ## Import
 

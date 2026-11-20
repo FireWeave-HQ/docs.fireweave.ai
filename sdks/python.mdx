@@ -78,6 +78,8 @@ on = client.control_points.get_boolean_value("new-checkout", False, EvaluationCo
 
 A `Decision` carries `value`, `reason`, `control_point_metadata` and, on failure, `error_kind`. `register_target` returns `ok=False` instead of raising.
 
+Cohort rules read only properties sent with a server key, and only the names an Owner or Admin lists in **Settings › Targets › Properties**. Properties a browser key sends are never trusted. See [Targets and cohorts](/ship/cohorts). The key decides the target's environment: a key bound to an environment registers there, an unbound key in the project's default. `RegisterTargetOptions`' `environment` is ignored.
+
 ## Errors and shutdown
 
 A read that fails returns your default. Configuration problems raise `ConfigurationError` at start. Every error subclasses `FireweaveError`, for example `ControlPointNotFoundError`: see [Errors and lifecycle](/sdks/errors-and-lifecycle).

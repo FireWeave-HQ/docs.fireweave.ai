@@ -1,0 +1,82 @@
+---
+title: "Targets and cohorts"
+description: "Send a change to named groups of your targets first, such as Staff or a beta list, before everyone."
+---
+
+import { Ramp, RampStage } from "/snippets/flow.jsx";
+
+A cohort is a named group of your targets (users or devices), by rule or by list. A rollout strategy step can name one, so a change reaches Staff first, then your beta list, then everyone.
+
+<Ramp title="Example strategy with cohorts">
+  <RampStage label="Staff" percent="100" note="hold 1h" />
+  <RampStage label="Beta list" percent="100" note="hold 1d" />
+  <RampStage label="Everyone" percent="10" note="cohorts stay in" />
+  <RampStage label="Everyone" percent="100" note="then stability soak" />
+</Ramp>
+
+Add cohort steps to a strategy with **Add cohort step** under **Rollout strategies** ([Strategies and checks](/ship/strategies-and-checks)). **Everyone** comes after the cohort steps: the cohorts before it stay in, plus a percentage of everyone else. With **Ramp inside each cohort** off, each cohort gets the control point all at once.
+
+## Targets
+
+A target is one of your users or devices, by the id your app sends as its targeting key. One list per project: the same id in two projects is two targets.
+
+Your app registers a target from a server (`registerTarget` in Node, `register_target` in Python, `identify` in Go, Java and Rust), or with `identify` in the web, Dart and Swift SDKs. Rollouts still work for ids you never register.
+
+Open the project's settings, under **Targets**:
+
+| You want to | Use |
+| --- | --- |
+| Filter by environment | **Environment**, or **Every environment** |
+| Find one target | **Find a target by id** |
+| Include devices | **Show devices** |
+| See what it gets | Open the target: **What this target gets in {environment}** shows **On** or **Off** per control point |
+| Remove it | **Delete target**: removes it and its events in every environment of the project, and from every list cohort and running rollout that holds it |
+
+Owners and Admins can delete targets.
+
+## Trusted properties
+
+Properties sent with a server key are **Trusted**. Properties sent with a browser key show as **From a browser**, and cohort rules never read them. Names starting with `fw_` or `$`, and `alias`, `distinct_id` and `token`, are reserved and dropped.
+
+Rules read only the names you list. On the **Targets** page's **Properties** tab, press **Edit properties**, then **Add property**, pick a **Type** (**Text**, **Number** or **True or false**), mark it **Trusted** and **Save**. Owners and Admins can change the properties.
+
+With a server key, attributes you pass on a read are trusted too, so a rule on a listed property can match a target you never registered.
+
+## Create a cohort
+
+Open the project's settings, under **Cohorts**, and press **New cohort**. Pick **Rule** or **List**. Owners and Admins can change cohorts.
+
+### Rule
+
+A target joins when any group matches. Every condition in a group must be true. Add conditions with **Property condition** or **Target key condition**, and groups with **Add group (OR)**.
+
+| Condition | Operators |
+| --- | --- |
+| Text or true/false property | **is one of**, **is not one of**, **is set** |
+| Number property | **is greater than**, **is at least**, **is less than**, **is at most** |
+| Text property or target key | **starts with**, **ends with**, **contains** |
+
+**starts with**, **ends with** and **contains** ignore case and take 1 to 200 letters, digits, spaces and `_ - . @ : / + ,`. For example, target key **ends with** `@acme.com`.
+
+### List
+
+Paste target ids, one per line or comma separated. Matching ignores case. A list needs at least one id. If deleting targets empties it, a rollout can't start on it.
+
+## Versions
+
+Every save makes a new version: v1, v2 and on. **Compare with newest** shows what changed. **Preview** counts the newest saved version, and sizes count registered users only.
+
+A rollout keeps the version it pinned at **Start rollout**. To use a newer one, re-pin it from the rollout; it applies at the next step.
+
+You can't **Archive** or **Delete** a cohort while the project default, an environment's strategy or an unfinished rollout uses it. Remove it from those first.
+
+## Limits
+
+| What | Limit |
+| --- | --- |
+| Target id | 120 characters |
+| Rule | 5 groups of 10 conditions |
+| List | 1,000 ids |
+| Text match value | 1 to 200 characters |
+| Strategy steps | 20 |
+| Properties per target | 100, and 64 KB |

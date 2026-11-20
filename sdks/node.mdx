@@ -89,6 +89,8 @@ const on = await fireweave.controlPoints.getBooleanValue('new-checkout', false, 
 
 A `Decision` carries `controlPointKey`, `value`, `reason` and, on failure, `errorKind`. `registerTarget` returns `{ ok, error? }` and never throws.
 
+Cohort rules read only properties sent with a server key, and only the names an Owner or Admin lists in **Settings › Targets › Properties**. Properties a browser key sends are never trusted. See [Targets and cohorts](/ship/cohorts). The key decides the target's environment: a key bound to an environment registers there, an unbound key in the project's default. `registerTarget`'s `environment` option is ignored.
+
 ## Errors and shutdown
 
 A read that fails returns your default. Configuration problems throw `FireweaveError` with kind `Configuration` at start. Other kinds include `ControlPointNotFound`, `Authentication` and `Network`: see [Errors and lifecycle](/sdks/errors-and-lifecycle).

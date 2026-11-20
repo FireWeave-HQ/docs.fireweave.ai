@@ -3,7 +3,7 @@ title: "Terraform org members"
 description: "Schema for fireweave_org_member. Org API keys currently receive 401 — do not apply this resource until that is fixed."
 ---
 
-`fireweave_org_member` is designed to manage an organisation **member role assignment**. Create and update call `PUT /api/organizations/:orgId/members/:userId/role`. Destroy calls `DELETE /api/organizations/:orgId/members/:userId`.
+`fireweave_org_member` is designed to manage an organization **member role assignment**. Create and update call `PUT /api/organizations/:orgId/members/:userId/role`. Destroy calls `DELETE /api/organizations/:orgId/members/:userId`.
 
 <Warning>
   Do not apply this resource yet. The member endpoints currently reject org API keys with **401 Unauthorized**. Fireweave's own internal Terraform leaves these resources commented out for that reason.
@@ -15,9 +15,9 @@ Generated schema: [fireweave_org_member on the Terraform Registry](https://regis
 
 ## What the resource will do (once unblocked)
 
-The target user must already be a member of the organisation (for example after accepting an invite). This resource does **not** send invitations.
+The target user must already be a member of the organization (for example after accepting an invite). This resource does **not** send invitations.
 
-The organisation `owner` role cannot be assigned or changed here. Valid roles are `admin`, `member`, and `viewer` only.
+The organization `owner` role cannot be assigned or changed here. Valid roles are `admin`, `member`, and `viewer` only.
 
 Changing `organization_id` or `user_id` forces a new resource. `role` updates in place.
 
@@ -46,11 +46,11 @@ resource "fireweave_org_member" "alice_admin" {
 }
 ```
 
-Use variables for identifiers. Do not commit organisation or user ids.
+Use variables for identifiers. Do not commit organization or user ids.
 
 ## Import
 
-Import by organisation id and user id:
+Import by organization id and user id:
 
 ```bash
 terraform import fireweave_org_member.alice_admin <organization_id>/<user_id>

@@ -1,6 +1,6 @@
 ---
 title: "Dart and Flutter"
-description: "Install the FireWeave Dart SDK from pub.dev, start it in one line and read control points."
+description: "Install the Fireweave Dart SDK from pub.dev, start it in one line and read control points."
 ---
 
 The Dart SDK is the `fireweave` package on pub.dev. It covers Flutter apps, Dart web apps and Dart servers.
@@ -75,6 +75,8 @@ At sign-in, register the user. The app then fetches that user's decisions.
 ```dart
 await fw.identify('user_42', properties: {'plan': 'pro'});
 ```
+
+An app sends properties with its browser key, so they show as **From a browser** and cohort rules never read them: anyone can copy a browser key out of your app. Register the properties your cohorts use from your server, with a server key, under the same user id. A Dart server's properties use its server key, so they are trusted.
 
 <Note>
   Dart statics belong to one isolate, so start Fireweave in every isolate that reads.

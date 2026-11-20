@@ -32,6 +32,8 @@ Once [setup](/setup) is merged and your deploy key is set, every feature follows
     <Badge color="blue">Required</Badge>
 
     Exposure rises stage by stage. At each stage Fireweave checks your guardrails before moving on. After the stability soak at 100%, the control point is marked stable. In **Manual** mode you press **Mark stable now**.
+
+    Home lists every rollout in progress under **Live rollouts**. Above it, **Needs you** shows what waits on a person: a rollout waiting for you, a Block alert, high-risk pull requests or an integration to reconnect.
   </Step>
   <Step title="Clean up">
     <Badge color="gray">Optional</Badge>
@@ -40,14 +42,14 @@ Once [setup](/setup) is merged and your deploy key is set, every feature follows
   </Step>
 </Steps>
 
-<Ramp title="Default strategy">
+<Ramp title="Fireweave default strategy">
   <RampStage label="Stage 1" percent="10" note="hold 30m · metrics checked" />
   <RampStage label="Stage 2" percent="50" note="hold 60m · metrics checked" />
   <RampStage label="Stage 3" percent="100" note="stability soak, then stable" />
 </Ramp>
 
 <Note>
-In **Manual** mode you move each stage yourself. In **Automatic** mode the ramp moves on by itself when the evidence is healthy. See [Strategies and checks](/ship/strategies-and-checks).
+These are the stages until you change the [project default](/ship/strategies-and-checks#project-default). In **Manual** mode you move each stage yourself. In **Automatic** mode the ramp moves on by itself when the evidence is healthy. See [Run a rollout](/ship/run-a-rollout#manual-or-automatic).
 </Note>
 
 If a guardrail set to **Block** breaches, the ramp parks at 0% and waits for you. See [Guardrails](/ship/guardrails) and [Run a rollout](/ship/run-a-rollout).

@@ -3,22 +3,22 @@ title: "Packages"
 description: "Fireweave SDK package names, versions, runtimes and the settings they read."
 ---
 
-Every SDK is at **3.1.0**. Upgrading from 2.x? See [Migrate to 3.0](/sdks/migrate-3).
+Every SDK is at **3.1.1**. Upgrading from 2.x? See [Migrate to 3.0](/sdks/migrate-3).
 
 ## SDKs
 
 | SDK | Package | Version | Runtime |
 | --- | --- | --- | --- |
-| [Node, Bun, Deno](/sdks/node) | npm `@fireweaveai/server-sdk` | 3.1.0 | Node 20.20+ |
-| [Node, CommonJS twin](/sdks/commonjs) | npm `@fireweaveai/server-sdk-cjs` | 3.1.0 | Node 20.20+ |
-| [Browser](/sdks/web) | npm `@fireweaveai/web-sdk` | 3.1.0 | Browsers |
-| [Browser, CommonJS twin](/sdks/commonjs) | npm `@fireweaveai/web-sdk-cjs` | 3.1.0 | Browsers |
-| [Python](/sdks/python) | PyPI `fireweave` | 3.1.0 | Python 3.10+ |
-| [Go](/sdks/go) | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v3` | v3.1.0 | Go 1.26.9+ |
-| [Java](/sdks/java) | Maven `ai.fireweave:fireweave-sdk` | 3.1.0 | Java 11+ |
-| [Rust](/sdks/rust) | crates.io `fireweave` | 3.1.0 | Rust 1.85+ |
-| [Dart](/sdks/dart) | pub.dev `fireweave` | 3.1.0 | Dart 3.8+ |
-| [Swift](/sdks/swift) | Swift package `github.com/FireWeave-HQ/fireweave-sdk` | 3.1.0 | iOS 16+, macOS 13+ |
+| [Node, Bun, Deno](/sdks/node) | npm `@fireweaveai/server-sdk` | 3.1.1 | Node 20.20+ |
+| [Node, CommonJS twin](/sdks/commonjs) | npm `@fireweaveai/server-sdk-cjs` | 3.1.1 | Node 20.20+ |
+| [Browser](/sdks/web) | npm `@fireweaveai/web-sdk` | 3.1.1 | Browsers |
+| [Browser, CommonJS twin](/sdks/commonjs) | npm `@fireweaveai/web-sdk-cjs` | 3.1.1 | Browsers |
+| [Python](/sdks/python) | PyPI `fireweave` | 3.1.1 | Python 3.10+ |
+| [Go](/sdks/go) | `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v3` | v3.1.1 | Go 1.26.9+ |
+| [Java](/sdks/java) | Maven `ai.fireweave:fireweave-sdk` | 3.1.1 | Java 11+ |
+| [Rust](/sdks/rust) | crates.io `fireweave` | 3.1.1 | Rust 1.85+ |
+| [Dart](/sdks/dart) | pub.dev `fireweave` | 3.1.1 | Dart 3.8+ |
+| [Swift](/sdks/swift) | Swift package `github.com/FireWeave-HQ/fireweave-sdk` | 3.1.1 | iOS 16+, macOS 13+ |
 
 The CommonJS twins are only for toolchains that can't load ES modules. See [CommonJS projects](/sdks/commonjs).
 
@@ -75,3 +75,5 @@ SDKs call three routes with `Authorization: Bearer <key>`. See [HTTP API](/refer
 | `POST` | `/v1/control-points/evaluate` |
 | `POST` | `/v1/capture` |
 | `POST` | `/v1/targets/register` |
+
+Three more runtime routes take only a server key and have no SDK method yet: `POST /v1/targets/batch` (up to 1,000 targets), `/v1/targets/unset` (clear properties) and `/v1/targets/delete`. Any other key gets `403 SERVER_KEY_REQUIRED`.

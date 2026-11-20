@@ -75,6 +75,10 @@ Reads use an anonymous device id until you identify the user.
 | `await fw.reset()` | Sign-out. Back to the device id. |
 | `fw.setPersistence('memory')`, `await fw.forget()` | Consent. Stop storing, or clear and start over. |
 
+An app sends properties with its browser key, so they show as **From a browser** and cohort rules never read them: anyone can copy a browser key out of your app. Register the properties your cohorts use from your server, with a server key, under the same user id. Then `identify(userId)` in the app is enough. See [Targets and cohorts](/ship/cohorts).
+
+<Note>The anonymous device id is a separate target. It is never merged into the user you identify.</Note>
+
 `fw` also has `ready`, `status()`, `subscribe(listener)` and `shutdown()`. A bad setup never crashes your app: reads serve defaults and `fw.status()` names the problem. Rules for every SDK: [Start profile](/sdks/start-profile).
 
 ## Core API

@@ -12,6 +12,8 @@ Everyone in your organization has one role, and every role covers every project.
 | **Member** | Write | Creates projects and works in every project. |
 | **Viewer** | Read | Reads every project and changes nothing. |
 
+Only Owners and Admins delete targets, edit a project's trusted properties, and create, edit, archive or delete [cohorts](/ship/cohorts). A custom role can't grant these.
+
 ## Custom roles
 
 Owners and Admins create a role with **New role**. Give it a name, a project access level (**Read** or **Write**), and any of these organization permissions:
@@ -22,6 +24,7 @@ Owners and Admins create a role with **New role**. Give it a name, a project acc
 | **Manage integrations** | Add and remove accounts for tools. |
 | **Manage CI keys** | Create and revoke the organization's CI keys. |
 | **View audit log** | Read **Settings › Audit log**. |
+| **View usage** | Nothing yet: usage isn't in the app. |
 
 ## Invite people
 
@@ -48,6 +51,8 @@ Invites last 7 days. Resend, copy the link or withdraw one from **Invitations**.
 | **AI apps** | AI tools you let read Fireweave for you. They can read, not change. |
 
 **Revoke everywhere** signs out every other browser, CLI device and AI app. This browser stays signed in.
+
+If you signed in more than 10 minutes ago, some actions first ask you to **Confirm it's you**: transferring or accepting ownership, deleting or restoring the organization, and setting a password. Enter your password. No password (you sign in with Google)? Press **Email me a code** and enter it; it works for 10 minutes.
 
 ## For Owners and Admins
 

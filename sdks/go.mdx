@@ -8,7 +8,7 @@ The Go SDK is the module `github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v3`. Its
 <Steps>
   <Step title="Install">
     ```bash
-    go get github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v3@v3.1.0
+    go get github.com/FireWeave-HQ/fireweave-sdk/sdks/go/v3@v3.1.1
     ```
     The `/v3` suffix is required in `go get` and in every import path.
   </Step>
@@ -56,13 +56,15 @@ With no key outside a development environment, `fw.Start` returns a configuratio
 
 ## Identify users
 
-At sign-in, register the facts your targeting matches on:
+At sign-in, register the facts your cohorts match on:
 
 ```go
 err := fw.Identify(ctx, user.ID, map[string]any{"plan": user.Plan})
 ```
 
-Pass attributes for one read with `fw.For(user.ID, map[string]any{"plan": user.Plan})`.
+Pass attributes for one read with `fw.For(user.ID, map[string]any{"plan": user.Plan})`. Attributes passed on a read count the same way as registered ones.
+
+Cohort rules read only properties sent with a server key, and only the names an Owner or Admin lists in **Settings › Targets › Properties**. Properties a browser key sends are never trusted. See [Targets and cohorts](/ship/cohorts).
 
 ## Status
 

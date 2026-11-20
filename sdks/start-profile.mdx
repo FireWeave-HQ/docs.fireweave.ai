@@ -70,6 +70,7 @@ Create keys on the project's **SDK keys** page ([Keys](/connect/keys)). The SDK 
 ## Rules worth knowing
 
 - One client per process (per page in browsers, per isolate in Dart).
+- A targeting key is at most 120 characters. Fireweave refuses a longer one: see [Errors and lifecycle](/sdks/errors-and-lifecycle#error-kinds).
 - Calling `start()` again with the same settings does nothing. Different settings are an error on servers.
 - Reads never throw. In Node, Python, Go, Java and Rust, a server read before `start()` starts the SDK from the environment.
 - Local values are served only in local mode. In remote mode your call site's default (`false`) applies until a rollout says otherwise.

@@ -40,6 +40,8 @@ Then add the plugin to your agent:
     /plugin marketplace add FireWeave-HQ/plugins-marketplace
     /plugin install fireweave@fireweave
     ```
+
+    Then, in your repository, run `fw plugins install fireweave --tool claude-code` to add the allow rules. It repeats the plugin steps above; you've done those.
   </Tab>
   <Tab title="Cursor">
     Open **Settings → Plugins → Import**, paste the address below, then enable **fireweave**.
@@ -47,6 +49,8 @@ Then add the plugin to your agent:
     ```text
     https://github.com/FireWeave-HQ/plugins-marketplace
     ```
+
+    Then, in your repository, run `fw plugins install fireweave --tool cursor` to add the allow rules. It repeats the plugin steps above; you've done those.
   </Tab>
   <Tab title="Codex">
     ```bash
@@ -74,7 +78,7 @@ Then add the plugin to your agent:
 </Tabs>
 
 <Tip>
-`fw plugins install` asks before it writes your agent's allow rules for `fw tool`, `fw status` and `fw sync`, so the agent can run them without a prompt each time.
+`fw plugins install` asks before it writes your agent's allow rules for `fw tool`, `fw status` and `fw sync`, so the agent can run them without a prompt each time. `--allow-rules committed` writes them into the project file instead of your local settings. Claude Code on the web needs that.
 </Tip>
 
 ## Next
@@ -82,4 +86,5 @@ Then add the plugin to your agent:
 <Columns cols={2}>
   <Card title="Building features" icon="code" href="/agents/building-features">How your agent wraps a change.</Card>
   <Card title="Join a repository" icon="users" href="/agents/join-a-repo">A teammate already set Fireweave up.</Card>
+  <Card title="Cloud coding agents" icon="cloud" href="/agents/cloud-agents">Let a cloud agent use `fw` with its own key.</Card>
 </Columns>

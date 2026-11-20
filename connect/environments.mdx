@@ -21,6 +21,7 @@ An environment is one stage your changes go through, such as Staging or Producti
 | **Tag rules** | Comma-separated tags, with `*` for any characters, for example `v*-rc*`. |
 | **Tier** | **Production** or **Non-production**. With no tier set, the last environment counts as production. |
 | **Observability** | The accounts that read metrics, logs and traces here. See [Observability](/connect/observability). |
+| **Advanced: environment aliases** | Other names your apps use for this environment, such as `prod` or `uat`, comma-separated. Fireweave reads them when it sets up your repository, so those names map to this environment. |
 
 ## Which merge registers where
 

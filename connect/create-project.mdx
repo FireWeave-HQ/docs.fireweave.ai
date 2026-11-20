@@ -18,13 +18,13 @@ A project is what you ship through Fireweave: its repositories, environments and
     Mark each repository **Managed** (checks and rollouts) or **Context only** (read for knowledge), and pick its exact production branch. A repository is Managed by one project only.
   </Step>
   <Step title="Rollouts">
-    Choose what Fireweave does with your Managed repositories (see below).
+    Choose **Safe rollouts** or **Release safety only** (see below). With **Safe rollouts**, untick any repository under **Repos to set up** that you want left alone, then press **Analyze repos**.
   </Step>
   <Step title="Analyze">
-    **Start analysis**. It's read-only, and it keeps going if you leave.
+    The analysis starts on its own. It's read-only, and it keeps going if you leave. If it fails, press **Retry analysis**.
   </Step>
   <Step title="Answers">
-    Confirm what the analysis found: your apps, where users sign in, metrics, and your team's agents. Not right? Run it again. See [Which apps cloud setup covers](/setup#which-apps-cloud-setup-covers).
+    Confirm what the analysis found. Under **Apps**, each app is marked **Recommended** or **Not recommended**: tick the ones to set up and check the SDK for each. Missed an app? Under **Add an app**, choose its **Folder** from the repository's folders and its **SDK**, then press **Add app**. Then check where users sign in, metrics and your team's agents. Not right? Run the analysis again. See [Which apps cloud setup covers](/setup#which-apps-cloud-setup-covers).
   </Step>
   <Step title="Environments">
     List your environments in promotion order, with one exact branch per Managed repository and a tier. See [Environments](/connect/environments).
@@ -41,10 +41,12 @@ A project is what you ship through Fireweave: its repositories, environments and
 
 | Choice | What you get | Changes your code? |
 | --- | --- | --- |
+| **Safe rollouts** (Recommended) | Analysis now, then a setup PR in each Managed repository. Changes ramp behind control points. | Yes, through the setup PR |
 | **Release safety only** | Risk analysis on every pull request. Skips **Analyze** and **Answers**. | No |
-| **Safe rollouts** (recommended) | Analysis now, then a setup PR in each Managed repository. Changes ramp behind control points. | Yes, through the setup PR |
 
-With **Safe rollouts**, Fireweave opens one setup PR per Managed repository on branch `fireweave/setup`. Merge each one to finish. Next: [Set up Fireweave](/setup).
+With **Safe rollouts**, Fireweave opens one setup PR on branch `fireweave/setup` in each repository you left ticked. Merge each one to finish. Next: [Set up Fireweave](/setup).
+
+Chose **Release safety only**? You can switch any time. On the project's **Project Setup** page, press **Turn on safe rollouts** on a repository's card. Fireweave analyzes the code (**Analyzing…**), then press **Open setup PR**.
 
 ## Finish later
 
